@@ -1,0 +1,37 @@
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0' //Plugin que ayuda a construir proyectos JAVAFX
+}
+
+repositories {
+    mavenCentral()
+}
+
+javafx {
+    version = "24" //Cambiamos a versión 23 que es estable
+    modules = [ 'javafx.base', 'javafx.swing', 'javafx.graphics', 'javafx.controls', 'javafx.fxml', 'javafx.media']
+}
+
+dependencies {
+    //PostgreSQL Driver
+    implementation 'org.postgresql:postgresql:42.6.0'
+}
+
+java { //Se indica la versión de JDK que ha de utilizar
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(24)
+    }
+}
+
+application { //Definimos clase principal del proyecto
+    mainClass = 'com.javafx.Clases.Main'
+}
+
+sourceSets {
+    main {
+        resources {
+            srcDirs = ["src/main/resources"]
+            includes = ["**/*.fxml","**/*.png","**/*.properties","**/*.css"]
+        }
+    }
+}

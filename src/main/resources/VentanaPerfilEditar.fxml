@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="550.0" prefWidth="500.0" spacing="15.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorPerfilEditar">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+    <children>
+        <Label fx:id="lblTituloVentana" text="Cambiar datos" />
+        <Separator prefWidth="200.0" />
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Nombre:" />
+                <TextField fx:id="txfNombreSanitarioCambiar" prefWidth="300.0" promptText="Nombre" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Apellidos:" />
+                <TextField fx:id="txfApellidosSanitarioCambiar" prefWidth="300.0" promptText="Apellidos" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="DNI:" />
+                <TextField fx:id="txfDNISanitarioCambiar" prefWidth="300.0" promptText="1234678X" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Cargo:" />
+                <CheckBox fx:id="cbxEspecialistaCambiar" mnemonicParsing="false" text="Especialista" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Email:" />
+                <TextField fx:id="txfEmailSanitarioCambiar" prefWidth="300.0" promptText="ejemplo@correo.com" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Teléfonos:" />
+                <TextField fx:id="txfTelUnoSanitarioCambiar" prefWidth="140.0" promptText="Teléfono 1" />
+                <Separator orientation="VERTICAL" prefHeight="200.0" />
+                <TextField fx:id="txfTelDosSanitarioCambiar" prefWidth="140.0" promptText="Teléfono 2" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Contraseña:" />
+                <PasswordField fx:id="pssContraseniaCambiarSanitario" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_RIGHT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Button fx:id="btnCancelarSanitarioCambiar" mnemonicParsing="false" onAction="#cerrarVentana" prefWidth="120.0" text="Cancelar" />
+                <Button fx:id="btnCrearSanitarioCambiar" mnemonicParsing="false" onAction="#cambiarSanitario" prefWidth="120.0" text="Cambiar" />
+            </children>
+        </HBox>
+    </children>
+</VBox>

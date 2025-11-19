@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+
+<VBox fx:id="vboxVentanaPregunta" alignment="CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" spacing="30.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaPregunta">
+   <children>
+      <ImageView fx:id="imgPregunta" fitHeight="100.0" fitWidth="100.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@pregunta.png" />
+         </image>
+      </ImageView>
+      <Label fx:id="lblPregunta" textAlignment="CENTER" />
+      <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" spacing="20.0">
+         <children>
+            <Button fx:id="btnCancelarPregunta" mnemonicParsing="false" onAction="#cerrarVentana" text="Cancelar" />
+            <Button fx:id="btnConfirmarPregunta" mnemonicParsing="false" onAction="#confirmarPregunta" text="Aceptar" />
+         </children>
+      </HBox>
+   </children>
+</VBox>

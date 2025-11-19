@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="550.0" prefWidth="500.0" spacing="15.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaSanitarioListar">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+    <children>
+        <Label fx:id="lblTituloVentana" text="Información del sanitario" />
+        <Separator prefWidth="200.0" />
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Nombre:" />
+            <Label fx:id="lblNombreValor" prefWidth="300.0" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Apellidos:" />
+            <Label fx:id="lblApellidosValor" prefWidth="300.0" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="DNI:" />
+            <Label fx:id="lblDNIValor" prefWidth="300.0" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Cargo:" />
+            <Label fx:id="lblCargoValor" prefWidth="300.0" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Email:" />
+            <Label fx:id="lblEmailValor" prefWidth="300.0" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Teléfonos:" />
+            <Label fx:id="lblTelefonoUnoValor" prefWidth="140.0" />
+                <Separator orientation="VERTICAL" prefHeight="200.0" />
+            <Label fx:id="lblTelefonoDosValor" prefWidth="140.0" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Label prefWidth="120.0" text="Pacientes asignados:" />
+            <Label fx:id="lblPacientesAsignValor" prefWidth="300.0" />
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_RIGHT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Button fx:id="btnEditar" mnemonicParsing="false" onAction="#cerrarVentana" prefWidth="120.0" text="Editar" />
+                <Button fx:id="btnAceptar" mnemonicParsing="false" onAction="#cerrarVentana" prefWidth="120.0" text="Aceptar" />
+            </children>
+        </HBox>
+    </children>
+</VBox>

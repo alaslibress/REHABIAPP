@@ -13,6 +13,8 @@ javafx {
 }
 
 dependencies {
+    //Javafx
+    implementation 'org.controlsfx:controlsfx:11.2.2'
     //PostgreSQL Driver
     implementation 'org.postgresql:postgresql:42.6.0'
 }

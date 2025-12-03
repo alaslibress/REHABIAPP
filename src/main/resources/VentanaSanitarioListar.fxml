@@ -12,55 +12,66 @@
         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
     <children>
-        <Label fx:id="lblTituloVentana" text="Información del sanitario" />
+        <Label fx:id="lblTituloVentana" style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Informacion del sanitario" />
         <Separator prefWidth="200.0" />
-        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+
+        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Nombre:" />
-            <Label fx:id="lblNombreValor" prefWidth="300.0" />
+                <Label prefWidth="150.0" style="-fx-font-weight: bold;" text="Nombre:" />
+                <Label fx:id="lblNombreValor" prefWidth="300.0" />
             </children>
         </HBox>
-        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+
+        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Apellidos:" />
-            <Label fx:id="lblApellidosValor" prefWidth="300.0" />
+                <Label prefWidth="150.0" style="-fx-font-weight: bold;" text="Apellidos:" />
+                <Label fx:id="lblApellidosValor" prefWidth="300.0" />
             </children>
         </HBox>
-        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+
+        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="DNI:" />
-            <Label fx:id="lblDNIValor" prefWidth="300.0" />
+                <Label prefWidth="150.0" style="-fx-font-weight: bold;" text="DNI:" />
+                <Label fx:id="lblDNIValor" prefWidth="300.0" />
             </children>
         </HBox>
-        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+
+        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Cargo:" />
-            <Label fx:id="lblCargoValor" prefWidth="300.0" />
+                <Label prefWidth="150.0" style="-fx-font-weight: bold;" text="Cargo:" />
+                <Label fx:id="lblCargoValor" prefWidth="300.0" />
             </children>
         </HBox>
-        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+
+        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Email:" />
-            <Label fx:id="lblEmailValor" prefWidth="300.0" />
+                <Label prefWidth="150.0" style="-fx-font-weight: bold;" text="Email:" />
+                <Label fx:id="lblEmailValor" prefWidth="300.0" />
             </children>
         </HBox>
-        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+
+        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Teléfonos:" />
-            <Label fx:id="lblTelefonoUnoValor" prefWidth="140.0" />
-                <Separator orientation="VERTICAL" prefHeight="200.0" />
-            <Label fx:id="lblTelefonoDosValor" prefWidth="140.0" />
+                <Label prefWidth="150.0" style="-fx-font-weight: bold;" text="Telefonos:" />
+                <Label fx:id="lblTelefonoUnoValor" prefWidth="130.0" />
+                <Separator orientation="VERTICAL" prefHeight="20.0" />
+                <Label fx:id="lblTelefonoDosValor" prefWidth="130.0" />
             </children>
         </HBox>
-        <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+
+        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Pacientes asignados:" />
-            <Label fx:id="lblPacientesAsignValor" prefWidth="300.0" />
+                <Label prefWidth="150.0" style="-fx-font-weight: bold;" text="Pacientes asignados:" />
+                <Label fx:id="lblPacientesAsignValor" prefWidth="300.0" />
             </children>
         </HBox>
-        <HBox alignment="CENTER_RIGHT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
+
+        <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
+            <VBox.margin>
+                <Insets top="20.0" />
+            </VBox.margin>
             <children>
-                <Button fx:id="btnEditar" mnemonicParsing="false" onAction="#cerrarVentana" prefWidth="120.0" text="Editar" />
+                <Button fx:id="btnEditar" mnemonicParsing="false" onAction="#abrirEdicion" prefWidth="120.0" text="Editar" />
                 <Button fx:id="btnAceptar" mnemonicParsing="false" onAction="#cerrarVentana" prefWidth="120.0" text="Aceptar" />
             </children>
         </HBox>

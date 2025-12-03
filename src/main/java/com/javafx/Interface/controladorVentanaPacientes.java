@@ -1,6 +1,9 @@
 package com.javafx.Interface;
 
 import com.javafx.Clases.Paciente;
+import com.javafx.Clases.SesionUsuario;
+import com.javafx.Clases.VentanaUtil;
+import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.PacienteDAO;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -11,6 +14,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -18,8 +22,13 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+
 import java.util.List;
 
+/**
+ * Controlador para la ventana principal de gestion de pacientes
+ * Muestra la lista de pacientes y permite realizar operaciones CRUD
+ */
 public class controladorVentanaPacientes {
 
     @FXML
@@ -44,13 +53,19 @@ public class controladorVentanaPacientes {
     private TableColumn<Paciente, String> colApellidos;
 
     @FXML
-    private TableColumn<Paciente, Integer> colCargo;
-
-    @FXML
     private TableColumn<Paciente, String> colDNI;
 
     @FXML
+    private TableColumn<Paciente, String> colDiscapacidad;
+
+    @FXML
+    private TableColumn<Paciente, Integer> colEdad;
+
+    @FXML
     private TableColumn<Paciente, String> colNombre;
+
+    @FXML
+    private TableColumn<Paciente, Integer> colProtesis;
 
     @FXML
     private Label lblBuscarPacientes;
@@ -66,108 +81,296 @@ public class controladorVentanaPacientes {
 
     @FXML
     private VBox vboxContenedorPrinPacientes;
-    
-    //Lista observable para la tabla
+
+    //Lista observable de pacientes
     private ObservableList<Paciente> listaPacientes;
-    
+
     //DAO para operaciones de base de datos
     private PacienteDAO pacienteDAO;
 
-    //Metodo initialize se ejecuta automaticamente al cargar el FXML
+    //DNI del sanitario logueado
+    private String dniSanitarioActual;
+
+    /**
+     * Metodo initialize se ejecuta automaticamente al cargar el FXML
+     */
     @FXML
     public void initialize() {
         //Inicializar DAO
         pacienteDAO = new PacienteDAO();
-        
-        //Configurar columnas de la tabla
+
+        //Inicializar lista observable
+        listaPacientes = FXCollections.observableArrayList();
+
+        //Configurar la tabla
         configurarTabla();
-        
-        //Cargar datos de la base de datos
+
+        //Permitir seleccion multiple
+        tblPacientes.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        //Cargar pacientes automaticamente
         cargarPacientes();
     }
-    
-    //Metodo para configurar las columnas de la tabla
+
+    /**
+     * Configura los permisos de la ventana segun el usuario logueado
+     * No especialistas (enfermeros): solo pueden ver pacientes (listar)
+     * Especialistas: acceso completo (CRUD)
+     */
+    public void configurarPermisos() {
+        SesionUsuario sesion = SesionUsuario.getInstancia();
+
+        if (!sesion.esEspecialista()) {
+            //Los no especialistas solo pueden LISTAR (leer)
+            //Deshabilitar boton de añadir
+            btnAnadirPaciente.setDisable(true);
+            btnAnadirPaciente.setOpacity(0.5);
+            btnAnadirPaciente.setTooltip(new javafx.scene.control.Tooltip(
+                    "No tienes permisos para añadir pacientes"));
+
+            //Deshabilitar boton de eliminar
+            btnEliminarPaciente.setDisable(true);
+            btnEliminarPaciente.setOpacity(0.5);
+            btnEliminarPaciente.setTooltip(new javafx.scene.control.Tooltip(
+                    "No tienes permisos para eliminar pacientes"));
+
+            //Deshabilitar boton de abrir/editar (solo ver)
+            btnAbrirPaciente.setText("Ver");
+
+            System.out.println("Permisos de solo lectura aplicados para: " + sesion.getCargo());
+        } else {
+            System.out.println("Permisos completos aplicados para: " + sesion.getCargo());
+        }
+
+        //Establecer DNI del sanitario
+        dniSanitarioActual = sesion.getDniUsuario();
+    }
+
+    /**
+     * Realiza una busqueda de pacientes con el texto especificado
+     * Llamado desde la ventana principal para busqueda rapida
+     * @param textoBusqueda Texto a buscar
+     */
+    public void ejecutarBusqueda(String textoBusqueda) {
+        if (textoBusqueda != null && !textoBusqueda.isEmpty()) {
+            txfBuscarPacientes.setText(textoBusqueda);
+            realizarBusqueda();
+        }
+    }
+
+    /**
+     * Realiza la busqueda con el texto del campo de busqueda
+     */
+    private void realizarBusqueda() {
+        String texto = txfBuscarPacientes.getText().trim();
+
+        if (texto.isEmpty()) {
+            cargarPacientes();
+            return;
+        }
+
+        listaPacientes.clear();
+        List<Paciente> pacientesEncontrados = pacienteDAO.buscarPorTexto(texto);
+        listaPacientes.addAll(pacientesEncontrados);
+    }
+
+    /**
+     * Configura las columnas de la tabla
+     */
     private void configurarTabla() {
-        //Vincular columnas con propiedades del objeto Paciente
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
         colApellidos.setCellValueFactory(new PropertyValueFactory<>("apellidos"));
         colDNI.setCellValueFactory(new PropertyValueFactory<>("dni"));
-        colCargo.setCellValueFactory(new PropertyValueFactory<>("protesis"));
-        
-        System.out.println("Tabla de pacientes configurada");
-    }
-    
-    //Metodo para cargar todos los pacientes de la base de datos en la tabla
-    private void cargarPacientes() {
-        try {
-            //Obtener lista de pacientes desde la base de datos
-            List<Paciente> pacientes = pacienteDAO.listarTodos();
-            
-            //Convertir a ObservableList y asignar a la tabla
-            listaPacientes = FXCollections.observableArrayList(pacientes);
-            tblPacientes.setItems(listaPacientes);
-            
-            System.out.println("Tabla cargada con " + pacientes.size() + " pacientes");
-            
-        } catch (Exception e) {
-            System.err.println("Error al cargar pacientes: " + e.getMessage());
-            e.printStackTrace();
-        }
+        colEdad.setCellValueFactory(new PropertyValueFactory<>("edad"));
+        colDiscapacidad.setCellValueFactory(new PropertyValueFactory<>("discapacidad"));
+        colProtesis.setCellValueFactory(new PropertyValueFactory<>("protesis"));
+
+        //Asignar la lista observable a la tabla
+        tblPacientes.setItems(listaPacientes);
     }
 
+    /**
+     * Establece el DNI del sanitario logueado y carga los pacientes
+     * @param dniSanitario DNI del sanitario
+     */
+    public void setDniSanitario(String dniSanitario) {
+        this.dniSanitarioActual = dniSanitario;
+        cargarPacientes();
+    }
+
+    /**
+     * Carga todos los pacientes desde la base de datos
+     */
+    private void cargarPacientes() {
+        listaPacientes.clear();
+
+        List<Paciente> pacientes = pacienteDAO.listarTodos();
+        listaPacientes.addAll(pacientes);
+
+        System.out.println("Pacientes cargados: " + pacientes.size());
+    }
+
+    /**
+     * Abre la ficha de informacion del paciente seleccionado
+     */
     @FXML
     void abrirFichaPaciente(ActionEvent event) {
-        //Obtener paciente seleccionado en la tabla
         Paciente pacienteSeleccionado = tblPacientes.getSelectionModel().getSelectedItem();
-        
-        if (pacienteSeleccionado != null) {
-            try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaListarPaciente.fxml"));
-                Parent root = loader.load();
-                
-                //Obtener el controlador y pasarle el DNI del paciente
-                controladorVentanaPacienteListar controlador = loader.getController();
-                controlador.cargarDatosPaciente(pacienteSeleccionado.getDni());
-                
-                Stage stage = new Stage();
-                stage.setScene(new Scene(root));
-                stage.initModality(Modality.APPLICATION_MODAL);
-                stage.showAndWait();
-            } catch (Exception e) {
-                e.printStackTrace();
+
+        if (pacienteSeleccionado == null) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Debe seleccionar un paciente de la lista.",
+                    TipoMensaje.ADVERTENCIA
+            );
+            return;
+        }
+
+        try {
+            //Ruta absoluta desde resources con / al principio
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaListarPaciente.fxml"));
+            Parent root = loader.load();
+
+            //Obtener el controlador y cargar los datos del paciente
+            controladorVentanaPacienteListar controlador = loader.getController();
+            controlador.cargarDatosPaciente(pacienteSeleccionado.getDni());
+
+            //Configurar modo solo lectura para no especialistas
+            SesionUsuario sesion = SesionUsuario.getInstancia();
+            if (!sesion.esEspecialista()) {
+                controlador.setModoSoloLectura(true);
             }
-        } else {
-            System.out.println("No hay ningun paciente seleccionado");
+
+            //Crear y mostrar la ventana modal
+            Stage stage = new Stage();
+            stage.setTitle("Ficha del Paciente");
+            stage.setScene(new Scene(root));
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setResizable(false);
+            stage.showAndWait();
+
+            //Recargar la lista si hubo cambios
+            if (controlador.hayCambiosRealizados()) {
+                cargarPacientes();
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al abrir ficha del paciente: " + e.getMessage());
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error al abrir la ficha del paciente.",
+                    TipoMensaje.ERROR
+            );
         }
     }
 
-    @FXML
-    void abrirFiltrosPaciente(ActionEvent event) {
-
-    }
-
+    /**
+     * Abre el formulario para crear un nuevo paciente
+     */
     @FXML
     void abrirFormularioNuevoPaciente(ActionEvent event) {
         try {
+            //Ruta absoluta desde resources con / al principio
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaAgregarPaciente.fxml"));
             Parent root = loader.load();
+
+            //Obtener el controlador y pasar el DNI del sanitario
+            controladorAgregarPaciente controlador = loader.getController();
+            controlador.setDniSanitario(dniSanitarioActual);
+
+            //Crear y mostrar la ventana modal
             Stage stage = new Stage();
+            stage.setTitle("Nuevo Paciente");
             stage.setScene(new Scene(root));
             stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setResizable(false);
             stage.showAndWait();
+
+            //Recargar la lista de pacientes
+            cargarPacientes();
+
         } catch (Exception e) {
+            System.err.println("Error al abrir formulario de nuevo paciente: " + e.getMessage());
             e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error al abrir el formulario de nuevo paciente.",
+                    TipoMensaje.ERROR
+            );
         }
     }
 
+    /**
+     * Filtra los pacientes segun el texto de busqueda
+     */
     @FXML
-    void eliminarPacientesSeleccionado(ActionEvent event) {
-
+    void abrirFiltrosPacientes(ActionEvent event) {
+        buscarPacientes(event);
     }
 
+    /**
+     * Busca pacientes por texto
+     */
+    @FXML
+    void buscarPacientes(ActionEvent event) {
+        String textoBusqueda = txfBuscarPacientes.getText().trim();
+
+        listaPacientes.clear();
+
+        if (textoBusqueda.isEmpty()) {
+            //Si no hay texto, mostrar todos
+            List<Paciente> pacientes = pacienteDAO.listarTodos();
+            listaPacientes.addAll(pacientes);
+        } else {
+            //Buscar por texto
+            List<Paciente> pacientes = pacienteDAO.buscarPorTexto(textoBusqueda);
+            listaPacientes.addAll(pacientes);
+        }
+    }
+
+    /**
+     * Elimina el paciente seleccionado
+     */
+    @FXML
+    void eliminarPacienteSeleccionado(ActionEvent event) {
+        Paciente pacienteSeleccionado = tblPacientes.getSelectionModel().getSelectedItem();
+
+        if (pacienteSeleccionado == null) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Debe seleccionar un paciente para eliminar.",
+                    TipoMensaje.ADVERTENCIA
+            );
+            return;
+        }
+
+        //Mostrar ventana de confirmacion
+        String mensaje = "¿Esta seguro de que desea eliminar al paciente " +
+                pacienteSeleccionado.getNombreCompleto() + " (" + pacienteSeleccionado.getDni() + ")?\n\n" +
+                "Esta accion eliminara tambien sus citas y telefonos asociados.";
+
+        boolean confirmado = VentanaUtil.mostrarVentanaPregunta(mensaje);
+
+        if (confirmado) {
+            boolean eliminado = pacienteDAO.eliminar(pacienteSeleccionado.getDni());
+
+            if (eliminado) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "El paciente ha sido eliminado correctamente.",
+                        TipoMensaje.EXITO
+                );
+                cargarPacientes();
+            } else {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "No se pudo eliminar el paciente.",
+                        TipoMensaje.ERROR
+                );
+            }
+        }
+    }
+
+    /**
+     * Selecciona todos los pacientes de la tabla
+     */
     @FXML
     void seleccionarTodosPacientes(ActionEvent event) {
-
+        tblPacientes.getSelectionModel().selectAll();
     }
-
 }

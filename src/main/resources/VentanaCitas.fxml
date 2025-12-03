@@ -4,110 +4,126 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox fx:id="vboxContenedorPrincipal" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="700.0" prefWidth="1100.0" spacing="15.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaCitas">
-   <children>
-      <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="350.0" spacing="20.0" VBox.vgrow="ALWAYS">
-         <children>
-            <VBox prefHeight="398.0" prefWidth="860.0" spacing="15.0" HBox.hgrow="ALWAYS">
-               <children>
-                  <Label fx:id="lblTituloPestania" text="Citas">
-                     <VBox.margin>
-                        <Insets />
-                     </VBox.margin>
-                  </Label>
-                  <Button fx:id="btnSeleccionarTodo" disable="true" mnemonicParsing="false" prefWidth="120.0" text="Seleccionar todo">
-                     <VBox.margin>
-                        <Insets bottom="20.0" left="300.0" />
-                     </VBox.margin>
-                  </Button>
-                  <DatePicker fx:id="dprCalendario" onAction="#seleccionarFecha" prefHeight="240.0" prefWidth="371.0" />
-                  <HBox alignment="BOTTOM_RIGHT" prefHeight="100.0" prefWidth="200.0" spacing="10.0" VBox.vgrow="ALWAYS">
-                     <children>
-                        <Button fx:id="btnEliminarCita" mnemonicParsing="false" onAction="#eliminarCitaSeleccionada" prefWidth="130.0" text="Eliminar" />
-                        <Button fx:id="btnVerCita" mnemonicParsing="false" onAction="#verCita" prefWidth="130.0" text="Ver" />
-                     </children>
-                     <padding>
-                        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                     </padding>
-                  </HBox>
-               </children>
-            </VBox>
-         </children>
-         <VBox.margin>
-            <Insets />
-         </VBox.margin>
-      </HBox>
-      <HBox prefHeight="100.0" prefWidth="200.0" spacing="20.0" VBox.vgrow="ALWAYS">
-         <children>
-            <VBox prefHeight="198.0" prefWidth="860.0" spacing="15.0" HBox.hgrow="ALWAYS">
-               <children>
-                  <Label fx:id="lblNuevaCita" text="Nueva cita:">
-                     <VBox.margin>
-                        <Insets bottom="10.0" />
-                     </VBox.margin>
-                  </Label>
-                  <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="15.0">
-                     <children>
-                        <Label fx:id="lblDNIUsuario" text="DNI Usuario: ">
-                           <HBox.margin>
-                              <Insets right="15.0" />
-                           </HBox.margin>
-                        </Label>
-                        <TextField fx:id="txfDNICita" prefHeight="30.0" prefWidth="280.0" promptText="DNI">
-                           <HBox.margin>
-                              <Insets right="50.0" />
-                           </HBox.margin>
-                        </TextField>
-                        <Label fx:id="lblHora" text="Hora: ">
-                           <HBox.margin>
-                              <Insets right="10.0" />
-                           </HBox.margin>
-                        </Label>
-                        <Spinner fx:id="spnHoraCita" editable="true" prefHeight="30.0" prefWidth="120.0">
-                           <HBox.margin>
-                              <Insets />
-                           </HBox.margin>
-                        </Spinner>
-                        <Label fx:id="lblSeparadorHora" text=":" />
-                        <Spinner fx:id="spnMinutoCita" editable="true" prefHeight="30.0" prefWidth="120.0" />
-                     </children>
-                  </HBox>
-                  <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="15.0">
-                     <children>
-                        <Label fx:id="lblFechaCita" text="Fecha:  Dia:" />
-                        <Spinner fx:id="spnDiaCita" editable="true" prefHeight="30.0" prefWidth="80.0" />
-                        <Label text="Mes:" />
-                        <Spinner fx:id="spnMesCita" editable="true" prefHeight="30.0" prefWidth="80.0" />
-                        <Label text="Año:" />
-                        <Spinner fx:id="spnAnioCita" editable="true" prefHeight="30.0" prefWidth="100.0" />
-                     </children>
-                     <padding>
-                        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                     </padding>
-                  </HBox>
-                  <HBox alignment="BOTTOM_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0" VBox.vgrow="ALWAYS">
-                     <children>
-                        <Button fx:id="btnRestablecer" mnemonicParsing="false" onAction="#restablecerValoresDeCita" prefWidth="130.0" text="Restablecer" />
-                        <Button fx:id="btnAniadir" mnemonicParsing="false" onAction="#aniadirCita" prefWidth="130.0" text="Añadir" />
-                     </children>
-                     <VBox.margin>
-                        <Insets />
-                     </VBox.margin>
-                     <padding>
-                        <Insets bottom="10.0" top="10.0" />
-                     </padding>
-                  </HBox>
-               </children>
-            </VBox>
-         </children>
-      </HBox>
-   </children>
-   <padding>
-      <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-   </padding>
+<VBox fx:id="vboxContenedorPrincipal" prefHeight="700.0" prefWidth="1100.0" spacing="15.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaCitas">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+    <children>
+        <!-- Titulo -->
+        <Label fx:id="lblTituloPestania" style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Gestion de Citas" />
+
+        <Separator />
+
+        <!-- Contenido principal -->
+        <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+            <children>
+                <!-- Columna izquierda: Calendario y lista de citas -->
+                <VBox prefWidth="600.0" spacing="15.0" HBox.hgrow="ALWAYS">
+                    <children>
+                        <!-- Seccion calendario -->
+                        <Label style="-fx-font-weight: bold;" text="Seleccionar fecha:" />
+
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                            <children>
+                                <DatePicker fx:id="dpFechaSeleccionada" onAction="#seleccionarFecha" prefWidth="200.0" />
+                                <Button fx:id="btnHoy" onAction="#irAHoy" text="Hoy" />
+                                <Button fx:id="btnVerTodas" onAction="#verTodasLasCitas" text="Ver todas" />
+                            </children>
+                        </HBox>
+
+                        <Separator />
+
+                        <!-- Tabla de citas -->
+                        <Label style="-fx-font-weight: bold;" text="Citas programadas:" />
+
+                        <TableView fx:id="tblCitas" prefHeight="300.0" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="colFecha" prefWidth="100.0" text="Fecha" />
+                                <TableColumn fx:id="colHora" prefWidth="80.0" text="Hora" />
+                                <TableColumn fx:id="colPaciente" prefWidth="200.0" text="Paciente" />
+                                <TableColumn fx:id="colDNIPaciente" prefWidth="100.0" text="DNI Paciente" />
+                                <TableColumn fx:id="colSanitario" prefWidth="150.0" text="Sanitario" />
+                            </columns>
+                        </TableView>
+
+                        <!-- Botones de accion -->
+                        <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                            <children>
+                                <Button fx:id="btnEliminarCita" onAction="#eliminarCitaSeleccionada" prefWidth="100.0" text="Eliminar" />
+                                <Button fx:id="btnVerCita" onAction="#verCitaSeleccionada" prefWidth="100.0" text="Ver cita" />
+                            </children>
+                        </HBox>
+                    </children>
+                </VBox>
+
+                <!-- Separador vertical -->
+                <Separator orientation="VERTICAL" />
+
+                <!-- Columna derecha: Nueva cita -->
+                <VBox prefWidth="400.0" spacing="15.0">
+                    <children>
+                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Nueva Cita" />
+
+                        <Separator />
+
+                        <!-- DNI Paciente -->
+                        <VBox spacing="5.0">
+                            <children>
+                                <Label text="DNI del Paciente:" />
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <TextField fx:id="txtDNIPaciente" prefWidth="150.0" promptText="12345678X" />
+                                        <Button fx:id="btnBuscarPaciente" onAction="#buscarPaciente" text="Buscar" />
+                                    </children>
+                                </HBox>
+                                <Label fx:id="lblNombrePaciente" style="-fx-text-fill: #666666;" text="" />
+                            </children>
+                        </VBox>
+
+                        <!-- Fecha de la cita -->
+                        <VBox spacing="5.0">
+                            <children>
+                                <Label text="Fecha de la cita:" />
+                                <DatePicker fx:id="dpFechaNuevaCita" prefWidth="200.0" />
+                            </children>
+                        </VBox>
+
+                        <!-- Hora de la cita -->
+                        <VBox spacing="5.0">
+                            <children>
+                                <Label text="Hora de la cita:" />
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Spinner fx:id="spnHora" editable="true" prefWidth="80.0" />
+                                        <Label text=":" />
+                                        <Spinner fx:id="spnMinuto" editable="true" prefWidth="80.0" />
+                                        <Label text="h" />
+                                    </children>
+                                </HBox>
+                            </children>
+                        </VBox>
+
+                        <!-- Botones -->
+                        <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                            <VBox.margin>
+                                <Insets top="20.0" />
+                            </VBox.margin>
+                            <children>
+                                <Button fx:id="btnRestablecer" onAction="#restablecerFormulario" prefWidth="100.0" text="Limpiar" />
+                                <Button fx:id="btnAniadirCita" onAction="#aniadirCita" prefWidth="100.0" text="Crear cita" />
+                            </children>
+                        </HBox>
+                    </children>
+                </VBox>
+            </children>
+        </HBox>
+    </children>
 </VBox>

@@ -7,13 +7,14 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-//Clase para gestionar la conexion con la base de datos PostgreSQL Lee la configuracion desde un archivo properties
+//Clase para gestionar la conexion con la base de datos PostgreSQL
+//Lee la configuracion desde un archivo properties
 public class ConexionBD {
 
-    // Propiedades de configuracion
+    //Propiedades de configuracion
     private static Properties props = null;
 
-    // Instancia unica de la conexion (Singleton)
+    //Instancia unica de la conexion (Singleton)
     private static Connection conexion = null;
 
     //Constructor privado para evitar instanciacion externa
@@ -44,7 +45,8 @@ public class ConexionBD {
         }
     }
 
-    //Metodo que obtiene la conexion a la base de datos @return Connection objeto de conexion a la BD
+    //Metodo que obtiene la conexion a la base de datos
+    //Retorna Connection objeto de conexion a la BD
     public static Connection getConexion() {
         try {
             //Si la conexion no existe o esta cerrada, crear nueva conexion
@@ -77,6 +79,11 @@ public class ConexionBD {
         return conexion;
     }
 
+    //Alias del metodo getConexion para compatibilidad
+    public static Connection getConnection() {
+        return getConexion();
+    }
+
     //Metodo para cerrar la conexion a la base de datos
     public static void cerrarConexion() {
         try {
@@ -90,7 +97,8 @@ public class ConexionBD {
         }
     }
 
-    //Metodo para probar la conexion @return true si la conexion es exitosa, false en caso contrario
+    //Metodo para probar la conexion
+    //Retorna true si la conexion es exitosa, false en caso contrario
     public static boolean probarConexion() {
         try {
             Connection conn = getConexion();

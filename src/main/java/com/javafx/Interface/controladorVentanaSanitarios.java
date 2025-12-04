@@ -203,111 +203,21 @@ public class controladorVentanaSanitarios {
     }
 
     /**
-     * Abre la ventana de filtros de sanitarios
+     * Filtra los sanitarios segun el texto del campo de busqueda
      * @param event Evento del boton
      */
     @FXML
     void abrirFiltrosSanitarios(ActionEvent event) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaFiltroSanitarios.fxml"));
-            Parent root = loader.load();
-
-            controladorFiltroSanitarios controlador = loader.getController();
-
-            Stage stage = new Stage();
-            stage.setTitle("Filtrar Sanitarios");
-            stage.setScene(new Scene(root));
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.setResizable(false);
-            stage.showAndWait();
-
-            //Si se aplicaron filtros, filtrar la lista
-            if (controlador.seFiltrosAplicados()) {
-                aplicarFiltros(controlador.getFiltros());
-            }
-
-        } catch (Exception e) {
-            System.err.println("Error al abrir ventana de filtros: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Aplica los filtros seleccionados a la lista de sanitarios
-     * @param filtros Objeto con los criterios de filtrado
-     */
-    private void aplicarFiltros(controladorFiltroSanitarios.FiltrosSanitario filtros) {
-        //Obtener todos los sanitarios
-        List<Sanitario> todosLosSanitarios = sanitarioDAO.listarTodos();
-
-        //Filtrar segun criterios
-        List<Sanitario> sanitariosFiltrados = todosLosSanitarios.stream()
-                //Filtro de cargo
-                .filter(s -> {
-                    if (filtros.isSoloEspecialistas() && !filtros.isSoloEnfermeros()) {
-                        return s.getCargo() != null && s.getCargo().toLowerCase().contains("especialista");
-                    } else if (filtros.isSoloEnfermeros() && !filtros.isSoloEspecialistas()) {
-                        return s.getCargo() != null && s.getCargo().toLowerCase().contains("enfermero");
-                    }
-                    return true; //Si ambos o ninguno, mostrar todos
-                })
-                //Filtro de pacientes asignados
-                .filter(s -> {
-                    if (filtros.isConPacientes() && !filtros.isSinPacientes()) {
-                        return s.getNumPacientes() > 0;
-                    } else if (filtros.isSinPacientes() && !filtros.isConPacientes()) {
-                        return s.getNumPacientes() == 0;
-                    }
-                    return true;
-                })
-                .collect(java.util.stream.Collectors.toList());
-
-        //Ordenar segun criterio
-        java.util.Comparator<Sanitario> comparador = obtenerComparadorSanitarios(filtros.getOrdenarPor());
-        if (!filtros.isOrdenAscendente()) {
-            comparador = comparador.reversed();
-        }
-        sanitariosFiltrados.sort(comparador);
-
-        //Actualizar lista
-        listaSanitarios = FXCollections.observableArrayList(sanitariosFiltrados);
-        tblSanitarios.setItems(listaSanitarios);
-
-        System.out.println("Filtros aplicados. Sanitarios mostrados: " + sanitariosFiltrados.size());
-    }
-
-    /**
-     * Obtiene el comparador segun el campo de ordenacion
-     * @param campo Campo por el que ordenar
-     * @return Comparador correspondiente
-     */
-    private java.util.Comparator<Sanitario> obtenerComparadorSanitarios(String campo) {
-        switch (campo) {
-            case "Apellidos":
-                return java.util.Comparator.comparing(Sanitario::getApellidos, String.CASE_INSENSITIVE_ORDER);
-            case "DNI":
-                return java.util.Comparator.comparing(Sanitario::getDni, String.CASE_INSENSITIVE_ORDER);
-            case "Cargo":
-                return java.util.Comparator.comparing(s -> s.getCargo() != null ? s.getCargo() : "", String.CASE_INSENSITIVE_ORDER);
-            case "Num. Pacientes":
-                return java.util.Comparator.comparingInt(Sanitario::getNumPacientes);
-            case "Nombre":
-            default:
-                return java.util.Comparator.comparing(Sanitario::getNombre, String.CASE_INSENSITIVE_ORDER);
-        }
-    }
-
-    /**
-     * Busca sanitarios por texto en el campo de busqueda
-     * @param event Evento del campo o boton
-     */
-    private void buscarSanitariosPorTexto() {
         String textoBusqueda = txfBuscarSanitarios.getText().trim();
 
         if (textoBusqueda.isEmpty()) {
+            //Si el campo esta vacio, mostrar todos los sanitarios
             cargarSanitarios();
         } else {
+            //Buscar sanitarios que coincidan con el texto
             List<Sanitario> sanitariosFiltrados = sanitarioDAO.buscarPorTexto(textoBusqueda);
+
+            //Actualizar la tabla con los resultados
             listaSanitarios = FXCollections.observableArrayList(sanitariosFiltrados);
             tblSanitarios.setItems(listaSanitarios);
         }
@@ -418,7 +328,7 @@ public class controladorVentanaSanitarios {
      */
     @FXML
     void buscarSanitarios(ActionEvent event) {
-        buscarSanitariosPorTexto();
+        abrirFiltrosSanitarios(event);
     }
 
     /**
@@ -429,7 +339,11 @@ public class controladorVentanaSanitarios {
     public void ejecutarBusqueda(String textoBusqueda) {
         if (textoBusqueda != null && !textoBusqueda.isEmpty()) {
             txfBuscarSanitarios.setText(textoBusqueda);
-            buscarSanitariosPorTexto();
+
+            //Realizar busqueda
+            listaSanitarios.clear();
+            List<Sanitario> sanitariosEncontrados = sanitarioDAO.buscarPorTexto(textoBusqueda);
+            listaSanitarios.addAll(sanitariosEncontrados);
         }
     }
 }

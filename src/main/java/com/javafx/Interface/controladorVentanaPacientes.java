@@ -299,96 +299,11 @@ public class controladorVentanaPacientes {
     }
 
     /**
-     * Abre la ventana de filtros de pacientes
+     * Filtra los pacientes segun el texto de busqueda
      */
     @FXML
     void abrirFiltrosPacientes(ActionEvent event) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaFiltroPacientes.fxml"));
-            Parent root = loader.load();
-
-            controladorFiltroPacientes controlador = loader.getController();
-
-            Stage stage = new Stage();
-            stage.setTitle("Filtrar Pacientes");
-            stage.setScene(new Scene(root));
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.setResizable(false);
-            stage.showAndWait();
-
-            //Si se aplicaron filtros, filtrar la lista
-            if (controlador.seFiltrosAplicados()) {
-                aplicarFiltros(controlador.getFiltros());
-            }
-
-        } catch (Exception e) {
-            System.err.println("Error al abrir ventana de filtros: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Aplica los filtros seleccionados a la lista de pacientes
-     * @param filtros Objeto con los criterios de filtrado
-     */
-    private void aplicarFiltros(controladorFiltroPacientes.FiltrosPaciente filtros) {
-        //Obtener todos los pacientes
-        List<Paciente> todosLosPacientes = pacienteDAO.listarTodos();
-
-        //Filtrar segun criterios
-        List<Paciente> pacientesFiltrados = todosLosPacientes.stream()
-                //Filtro de protesis
-                .filter(p -> {
-                    if (filtros.isConProtesis() && !filtros.isSinProtesis()) {
-                        return p.getProtesis() == 1;
-                    } else if (filtros.isSinProtesis() && !filtros.isConProtesis()) {
-                        return p.getProtesis() == 0;
-                    }
-                    return true; //Si ambos o ninguno, mostrar todos
-                })
-                //Filtro de edad
-                .filter(p -> {
-                    if (filtros.isFiltrarEdad()) {
-                        int edad = p.getEdad();
-                        return edad >= filtros.getEdadMinima() && edad <= filtros.getEdadMaxima();
-                    }
-                    return true;
-                })
-                .collect(java.util.stream.Collectors.toList());
-
-        //Ordenar segun criterio
-        java.util.Comparator<Paciente> comparador = obtenerComparadorPacientes(filtros.getOrdenarPor());
-        if (!filtros.isOrdenAscendente()) {
-            comparador = comparador.reversed();
-        }
-        pacientesFiltrados.sort(comparador);
-
-        //Actualizar lista
-        listaPacientes.clear();
-        listaPacientes.addAll(pacientesFiltrados);
-
-        System.out.println("Filtros aplicados. Pacientes mostrados: " + pacientesFiltrados.size());
-    }
-
-    /**
-     * Obtiene el comparador segun el campo de ordenacion
-     * @param campo Campo por el que ordenar
-     * @return Comparador correspondiente
-     */
-    private java.util.Comparator<Paciente> obtenerComparadorPacientes(String campo) {
-        switch (campo) {
-            case "Apellidos":
-                return java.util.Comparator.comparing(Paciente::getApellidos, String.CASE_INSENSITIVE_ORDER);
-            case "DNI":
-                return java.util.Comparator.comparing(Paciente::getDni, String.CASE_INSENSITIVE_ORDER);
-            case "Edad":
-                return java.util.Comparator.comparingInt(Paciente::getEdad);
-            case "Discapacidad":
-                return java.util.Comparator.comparing(p -> p.getDiscapacidad() != null ? p.getDiscapacidad() : "", String.CASE_INSENSITIVE_ORDER);
-            case "Nombre":
-            default:
-                return java.util.Comparator.comparing(Paciente::getNombre, String.CASE_INSENSITIVE_ORDER);
-        }
+        buscarPacientes(event);
     }
 
     /**

@@ -140,10 +140,14 @@ public class controladorVentanaSanitarioListar {
             controladorAgregarSanitario controlador = loader.getController();
             controlador.cargarDatosParaEdicion(sanitarioActual);
 
+            //Crear escena y aplicar CSS
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
             //Crear y mostrar la ventana modal
             Stage stage = new Stage();
             stage.setTitle("Modificar Sanitario");
-            stage.setScene(new Scene(root));
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
             stage.showAndWait();

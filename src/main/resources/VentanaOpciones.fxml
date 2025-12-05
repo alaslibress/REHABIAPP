@@ -15,29 +15,29 @@
         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
     <children>
-        <Label fx:id="lblTituloOpciones" style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Opciones" />
+        <Label fx:id="lblTituloOpciones" styleClass="label-titulo" text="Opciones" />
         <Separator prefWidth="200.0" />
         <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="15.0">
             <children>
                 <Label prefWidth="150.0" text="Tamaño de letra:" />
-                <ComboBox fx:id="cbxTamanioLetra" prefWidth="180.0" />
+                <ComboBox fx:id="cmbTamanioLetra" prefWidth="180.0" />
             </children>
         </HBox>
         <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="15.0">
             <children>
                 <Label prefWidth="150.0" text="Tema:" />
-                <RadioButton fx:id="rdbClaro" mnemonicParsing="false" selected="true" text="Claro">
+                <RadioButton fx:id="rbTemaClaro" mnemonicParsing="false" selected="true" text="Claro">
                     <toggleGroup>
                         <ToggleGroup fx:id="grupoTema" />
                     </toggleGroup>
                 </RadioButton>
-                <RadioButton fx:id="rdbOscuro" mnemonicParsing="false" text="Oscuro" toggleGroup="$grupoTema" />
+                <RadioButton fx:id="rbTemaOscuro" mnemonicParsing="false" text="Oscuro" toggleGroup="$grupoTema" />
             </children>
         </HBox>
         <HBox alignment="BOTTOM_RIGHT" prefHeight="100.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Button fx:id="btnCancelarOpciones" mnemonicParsing="false" onAction="#cerrarVentanaOpciones" prefWidth="100.0" text="Cancelar" />
-                <Button fx:id="btnGuardarOpciones" mnemonicParsing="false" onAction="#guardarOpciones" prefWidth="100.0" text="Guardar" />
+                <Button fx:id="btnCancelar" mnemonicParsing="false" onAction="#cerrarVentana" prefWidth="100.0" styleClass="button-peligro" text="Cancelar" />
+                <Button fx:id="btnAplicar" mnemonicParsing="false" onAction="#guardarOpciones" prefWidth="100.0" styleClass="button-primario" text="Guardar" />
             </children>
         </HBox>
     </children>

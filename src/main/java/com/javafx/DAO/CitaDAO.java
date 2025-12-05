@@ -164,6 +164,44 @@ public class CitaDAO {
     }
 
     /**
+     * Lista las citas de un sanitario en una fecha especifica
+     * @param dniSanitario DNI del sanitario
+     * @param fecha Fecha a buscar
+     * @return Lista de citas del sanitario en esa fecha
+     */
+    public List<Cita> obtenerCitasPorSanitarioYFecha(String dniSanitario, LocalDate fecha) {
+        List<Cita> citas = new ArrayList<>();
+
+        String query = "SELECT c.dni_pac, c.dni_san, c.fecha_cita, c.hora_cita, " +
+                "CONCAT(p.nombre_pac, ' ', p.apellido1_pac, ' ', COALESCE(p.apellido2_pac, '')) AS nombre_paciente, " +
+                "CONCAT(s.nombre_san, ' ', s.apellido1_san, ' ', COALESCE(s.apellido2_san, '')) AS nombre_sanitario " +
+                "FROM cita c " +
+                "JOIN paciente p ON c.dni_pac = p.dni_pac " +
+                "JOIN sanitario s ON c.dni_san = s.dni_san " +
+                "WHERE c.dni_san = ? AND c.fecha_cita = ? " +
+                "ORDER BY c.hora_cita ASC";
+
+        try (Connection conn = ConexionBD.getConexion();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, dniSanitario);
+            stmt.setDate(2, Date.valueOf(fecha));
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                Cita cita = mapearCitaDesdeResultSet(rs);
+                citas.add(cita);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error al listar citas por sanitario y fecha: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return citas;
+    }
+
+    /**
      * Verifica si existe una cita en una fecha y hora especifica para un sanitario
      * @param dniSanitario DNI del sanitario
      * @param fecha Fecha de la cita

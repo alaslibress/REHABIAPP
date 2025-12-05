@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="480.0" prefWidth="420.0" spacing="18.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorFiltroPacientes">
+    <padding>
+        <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
+    </padding>
+    <children>
+        <Label fx:id="lblTituloFiltros" styleClass="label-titulo" text="Filtrar Pacientes" />
+        <Separator prefWidth="200.0" />
+
+        <VBox alignment="CENTER_LEFT" spacing="10.0">
+            <children>
+                <Label style="-fx-font-weight: bold;" text="Prótesis:" />
+                <CheckBox fx:id="chkConProtesis" text="Con prótesis" />
+                <CheckBox fx:id="chkSinProtesis" text="Sin prótesis" />
+            </children>
+        </VBox>
+
+        <Separator prefWidth="200.0" />
+
+        <VBox alignment="CENTER_LEFT" spacing="10.0">
+            <children>
+                <CheckBox fx:id="chkFiltrarEdad" style="-fx-font-weight: bold;" text="Filtrar por edad:" />
+                <HBox alignment="CENTER_LEFT" spacing="12.0">
+                    <children>
+                        <Label text="Desde:" />
+                        <Spinner fx:id="spnEdadMinima" prefWidth="90.0" />
+                        <Label text="Hasta:" />
+                        <Spinner fx:id="spnEdadMaxima" prefWidth="90.0" />
+                        <Label text="años" />
+                    </children>
+                    <VBox.margin>
+                        <Insets left="25.0" />
+                    </VBox.margin>
+                </HBox>
+            </children>
+        </VBox>
+
+        <Separator prefWidth="200.0" />
+
+        <VBox alignment="CENTER_LEFT" spacing="10.0">
+            <children>
+                <Label style="-fx-font-weight: bold;" text="Ordenar por:" />
+                <HBox alignment="CENTER_LEFT" spacing="12.0">
+                    <children>
+                        <ComboBox fx:id="cmbOrdenarPor" prefWidth="180.0" />
+                    </children>
+                    <VBox.margin>
+                        <Insets left="25.0" />
+                    </VBox.margin>
+                </HBox>
+                <HBox alignment="CENTER_LEFT" spacing="20.0">
+                    <children>
+                        <RadioButton fx:id="rdbAscendente" selected="true" text="Ascendente (A-Z)">
+                            <toggleGroup>
+                                <ToggleGroup fx:id="grupoOrden" />
+                            </toggleGroup>
+                        </RadioButton>
+                        <RadioButton fx:id="rdbDescendente" text="Descendente (Z-A)" toggleGroup="$grupoOrden" />
+                    </children>
+                    <VBox.margin>
+                        <Insets left="25.0" />
+                    </VBox.margin>
+                </HBox>
+            </children>
+        </VBox>
+
+        <Separator prefWidth="200.0" />
+
+        <HBox alignment="CENTER_RIGHT" spacing="12.0">
+            <children>
+                <Button mnemonicParsing="false" onAction="#restablecerFiltros" prefHeight="35.0" prefWidth="110.0" text="Restablecer" />
+                <Button mnemonicParsing="false" onAction="#cerrarVentana" prefHeight="35.0" prefWidth="90.0" styleClass="button-peligro" text="Cancelar" />
+                <Button mnemonicParsing="false" onAction="#aplicarFiltros" prefHeight="35.0" prefWidth="90.0" styleClass="button-primario" text="Aplicar" />
+            </children>
+        </HBox>
+    </children>
+</VBox>

@@ -19,7 +19,7 @@
     <children>
         <HBox prefHeight="100.0" prefWidth="200.0">
             <children>
-                <Label fx:id="lblTituloPestaniaPacientes" text="Pacientes" />
+                <Label fx:id="lblTituloPestaniaPacientes" styleClass="label-titulo" text="Pacientes" />
                 <VBox prefHeight="100.0" prefWidth="802.0">
                     <children>
                         <Button fx:id="btnSeleccionarTodoPacientes" mnemonicParsing="false" onAction="#seleccionarTodosPacientes" text="Seleccionar todo">
@@ -34,7 +34,7 @@
                                         <Insets right="10.0" />
                                     </HBox.margin>
                                 </Label>
-                                <Button fx:id="btnBuscarPacientes" mnemonicParsing="false" onAction="#buscarPacientes" prefHeight="30.0" prefWidth="30.0">
+                                <Button fx:id="btnBuscarPacientes" mnemonicParsing="false" onAction="#buscarPacientes" prefHeight="30.0" prefWidth="30.0" styleClass="button-icono">
                                     <graphic>
                                         <ImageView fitHeight="18.0" fitWidth="25.0" pickOnBounds="true" preserveRatio="true">
                                             <image>
@@ -57,7 +57,7 @@
                                         <Insets right="100.0" />
                                     </HBox.margin>
                                 </TextField>
-                                <Button fx:id="btnAnadirPaciente" mnemonicParsing="false" onAction="#abrirFormularioNuevoPaciente" prefHeight="30.0" prefWidth="30.0">
+                                <Button fx:id="btnAnadirPaciente" mnemonicParsing="false" onAction="#abrirFormularioNuevoPaciente" prefHeight="30.0" prefWidth="30.0" styleClass="button-primario">
                                     <graphic>
                                         <ImageView fitHeight="18.0" fitWidth="74.0" pickOnBounds="true" preserveRatio="true">
                                             <image>
@@ -87,7 +87,7 @@
                         <TableColumn fx:id="colProtesis" prefWidth="70.0" text="Protesis" />
                     </columns>
                 </TableView>
-                <Button fx:id="btnFiltrarPacientes" mnemonicParsing="false" onAction="#abrirFiltrosPacientes" prefHeight="40.0" prefWidth="40.0">
+                <Button fx:id="btnFiltrarPacientes" mnemonicParsing="false" onAction="#abrirFiltrosPacientes" prefHeight="40.0" prefWidth="40.0" styleClass="button-icono">
                     <graphic>
                         <ImageView fitHeight="18.0" fitWidth="113.0" pickOnBounds="true" preserveRatio="true">
                             <image>
@@ -103,8 +103,8 @@
         </HBox>
         <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Button fx:id="btnEliminarPaciente" mnemonicParsing="false" onAction="#eliminarPacienteSeleccionado" prefWidth="100.0" text="Eliminar" textAlignment="CENTER" />
-                <Button fx:id="btnAbrirPaciente" mnemonicParsing="false" onAction="#abrirFichaPaciente" prefWidth="100.0" text="Abrir" />
+                <Button fx:id="btnEliminarPaciente" mnemonicParsing="false" onAction="#eliminarPacienteSeleccionado" prefWidth="100.0" styleClass="button-peligro" text="Eliminar" textAlignment="CENTER" />
+                <Button fx:id="btnAbrirPaciente" mnemonicParsing="false" onAction="#abrirFichaPaciente" prefWidth="100.0" styleClass="button-primario" text="Abrir" />
             </children>
         </HBox>
     </children>

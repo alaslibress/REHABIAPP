@@ -13,7 +13,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.Modality;
@@ -57,16 +56,6 @@ public class controladorPerfil {
 
     @FXML
     private Label lblTitulo;
-
-    //Campos para cambio de contraseña (pueden estar en un panel oculto o ventana aparte)
-    @FXML
-    private PasswordField txtContrasenaActual;
-
-    @FXML
-    private PasswordField txtNuevaContrasena;
-
-    @FXML
-    private PasswordField txtConfirmarContrasena;
 
     //DAO
     private SanitarioDAO sanitarioDAO;
@@ -175,9 +164,13 @@ public class controladorPerfil {
             //Obtener controlador
             controladorPerfilEditar controlador = loader.getController();
 
+            //Crear escena y aplicar CSS
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
             Stage stage = new Stage();
             stage.setTitle("Editar Mi Perfil");
-            stage.setScene(new Scene(root));
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
             stage.showAndWait();
@@ -202,21 +195,8 @@ public class controladorPerfil {
      */
     @FXML
     void cambiarContrasena(ActionEvent event) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaCambiarContrasena.fxml"));
-            Parent root = loader.load();
-
-            Stage stage = new Stage();
-            stage.setTitle("Cambiar Contraseña");
-            stage.setScene(new Scene(root));
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.setResizable(false);
-            stage.showAndWait();
-
-        } catch (Exception e) {
-            //Si no existe la ventana especifica, mostrar dialogo simple
-            mostrarDialogoCambioContrasena();
-        }
+        //Mostrar dialogo simple para cambiar contraseña
+        mostrarDialogoCambioContrasena();
     }
 
     /**
@@ -313,6 +293,10 @@ public class controladorPerfil {
         );
 
         Scene scene = new Scene(vbox, 300, 300);
+
+        //Aplicar CSS al dialogo
+        controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
         dialog.setScene(scene);
         dialog.showAndWait();
     }

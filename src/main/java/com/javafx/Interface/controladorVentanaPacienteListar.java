@@ -296,10 +296,14 @@ public class controladorVentanaPacienteListar {
             controladorAgregarPaciente controlador = loader.getController();
             controlador.cargarDatosParaEdicion(pacienteActual);
 
+            //Crear escena y aplicar CSS
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
             //Crear y mostrar la ventana modal
             Stage stage = new Stage();
             stage.setTitle("Modificar Paciente");
-            stage.setScene(new Scene(root));
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
             stage.showAndWait();

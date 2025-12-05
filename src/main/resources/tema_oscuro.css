@@ -1,0 +1,377 @@
+/* ============================================
+   ESTILOS TEMA OSCURO - RehabiAPP
+   Paleta: Grises azulados (sin negro absoluto)
+   ============================================ */
+
+/* ====== CONFIGURACION GLOBAL ====== */
+.root {
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-font-size: 14px;
+    -fx-base: #1E1E1E;
+    -fx-background: #0D1117;
+    -fx-focus-color: #5DADE2;
+    -fx-accent: #6B8EC4;
+}
+
+/* ====== CONTENEDORES PRINCIPALES ====== */
+.border-pane {
+    -fx-background-color: #0D1117;
+}
+
+.vbox, .hbox {
+    -fx-background-color: transparent;
+}
+
+#bdpPrincipal .vbox {
+    -fx-background-color: #1E1E1E;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 12, 0, 2, 0);
+}
+
+/* ====== LABELS ====== */
+.label {
+    -fx-text-fill: #E8E8E8;
+    -fx-font-size: inherit;
+}
+
+.label-titulo {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #FFFFFF;
+}
+
+#lblSlogan {
+    -fx-font-size: 11px;
+    -fx-text-fill: #95A5A6;
+    -fx-font-style: italic;
+}
+
+#lblNombreUsuario, #lblCargo {
+    -fx-font-weight: bold;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 13px;
+}
+
+#lblNombreTemporal, #lblCargoTemporal {
+    -fx-text-fill: #E8E8E8;
+    -fx-font-size: 15px;
+    -fx-font-weight: 500;
+}
+
+#lblMensajeError {
+    -fx-text-fill: #EC7063;
+    -fx-font-size: 13px;
+}
+
+#lblBuscarRapido {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: 600;
+}
+
+/* ====== TEXT FIELDS Y PASSWORD FIELDS ====== */
+.text-field, .password-field {
+    -fx-background-color: #2D2D2D;
+    -fx-background-radius: 8px;
+    -fx-border-color: #404040;
+    -fx-border-radius: 8px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 8px 12px;
+    -fx-font-size: inherit;
+    -fx-text-fill: #E8E8E8;
+}
+
+.text-field:focused, .password-field:focused {
+    -fx-border-color: #5DADE2;
+    -fx-border-width: 2px;
+    -fx-effect: dropshadow(gaussian, rgba(93, 173, 226, 0.5), 8, 0, 0, 0);
+}
+
+#txfBusquedaRapida {
+    -fx-prompt-text-fill: #7F8C8D;
+    -fx-background-radius: 0 8px 8px 0;
+    -fx-border-radius: 0 8px 8px 0;
+    -fx-border-width: 1.5px 1.5px 1.5px 0;
+}
+
+/* ====== TEXT AREA ====== */
+.text-area {
+    -fx-background-color: #2D2D2D;
+    -fx-background-radius: 8px;
+    -fx-border-color: #404040;
+    -fx-border-radius: 8px;
+    -fx-border-width: 1.5px;
+    -fx-padding: 8px;
+    -fx-text-fill: #E8E8E8;
+}
+
+.text-area:focused {
+    -fx-border-color: #5DADE2;
+    -fx-border-width: 2px;
+}
+
+.text-area .content {
+    -fx-background-color: #2D2D2D;
+}
+
+/* TextArea de la ventana de ayuda - texto blanco */
+.text-area-ayuda {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-family: monospace;
+}
+
+.text-area-ayuda .content {
+    -fx-background-color: #2D2D2D;
+}
+
+/* ====== BOTONES ESTANDAR ====== */
+.button {
+    -fx-background-color: #5499C7;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 8px;
+    -fx-padding: 10px 20px;
+    -fx-font-size: inherit;
+    -fx-font-weight: 500;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 4, 0, 0, 2);
+}
+
+.button:hover {
+    -fx-background-color: #6B8EC4;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 6, 0, 0, 3);
+}
+
+.button:pressed {
+    -fx-background-color: #4A7DA8;
+    -fx-translate-y: 1px;
+}
+
+.button:disabled {
+    -fx-background-color: #404040;
+    -fx-text-fill: #7F8C8D;
+    -fx-opacity: 0.7;
+}
+
+/* Boton secundario */
+#btnCancelar, #btnCancelarSanitario, #btnCancelarOpciones, #btnCancelarPregunta {
+    -fx-background-color: #2D2D2D;
+    -fx-text-fill: #BDC3C7;
+}
+
+#btnCancelar:hover, #btnCancelarSanitario:hover, #btnCancelarOpciones:hover, #btnCancelarPregunta:hover {
+    -fx-background-color: #404040;
+}
+
+/* Botones eliminar */
+#btnEliminar, #btnEliminarSanitario, #btnEliminarPaciente, #btnEliminarCita {
+    -fx-background-color: #E74C3C;
+    -fx-text-fill: #FFFFFF;
+}
+
+#btnEliminar:hover, #btnEliminarSanitario:hover, #btnEliminarPaciente:hover, #btnEliminarCita:hover {
+    -fx-background-color: #C0392B;
+}
+
+/* ====== BOTONES DE NAVEGACION ====== */
+#btnPestaniaSanitarios,
+#btnPestaniaPacientes,
+#btnPestaniaCitas,
+#btnPestaniaAyuda {
+    -fx-background-color: transparent;
+    -fx-text-fill: #BDC3C7;
+    -fx-background-radius: 0;
+    -fx-padding: 16px 20px;
+    -fx-font-size: inherit;
+    -fx-font-weight: 500;
+    -fx-alignment: CENTER-LEFT;
+    -fx-border-width: 0 0 0 4px;
+    -fx-border-color: transparent;
+    -fx-effect: none;
+}
+
+#btnPestaniaSanitarios:hover,
+#btnPestaniaPacientes:hover,
+#btnPestaniaCitas:hover,
+#btnPestaniaAyuda:hover {
+    -fx-background-color: #2D2D2D;
+    -fx-text-fill: #7FB3D5;
+}
+
+/* ====== BOTONES CON ICONOS ====== */
+#btnAjustes, #btnSalir, #btnPerfil {
+    -fx-background-color: #D5DBDB;
+    -fx-background-radius: 8px;
+    -fx-padding: 10px;
+    -fx-cursor: hand;
+}
+
+#btnAjustes:hover, #btnSalir:hover, #btnPerfil:hover {
+    -fx-background-color: #ECF0F1;
+}
+
+#btnBuscar, #btnBuscarSanitarios, #btnBuscarPacientes {
+    -fx-background-color: #5499C7;
+    -fx-background-radius: 8px 0 0 8px;
+    -fx-border-radius: 8px 0 0 8px;
+    -fx-padding: 8px;
+    -fx-effect: none;
+}
+
+#btnBuscar:hover {
+    -fx-background-color: #6B8EC4;
+}
+
+#btnSeleccionarTodo, #btnSeleccionarTodoPacientes {
+    -fx-background-color: #5499C7;
+    -fx-text-fill: #FFFFFF;
+}
+
+#btnAgregar, #btnAbrir, #btnFiltrar, #btnEditar, #btnAnadirSanitario, #btnAnadirPaciente, #btnFiltrarSanitarios, #btnFiltrarPacientes {
+    -fx-background-color: #D5DBDB;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px;
+}
+
+#btnAgregar:hover, #btnAbrir:hover, #btnFiltrar:hover, #btnEditar:hover, #btnAnadirSanitario:hover, #btnAnadirPaciente:hover {
+    -fx-background-color: #ECF0F1;
+}
+
+/* ====== TABLAS ====== */
+.table-view {
+    -fx-background-color: #2D2D2D;
+    -fx-border-color: #404040;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+}
+
+.table-view .column-header {
+    -fx-background-color: #1E1E1E;
+    -fx-font-weight: bold;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #FFFFFF;
+}
+
+.table-view .table-cell {
+    -fx-text-fill: #E8E8E8;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #2D2D2D;
+}
+
+.table-row-cell:even {
+    -fx-background-color: #252525;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #404040;
+}
+
+.table-row-cell:hover {
+    -fx-background-color: #353535;
+}
+
+/* ====== COMBOBOX ====== */
+.combo-box {
+    -fx-background-color: #2D2D2D;
+    -fx-background-radius: 8px;
+    -fx-border-color: #404040;
+    -fx-border-radius: 8px;
+    -fx-border-width: 1.5px;
+    -fx-font-size: inherit;
+}
+
+.combo-box:focused {
+    -fx-border-color: #5DADE2;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: #E8E8E8;
+}
+
+/* ====== SPINNER ====== */
+.spinner {
+    -fx-background-color: #2D2D2D;
+    -fx-border-color: #404040;
+    -fx-border-radius: 8px;
+    -fx-font-size: inherit;
+}
+
+.spinner .text-field {
+    -fx-text-fill: #E8E8E8;
+}
+
+/* ====== CHECKBOX Y RADIOBUTTON ====== */
+.check-box, .radio-button {
+    -fx-text-fill: #E8E8E8;
+    -fx-font-size: inherit;
+}
+
+.check-box .box, .radio-button .radio {
+    -fx-border-color: #404040;
+    -fx-background-color: #2D2D2D;
+}
+
+.check-box:selected .mark, .radio-button:selected .dot {
+    -fx-background-color: #5DADE2;
+}
+
+/* ====== DATE PICKER ====== */
+.date-picker {
+    -fx-background-color: #2D2D2D;
+    -fx-border-color: #404040;
+    -fx-border-radius: 8px;
+    -fx-font-size: inherit;
+}
+
+.date-picker:focused {
+    -fx-border-color: #5DADE2;
+}
+
+.date-picker .text-field {
+    -fx-text-fill: #E8E8E8;
+}
+
+/* ====== SEPARATOR ====== */
+.separator .line {
+    -fx-border-color: #404040;
+}
+
+/* ====== TOOLTIPS ====== */
+.tooltip {
+    -fx-background-color: #404040;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 6px;
+    -fx-font-size: 12px;
+    -fx-padding: 6px 10px;
+}
+
+/* ====== SCROLL ====== */
+.scroll-pane, .scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #404040;
+    -fx-background-radius: 4px;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #555555;
+}
+
+/* ====== VALIDACION ====== */
+.error {
+    -fx-border-color: #EC7063;
+    -fx-border-width: 2px;
+}
+
+.correcto {
+    -fx-border-color: #52BE80;
+    -fx-border-width: 2px;
+}
+
+.advertencia {
+    -fx-border-color: #F8B739;
+    -fx-border-width: 2px;
+}

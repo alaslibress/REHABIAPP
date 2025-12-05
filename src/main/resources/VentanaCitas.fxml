@@ -18,7 +18,7 @@
     </padding>
     <children>
         <!-- Titulo -->
-        <Label fx:id="lblTituloPestania" style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Gestion de Citas" />
+        <Label fx:id="lblTituloPestania" styleClass="label-titulo" text="Gestion de Citas" />
 
         <Separator />
 
@@ -57,8 +57,8 @@
                         <!-- Botones de accion -->
                         <HBox alignment="CENTER_RIGHT" spacing="10.0">
                             <children>
-                                <Button fx:id="btnEliminarCita" onAction="#eliminarCitaSeleccionada" prefWidth="100.0" text="Eliminar" />
-                                <Button fx:id="btnVerCita" onAction="#verCitaSeleccionada" prefWidth="100.0" text="Ver cita" />
+                                <Button fx:id="btnEliminarCita" onAction="#eliminarCitaSeleccionada" prefWidth="100.0" styleClass="button-peligro" text="Eliminar" />
+                                <Button fx:id="btnVerCita" onAction="#verCitaSeleccionada" prefWidth="100.0" styleClass="button-primario" text="Ver cita" />
                             </children>
                         </HBox>
                     </children>
@@ -70,7 +70,7 @@
                 <!-- Columna derecha: Nueva cita -->
                 <VBox prefWidth="400.0" spacing="15.0">
                     <children>
-                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Nueva Cita" />
+                        <Label styleClass="label-titulo" text="Nueva Cita" />
 
                         <Separator />
 
@@ -118,7 +118,7 @@
                             </VBox.margin>
                             <children>
                                 <Button fx:id="btnRestablecer" onAction="#restablecerFormulario" prefWidth="100.0" text="Limpiar" />
-                                <Button fx:id="btnAniadirCita" onAction="#aniadirCita" prefWidth="100.0" text="Crear cita" />
+                                <Button fx:id="btnAniadirCita" onAction="#aniadirCita" prefWidth="100.0" styleClass="button-primario" text="Crear cita" />
                             </children>
                         </HBox>
                     </children>

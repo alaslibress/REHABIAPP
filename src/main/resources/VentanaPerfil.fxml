@@ -14,7 +14,7 @@
     </padding>
     <children>
         <!-- Titulo -->
-        <Label fx:id="lblTitulo" style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Mi Perfil" />
+        <Label fx:id="lblTitulo" styleClass="label-titulo" text="Mi Perfil" />
 
         <Separator />
 
@@ -90,7 +90,7 @@
             <children>
                 <Button fx:id="btnCambiarContrasena" onAction="#cambiarContrasena" prefWidth="150.0" text="Cambiar contraseña" />
                 <Button fx:id="btnEditarPerfil" onAction="#editarPerfil" prefWidth="120.0" text="Editar perfil" />
-                <Button fx:id="btnCerrar" onAction="#cerrarVentana" prefWidth="100.0" text="Cerrar" />
+                <Button fx:id="btnCerrar" onAction="#cerrarVentana" prefWidth="100.0" styleClass="button-primario" text="Cerrar" />
             </children>
         </HBox>
     </children>

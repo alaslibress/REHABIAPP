@@ -1,17 +1,16 @@
 package com.javafx.Interface;
 
-import com.javafx.Clases.VentanaUtil;
-import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,73 +19,63 @@ import java.io.IOException;
 import java.util.Properties;
 
 /**
- * Controlador para la ventana de opciones/configuracion
- * Permite cambiar el tamaño de letra y el tema de la aplicacion
+ * Controlador para la ventana de opciones
+ * Permite cambiar el tamaño de letra y el tema (claro/oscuro)
+ * La configuracion se guarda en un archivo config.properties
+ * 
+ * MODIFICADO: Ahora carga archivos CSS externos en lugar de estilos inline
  */
 public class controladorVentanaOpciones {
 
     @FXML
-    private Button btnCancelarOpciones;
+    private Button btnAplicar;
 
     @FXML
-    private Button btnGuardarOpciones;
+    private Button btnCancelar;
 
     @FXML
-    private ComboBox<String> cbxTamanioLetra;
+    private ComboBox<String> cmbTamanioLetra;
+
+    @FXML
+    private RadioButton rbTemaClaro;
+
+    @FXML
+    private RadioButton rbTemaOscuro;
 
     @FXML
     private ToggleGroup grupoTema;
 
-    @FXML
-    private Label lblTituloOpciones;
-
-    @FXML
-    private RadioButton rdbClaro;
-
-    @FXML
-    private RadioButton rdbOscuro;
-
-    //Ruta del archivo de configuracion
+    // Constantes para la configuracion
     private static final String CONFIG_FILE = "config.properties";
-
-    //Claves de configuracion
     private static final String KEY_TAMANIO_LETRA = "tamanio.letra";
     private static final String KEY_TEMA = "tema";
 
-    //Valores por defecto
-    private static final String TEMA_CLARO = "claro";
-    private static final String TEMA_OSCURO = "oscuro";
-    private static final String TAMANIO_MEDIANO = "Mediano (14px)";
+    // Nombres de los archivos CSS
+    private static final String CSS_TEMA_CLARO = "/tema_claro.css";
+    private static final String CSS_TEMA_OSCURO = "/tema_oscuro.css";
+
+    // Opciones de tamaño de letra
+    private static final ObservableList<String> TAMANIOS_LETRA = FXCollections.observableArrayList(
+            "Pequeño (12px)",
+            "Mediano (14px)",
+            "Grande (16px)",
+            "Muy grande (18px)"
+    );
 
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML
      */
     @FXML
     public void initialize() {
-        //Inicializar ComboBox de tamaño de letra
-        inicializarComboTamanio();
+        // Configurar opciones del ComboBox
+        cmbTamanioLetra.setItems(TAMANIOS_LETRA);
 
-        //Cargar configuracion guardada
+        // Cargar configuracion guardada
         cargarConfiguracion();
     }
 
     /**
-     * Inicializa el ComboBox con las opciones de tamaño de letra
-     */
-    private void inicializarComboTamanio() {
-        ObservableList<String> tamanios = FXCollections.observableArrayList(
-                "Pequeño (12px)",
-                "Mediano (14px)",
-                "Grande (16px)",
-                "Muy grande (18px)"
-        );
-
-        cbxTamanioLetra.setItems(tamanios);
-        cbxTamanioLetra.setValue(TAMANIO_MEDIANO);
-    }
-
-    /**
-     * Carga la configuracion desde el archivo de propiedades
+     * Carga la configuracion desde el archivo properties
      */
     private void cargarConfiguracion() {
         Properties props = new Properties();
@@ -96,201 +85,210 @@ public class controladorVentanaOpciones {
             try (FileInputStream fis = new FileInputStream(configFile)) {
                 props.load(fis);
 
-                //Cargar tamaño de letra
-                String tamanio = props.getProperty(KEY_TAMANIO_LETRA, TAMANIO_MEDIANO);
-                cbxTamanioLetra.setValue(tamanio);
+                // Cargar tamaño de letra
+                String tamanio = props.getProperty(KEY_TAMANIO_LETRA, "Mediano (14px)");
+                cmbTamanioLetra.setValue(tamanio);
 
-                //Cargar tema
-                String tema = props.getProperty(KEY_TEMA, TEMA_CLARO);
-                if (TEMA_OSCURO.equals(tema)) {
-                    rdbOscuro.setSelected(true);
+                // Cargar tema
+                String tema = props.getProperty(KEY_TEMA, "claro");
+                if ("oscuro".equals(tema)) {
+                    rbTemaOscuro.setSelected(true);
                 } else {
-                    rdbClaro.setSelected(true);
+                    rbTemaClaro.setSelected(true);
                 }
-
-                System.out.println("Configuracion cargada correctamente");
 
             } catch (IOException e) {
                 System.err.println("Error al cargar configuracion: " + e.getMessage());
-                //Usar valores por defecto si hay error
+                establecerValoresPorDefecto();
             }
+        } else {
+            establecerValoresPorDefecto();
         }
     }
 
     /**
-     * Guarda las opciones seleccionadas
+     * Establece los valores por defecto
+     */
+    private void establecerValoresPorDefecto() {
+        cmbTamanioLetra.setValue("Mediano (14px)");
+        rbTemaClaro.setSelected(true);
+    }
+
+    /**
+     * Guarda la configuracion y aplica los cambios
      */
     @FXML
     void guardarOpciones(ActionEvent event) {
         Properties props = new Properties();
 
-        //Guardar tamaño de letra
-        String tamanio = cbxTamanioLetra.getValue();
+        // Guardar tamaño de letra
+        String tamanio = cmbTamanioLetra.getValue();
         props.setProperty(KEY_TAMANIO_LETRA, tamanio);
 
-        //Guardar tema
-        String tema = rdbOscuro.isSelected() ? TEMA_OSCURO : TEMA_CLARO;
+        // Guardar tema
+        String tema = rbTemaOscuro.isSelected() ? "oscuro" : "claro";
         props.setProperty(KEY_TEMA, tema);
 
-        //Guardar en archivo
+        // Escribir archivo
         try (FileOutputStream fos = new FileOutputStream(CONFIG_FILE)) {
             props.store(fos, "Configuracion de RehabiAPP");
-
-            //Aplicar cambios inmediatamente
-            aplicarConfiguracion(tamanio, tema);
-
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Configuracion guardada correctamente.\n" +
-                            "Los cambios se han aplicado.",
-                    TipoMensaje.EXITO
-            );
-
-            //Cerrar ventana
-            cerrarVentanaOpciones(null);
-
+            System.out.println("Configuracion guardada correctamente");
         } catch (IOException e) {
             System.err.println("Error al guardar configuracion: " + e.getMessage());
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Error al guardar la configuracion.",
-                    TipoMensaje.ERROR
-            );
         }
+
+        // Aplicar la configuracion a todas las ventanas abiertas
+        aplicarConfiguracionGlobal(tamanio, tema);
+
+        // Cerrar ventana de opciones
+        cerrarVentana(event);
     }
 
     /**
-     * Aplica la configuracion a la ventana principal
+     * Aplica la configuracion a todas las ventanas abiertas
      * @param tamanio Tamaño de letra seleccionado
      * @param tema Tema seleccionado (claro/oscuro)
      */
-    private void aplicarConfiguracion(String tamanio, String tema) {
-        //Obtener la ventana principal (parent de esta ventana)
-        Stage stageActual = (Stage) btnGuardarOpciones.getScene().getWindow();
-        Stage stagePrincipal = (Stage) stageActual.getOwner();
+    private void aplicarConfiguracionGlobal(String tamanio, String tema) {
+        // Obtener el tamaño en pixeles
+        int tamanioPx = obtenerTamanioPx(tamanio);
 
-        if (stagePrincipal != null && stagePrincipal.getScene() != null) {
-            //Aplicar tamaño de letra
-            int fontSize = obtenerTamanioPixeles(tamanio);
-            String estiloFuente = "-fx-font-size: " + fontSize + "px;";
+        // Obtener la ruta del CSS correspondiente
+        String cssPath = "oscuro".equals(tema) ? CSS_TEMA_OSCURO : CSS_TEMA_CLARO;
 
-            //Aplicar tema
-            String estiloTema = obtenerEstiloTema(tema);
-
-            //Combinar estilos
-            String estiloCompleto = estiloFuente + estiloTema;
-
-            //Aplicar a la escena principal
-            stagePrincipal.getScene().getRoot().setStyle(estiloCompleto);
-
-            System.out.println("Configuracion aplicada: " + estiloCompleto);
-        }
-    }
-
-    /**
-     * Convierte el texto del ComboBox a pixeles
-     * @param tamanio Texto del tamaño seleccionado
-     * @return Tamaño en pixeles
-     */
-    private int obtenerTamanioPixeles(String tamanio) {
-        if (tamanio == null) {
-            return 14;
-        }
-
-        if (tamanio.contains("12")) {
-            return 12;
-        } else if (tamanio.contains("14")) {
-            return 14;
-        } else if (tamanio.contains("16")) {
-            return 16;
-        } else if (tamanio.contains("18")) {
-            return 18;
-        }
-
-        return 14; //Por defecto
-    }
-
-    /**
-     * Obtiene el estilo CSS segun el tema seleccionado
-     * @param tema Tema seleccionado
-     * @return String con el estilo CSS
-     */
-    private String obtenerEstiloTema(String tema) {
-        if (TEMA_OSCURO.equals(tema)) {
-            return "-fx-base: #3c3c3c; " +
-                    "-fx-background: #2b2b2b; " +
-                    "-fx-control-inner-background: #3c3c3c; " +
-                    "-fx-text-fill: #ffffff;";
-        } else {
-            //Tema claro (por defecto)
-            return "-fx-base: #ececec; " +
-                    "-fx-background: #ffffff; " +
-                    "-fx-control-inner-background: #ffffff;";
-        }
-    }
-
-    /**
-     * Cierra la ventana sin guardar cambios
-     */
-    @FXML
-    void cerrarVentanaOpciones(ActionEvent event) {
-        Stage stage = (Stage) btnCancelarOpciones.getScene().getWindow();
-        stage.close();
-    }
-
-    // ==================== METODOS ESTATICOS PARA CARGAR CONFIG ====================
-
-    /**
-     * Carga y aplica la configuracion guardada a una escena
-     * Llamar este metodo al iniciar la aplicacion
-     * @param stage Stage principal de la aplicacion
-     */
-    public static void cargarYAplicarConfiguracion(Stage stage) {
-        Properties props = new Properties();
-        File configFile = new File(CONFIG_FILE);
-
-        if (configFile.exists()) {
-            try (FileInputStream fis = new FileInputStream(configFile)) {
-                props.load(fis);
-
-                String tamanio = props.getProperty(KEY_TAMANIO_LETRA, TAMANIO_MEDIANO);
-                String tema = props.getProperty(KEY_TEMA, TEMA_CLARO);
-
-                //Calcular tamaño en pixeles
-                int fontSize = 14;
-                if (tamanio.contains("12")) fontSize = 12;
-                else if (tamanio.contains("14")) fontSize = 14;
-                else if (tamanio.contains("16")) fontSize = 16;
-                else if (tamanio.contains("18")) fontSize = 18;
-
-                //Construir estilo
-                String estiloFuente = "-fx-font-size: " + fontSize + "px;";
-                String estiloTema;
-
-                if (TEMA_OSCURO.equals(tema)) {
-                    estiloTema = "-fx-base: #3c3c3c; " +
-                            "-fx-background: #2b2b2b; " +
-                            "-fx-control-inner-background: #3c3c3c; " +
-                            "-fx-text-fill: #ffffff;";
-                } else {
-                    estiloTema = "-fx-base: #ececec; " +
-                            "-fx-background: #ffffff; " +
-                            "-fx-control-inner-background: #ffffff;";
+        // Aplicar a todas las ventanas abiertas
+        for (Window window : Window.getWindows()) {
+            if (window instanceof Stage) {
+                Stage stage = (Stage) window;
+                Scene scene = stage.getScene();
+                if (scene != null) {
+                    aplicarConfiguracionAEscena(scene, cssPath, tamanioPx);
                 }
-
-                //Aplicar estilo
-                if (stage.getScene() != null && stage.getScene().getRoot() != null) {
-                    stage.getScene().getRoot().setStyle(estiloFuente + estiloTema);
-                }
-
-                System.out.println("Configuracion inicial aplicada");
-
-            } catch (IOException e) {
-                System.err.println("Error al cargar configuracion inicial: " + e.getMessage());
             }
         }
     }
 
     /**
-     * Obtiene el tema actual guardado
+     * Aplica la configuracion CSS y tamaño de fuente a una escena
+     * @param scene Escena a configurar
+     * @param cssPath Ruta del archivo CSS
+     * @param tamanioPx Tamaño de fuente en pixeles
+     */
+    public static void aplicarConfiguracionAEscena(Scene scene, String cssPath, int tamanioPx) {
+        if (scene == null) return;
+
+        // Limpiar hojas de estilo anteriores (solo las de tema)
+        scene.getStylesheets().removeIf(s -> 
+            s.contains("tema_claro.css") || s.contains("tema_oscuro.css")
+        );
+
+        // Agregar la nueva hoja de estilo
+        try {
+            String cssUrl = controladorVentanaOpciones.class.getResource(cssPath).toExternalForm();
+            scene.getStylesheets().add(cssUrl);
+            System.out.println("CSS aplicado: " + cssPath);
+        } catch (Exception e) {
+            System.err.println("Error al cargar CSS " + cssPath + ": " + e.getMessage());
+        }
+
+        // Aplicar tamaño de fuente al root
+        if (scene.getRoot() != null) {
+            scene.getRoot().setStyle("-fx-font-size: " + tamanioPx + "px;");
+        }
+    }
+
+    /**
+     * Convierte el nombre del tamaño a pixeles
+     * @param tamanio Nombre del tamaño
+     * @return Tamaño en pixeles
+     */
+    private static int obtenerTamanioPx(String tamanio) {
+        if (tamanio == null) return 14;
+
+        if (tamanio.contains("12")) return 12;
+        if (tamanio.contains("14")) return 14;
+        if (tamanio.contains("16")) return 16;
+        if (tamanio.contains("18")) return 18;
+
+        return 14; // Por defecto
+    }
+
+    /**
+     * Cierra la ventana sin guardar
+     */
+    @FXML
+    void cerrarVentana(ActionEvent event) {
+        Stage stage = (Stage) btnCancelar.getScene().getWindow();
+        stage.close();
+    }
+
+    // ============================================================
+    // METODOS ESTATICOS PARA APLICAR CONFIGURACION DESDE OTRAS CLASES
+    // ============================================================
+
+    /**
+     * Carga y aplica la configuracion guardada a un Stage
+     * Debe llamarse al abrir cada nueva ventana
+     * @param stage Stage al que aplicar la configuracion
+     */
+    public static void cargarYAplicarConfiguracion(Stage stage) {
+        if (stage == null || stage.getScene() == null) return;
+
+        Properties props = new Properties();
+        File configFile = new File(CONFIG_FILE);
+
+        String tema = "claro";
+        String tamanio = "Mediano (14px)";
+
+        if (configFile.exists()) {
+            try (FileInputStream fis = new FileInputStream(configFile)) {
+                props.load(fis);
+                tema = props.getProperty(KEY_TEMA, "claro");
+                tamanio = props.getProperty(KEY_TAMANIO_LETRA, "Mediano (14px)");
+            } catch (IOException e) {
+                System.err.println("Error al cargar configuracion: " + e.getMessage());
+            }
+        }
+
+        // Aplicar configuracion
+        String cssPath = "oscuro".equals(tema) ? CSS_TEMA_OSCURO : CSS_TEMA_CLARO;
+        int tamanioPx = obtenerTamanioPx(tamanio);
+
+        aplicarConfiguracionAEscena(stage.getScene(), cssPath, tamanioPx);
+    }
+
+    /**
+     * Aplica la configuracion guardada a una Scene
+     * Util cuando se carga contenido dinamico
+     * @param scene Scene a configurar
+     */
+    public static void aplicarConfiguracionAScene(Scene scene) {
+        if (scene == null) return;
+
+        Properties props = new Properties();
+        File configFile = new File(CONFIG_FILE);
+
+        String tema = "claro";
+        String tamanio = "Mediano (14px)";
+
+        if (configFile.exists()) {
+            try (FileInputStream fis = new FileInputStream(configFile)) {
+                props.load(fis);
+                tema = props.getProperty(KEY_TEMA, "claro");
+                tamanio = props.getProperty(KEY_TAMANIO_LETRA, "Mediano (14px)");
+            } catch (IOException e) {
+                System.err.println("Error al cargar configuracion: " + e.getMessage());
+            }
+        }
+
+        String cssPath = "oscuro".equals(tema) ? CSS_TEMA_OSCURO : CSS_TEMA_CLARO;
+        int tamanioPx = obtenerTamanioPx(tamanio);
+
+        aplicarConfiguracionAEscena(scene, cssPath, tamanioPx);
+    }
+
+    /**
+     * Obtiene el tema actual configurado
      * @return "claro" u "oscuro"
      */
     public static String obtenerTemaActual() {
@@ -300,38 +298,47 @@ public class controladorVentanaOpciones {
         if (configFile.exists()) {
             try (FileInputStream fis = new FileInputStream(configFile)) {
                 props.load(fis);
-                return props.getProperty(KEY_TEMA, TEMA_CLARO);
+                return props.getProperty(KEY_TEMA, "claro");
             } catch (IOException e) {
                 System.err.println("Error al leer tema: " + e.getMessage());
             }
         }
-
-        return TEMA_CLARO;
+        return "claro";
     }
 
     /**
-     * Obtiene el tamaño de letra actual guardado
-     * @return Tamaño en pixeles
+     * Obtiene el tamaño de letra actual configurado
+     * @return Tamaño de letra como String
      */
-    public static int obtenerTamanioLetraActual() {
+    public static String obtenerTamanioLetraActual() {
         Properties props = new Properties();
         File configFile = new File(CONFIG_FILE);
 
         if (configFile.exists()) {
             try (FileInputStream fis = new FileInputStream(configFile)) {
                 props.load(fis);
-                String tamanio = props.getProperty(KEY_TAMANIO_LETRA, TAMANIO_MEDIANO);
-
-                if (tamanio.contains("12")) return 12;
-                else if (tamanio.contains("14")) return 14;
-                else if (tamanio.contains("16")) return 16;
-                else if (tamanio.contains("18")) return 18;
-
+                return props.getProperty(KEY_TAMANIO_LETRA, "Mediano (14px)");
             } catch (IOException e) {
-                System.err.println("Error al leer tamaño letra: " + e.getMessage());
+                System.err.println("Error al leer tamanio letra: " + e.getMessage());
             }
         }
+        return "Mediano (14px)";
+    }
 
-        return 14;
+    /**
+     * Obtiene la ruta del CSS del tema actual
+     * @return Ruta del archivo CSS
+     */
+    public static String obtenerCssActual() {
+        String tema = obtenerTemaActual();
+        return "oscuro".equals(tema) ? CSS_TEMA_OSCURO : CSS_TEMA_CLARO;
+    }
+
+    /**
+     * Obtiene el tamaño de fuente actual en pixeles
+     * @return Tamaño en pixeles
+     */
+    public static int obtenerTamanioPxActual() {
+        return obtenerTamanioPx(obtenerTamanioLetraActual());
     }
 }

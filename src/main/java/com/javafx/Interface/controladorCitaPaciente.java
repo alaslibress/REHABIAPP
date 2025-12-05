@@ -1,6 +1,5 @@
 package com.javafx.Interface;
 
-import com.javafx.Clases.Cita;
 import com.javafx.Clases.Paciente;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;

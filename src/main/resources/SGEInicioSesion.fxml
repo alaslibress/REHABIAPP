@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorSesion">
+<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorSesion">
    <children>
       <ImageView fx:id="imgLogo" fitHeight="157.0" fitWidth="243.0" pickOnBounds="true" preserveRatio="true" scaleX="2.0" scaleY="2.0" scaleZ="2.0">
          <image>
@@ -24,7 +24,7 @@
                   <Insets bottom="5.0" />
                </VBox.margin>
             </Label>
-            <TextField fx:id="txtInsertarDNI" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="26.0" prefWidth="300.0">
+            <TextField fx:id="txtInsertarDNI" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="35.0" prefWidth="300.0">
                <VBox.margin>
                   <Insets bottom="30.0" />
                </VBox.margin>
@@ -34,7 +34,7 @@
                   <Insets bottom="5.0" />
                </VBox.margin>
             </Label>
-            <PasswordField fx:id="pssInsertarContrasenia" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="26.0" prefWidth="300.0" />
+            <PasswordField fx:id="pssInsertarContrasenia" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="35.0" prefWidth="300.0" />
             <Label fx:id="lblMensajeError" textFill="#d10000" visible="false">
                <VBox.margin>
                   <Insets top="8.0" />
@@ -47,12 +47,12 @@
       </VBox>
       <HBox alignment="TOP_CENTER" prefHeight="100.0" prefWidth="200.0">
          <children>
-            <Button fx:id="btnCancelar" mnemonicParsing="false" onAction="#CerrarAPP" text="Cancelar">
+            <Button fx:id="btnCancelar" mnemonicParsing="false" onAction="#CerrarAPP" styleClass="button-peligro" text="Cancelar">
                <HBox.margin>
                   <Insets right="30.0" />
                </HBox.margin>
             </Button>
-            <Button fx:id="btnEntrar" mnemonicParsing="false" onAction="#iniciarSesion" text="Entrar">
+            <Button fx:id="btnEntrar" mnemonicParsing="false" onAction="#iniciarSesion" styleClass="button-primario" text="Entrar">
                <HBox.margin>
                   <Insets left="30.0" />
                </HBox.margin></Button>

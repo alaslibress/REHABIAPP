@@ -42,7 +42,7 @@
                      </VBox.margin></Label>
                   <HBox prefHeight="49.0" prefWidth="391.0">
                      <children>
-                        <Button fx:id="btnBuscar" mnemonicParsing="false" prefHeight="42.0" prefWidth="50.0">
+                        <Button fx:id="btnBuscar" mnemonicParsing="false" onAction="#busquedaRapida" prefHeight="42.0" prefWidth="50.0" styleClass="button-icono">
                            <graphic>
                               <ImageView fitHeight="31.0" fitWidth="27.0" pickOnBounds="true" preserveRatio="true">
                                  <image>
@@ -51,7 +51,7 @@
                               </ImageView>
                            </graphic>
                            <tooltip>
-                              <Tooltip onAutoHide="#Buscar" text="Buscar" />
+                              <Tooltip text="Buscar" />
                            </tooltip>
                         </Button>
                         <TextField fx:id="txfBusquedaRapida" minHeight="25.0" prefHeight="42.0" prefWidth="527.0" promptText="Buscar:" />
@@ -59,7 +59,7 @@
                   </HBox>
                </children>
             </VBox>
-            <Button fx:id="btnPerfil" mnemonicParsing="false">
+            <Button fx:id="btnPerfil" mnemonicParsing="false" onAction="#abrirVentanaPerfil" styleClass="button-icono">
                <graphic>
                   <ImageView fitHeight="52.0" fitWidth="54.0" pickOnBounds="true" preserveRatio="true">
                      <image>
@@ -71,7 +71,7 @@
                   <Insets left="30.0" top="10.0" />
                </HBox.margin>
                <tooltip>
-                  <Tooltip onAutoHide="#Perfil" text="Perfil" />
+                  <Tooltip text="Perfil" />
                </tooltip>
             </Button>
          </children>
@@ -83,10 +83,10 @@
             <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
          </padding>
          <children>
-            <Button fx:id="btnPestaniaSanitarios" mnemonicParsing="false" prefHeight="60.0" prefWidth="225.0" text="Sanitarios" />
-            <Button fx:id="btnPestaniaPacientes" mnemonicParsing="false" prefHeight="60.0" prefWidth="225.0" text="Pacientes" />
-            <Button fx:id="btnPestaniaCitas" mnemonicParsing="false" prefHeight="60.0" prefWidth="225.0" text="Citas" />
-            <Button fx:id="btnPestaniaAyuda" mnemonicParsing="false" prefHeight="60.0" prefWidth="225.0" text="Ayuda">
+            <Button fx:id="btnPestaniaSanitarios" mnemonicParsing="false" onAction="#abrirPestaniaSanitarios" prefHeight="60.0" prefWidth="225.0" text="Sanitarios" />
+            <Button fx:id="btnPestaniaPacientes" mnemonicParsing="false" onAction="#abrirPestaniaPacientes" prefHeight="60.0" prefWidth="225.0" text="Pacientes" />
+            <Button fx:id="btnPestaniaCitas" mnemonicParsing="false" onAction="#abrirPestaniaCitas" prefHeight="60.0" prefWidth="225.0" text="Citas" />
+            <Button fx:id="btnPestaniaAyuda" mnemonicParsing="false" onAction="#abrirPestaniaAyuda" prefHeight="60.0" prefWidth="225.0" text="Ayuda">
                <VBox.margin>
                   <Insets />
                </VBox.margin></Button>
@@ -104,7 +104,7 @@
             </VBox>
             <HBox alignment="BOTTOM_CENTER" prefHeight="273.0" prefWidth="179.0">
                <children>
-                  <Button fx:id="btnAjustes" mnemonicParsing="false">
+                  <Button fx:id="btnAjustes" mnemonicParsing="false" onAction="#abrirVentanaOpciones" styleClass="button-icono">
                      <tooltip>
                         <Tooltip text="Ajustes" />
                      </tooltip>
@@ -118,7 +118,7 @@
                      <HBox.margin>
                         <Insets right="10.0" />
                      </HBox.margin></Button>
-                  <Button fx:id="btnSalir" mnemonicParsing="false">
+                  <Button fx:id="btnSalir" mnemonicParsing="false" onAction="#cerrarSesion" styleClass="button-peligro">
                      <tooltip>
                         <Tooltip text="Salir" />
                      </tooltip>

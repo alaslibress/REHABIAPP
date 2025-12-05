@@ -1,6 +1,7 @@
 package com.javafx.Clases;
 
 import com.javafx.Interface.controladorVentanaInformativa;
+import com.javafx.Interface.controladorVentanaOpciones;
 import com.javafx.Interface.controladorVentanaPregunta;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -9,31 +10,24 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 /**
- * Clase de utilidades para gestionar ventanas emergentes del sistema
- * Proporciona metodos estaticos para mostrar mensajes informativos y de confirmacion
+ * Clase de utilidad para mostrar ventanas emergentes
+ * Ventanas informativas, de error, advertencia y preguntas
  */
 public class VentanaUtil {
 
     /**
      * Enumerado con los tipos de mensaje disponibles
-     * Cada tipo tiene asociado un titulo y un icono
      */
     public enum TipoMensaje {
-        EXITO("Operacion exitosa", "/correcto.png"),
-        ERROR("Error", "/error.png"),
-        ADVERTENCIA("Advertencia", "/advertencia.png"),
-        INFORMACION("Informacion", "/correcto.png");
+        INFORMACION("/iconos/info.png"),
+        ADVERTENCIA("/iconos/advertencia.png"),
+        ERROR("/iconos/error.png"),
+        EXITO("/iconos/exito.png");
 
-        private final String titulo;
         private final String icono;
 
-        TipoMensaje(String titulo, String icono) {
-            this.titulo = titulo;
+        TipoMensaje(String icono) {
             this.icono = icono;
-        }
-
-        public String getTitulo() {
-            return titulo;
         }
 
         public String getIcono() {
@@ -43,49 +37,58 @@ public class VentanaUtil {
 
     /**
      * Muestra una ventana informativa con un mensaje y tipo especificado
-     * @param mensaje Texto a mostrar en la ventana
-     * @param tipo Tipo de mensaje (EXITO, ERROR, ADVERTENCIA, INFORMACION)
+     * @param mensaje Texto a mostrar
+     * @param tipo Tipo de mensaje (determina el icono)
      */
     public static void mostrarVentanaInformativa(String mensaje, TipoMensaje tipo) {
         try {
             FXMLLoader loader = new FXMLLoader(VentanaUtil.class.getResource("/VentanaInformativa.fxml"));
             Parent root = loader.load();
 
-            //Obtener el controlador y configurar el mensaje
+            //Configurar el controlador con el mensaje y tipo
             controladorVentanaInformativa controlador = loader.getController();
             controlador.configurarVentana(mensaje, tipo);
 
+            //Crear escena y aplicar CSS
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
             //Crear y mostrar la ventana modal
             Stage stage = new Stage();
-            stage.setTitle(tipo.getTitulo());
-            stage.setScene(new Scene(root));
+            stage.setTitle(obtenerTituloVentana(tipo));
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
             stage.showAndWait();
 
         } catch (Exception e) {
             System.err.println("Error al mostrar ventana informativa: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     /**
-     * Muestra una ventana de confirmacion con una pregunta
-     * @param mensaje Pregunta a mostrar al usuario
-     * @return true si el usuario confirma, false si cancela
+     * Muestra una ventana de pregunta con opciones Si/No
+     * @param mensaje Pregunta a mostrar
+     * @return true si el usuario confirmo, false si cancelo
      */
     public static boolean mostrarVentanaPregunta(String mensaje) {
         try {
             FXMLLoader loader = new FXMLLoader(VentanaUtil.class.getResource("/VentanaPregunta.fxml"));
             Parent root = loader.load();
 
-            //Obtener el controlador y configurar la pregunta
+            //Configurar el controlador con la pregunta
             controladorVentanaPregunta controlador = loader.getController();
             controlador.configurarPregunta(mensaje);
 
+            //Crear escena y aplicar CSS
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
             //Crear y mostrar la ventana modal
             Stage stage = new Stage();
-            stage.setTitle("Confirmar accion");
-            stage.setScene(new Scene(root));
+            stage.setTitle("Confirmar");
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
             stage.showAndWait();
@@ -95,7 +98,28 @@ public class VentanaUtil {
 
         } catch (Exception e) {
             System.err.println("Error al mostrar ventana de pregunta: " + e.getMessage());
+            e.printStackTrace();
             return false;
+        }
+    }
+
+    /**
+     * Obtiene el titulo de la ventana segun el tipo de mensaje
+     * @param tipo Tipo de mensaje
+     * @return Titulo correspondiente
+     */
+    private static String obtenerTituloVentana(TipoMensaje tipo) {
+        switch (tipo) {
+            case INFORMACION:
+                return "Informacion";
+            case ADVERTENCIA:
+                return "Advertencia";
+            case ERROR:
+                return "Error";
+            case EXITO:
+                return "Exito";
+            default:
+                return "Mensaje";
         }
     }
 }

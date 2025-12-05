@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew clean build:*)",
+      "Bash(find:*)",
+      "Bash(./gradlew build:*)",
+      "Bash(psql:*)",
+      "Bash(pg_isready:*)",
+      "Bash(./gradlew run:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

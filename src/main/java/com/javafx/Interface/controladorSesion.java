@@ -173,6 +173,10 @@ public class controladorSesion {
             }
 
             Scene scene = new Scene(root);
+            
+            //Aplicar configuracion de tema y tamaño de letra
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
             Stage stage = new Stage();
             stage.setTitle("RehabiAPP - " + SesionUsuario.getInstancia().getNombreCompleto());
             stage.setScene(scene);

@@ -19,7 +19,7 @@
     <children>
         <HBox prefHeight="100.0" prefWidth="200.0">
             <children>
-                <Label fx:id="lblTituloPestania" text="Sanitarios" />
+                <Label fx:id="lblTituloPestania" styleClass="label-titulo" text="Sanitarios" />
                 <VBox prefHeight="100.0" prefWidth="802.0">
                     <children>
                         <Button fx:id="btnSeleccionarTodo" mnemonicParsing="false" onAction="#seleccionarTodosSanitarios" text="Seleccionar todo">
@@ -34,7 +34,7 @@
                                         <Insets right="10.0" />
                                     </HBox.margin>
                                 </Label>
-                                <Button fx:id="btnBuscarSanitarios" mnemonicParsing="false" onAction="#buscarSanitarios" prefHeight="30.0" prefWidth="30.0">
+                                <Button fx:id="btnBuscarSanitarios" mnemonicParsing="false" onAction="#buscarSanitarios" prefHeight="30.0" prefWidth="30.0" styleClass="button-icono">
                                     <graphic>
                                         <ImageView fitHeight="18.0" fitWidth="25.0" pickOnBounds="true" preserveRatio="true">
                                             <image>
@@ -57,7 +57,7 @@
                                         <Insets right="100.0" />
                                     </HBox.margin>
                                 </TextField>
-                                <Button fx:id="btnAnadirSanitario" mnemonicParsing="false" onAction="#abrirFormularioNuevoSanitario" prefHeight="30.0" prefWidth="30.0">
+                                <Button fx:id="btnAnadirSanitario" mnemonicParsing="false" onAction="#abrirFormularioNuevoSanitario" prefHeight="30.0" prefWidth="30.0" styleClass="button-primario">
                                     <graphic>
                                         <ImageView fitHeight="18.0" fitWidth="74.0" pickOnBounds="true" preserveRatio="true">
                                             <image>
@@ -85,7 +85,7 @@
                         <TableColumn fx:id="colCargo" prefWidth="120.0" text="Cargo" />
                     </columns>
                 </TableView>
-                <Button fx:id="btnFiltrarSanitarios" mnemonicParsing="false" onAction="#abrirFiltrosSanitarios" prefHeight="40.0" prefWidth="40.0">
+                <Button fx:id="btnFiltrarSanitarios" mnemonicParsing="false" onAction="#abrirFiltrosSanitarios" prefHeight="40.0" prefWidth="40.0" styleClass="button-icono">
                     <graphic>
                         <ImageView fitHeight="18.0" fitWidth="113.0" pickOnBounds="true" preserveRatio="true">
                             <image>
@@ -101,8 +101,8 @@
         </HBox>
         <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Button fx:id="btnEliminarSanitario" mnemonicParsing="false" onAction="#eliminarSanitarioSeleccionado" prefWidth="100.0" text="Eliminar" textAlignment="CENTER" />
-                <Button fx:id="btnAbrirSanitario" mnemonicParsing="false" onAction="#abrirFichaSanitario" prefWidth="100.0" text="Abrir" />
+                <Button fx:id="btnEliminarSanitario" mnemonicParsing="false" onAction="#eliminarSanitarioSeleccionado" prefWidth="100.0" styleClass="button-peligro" text="Eliminar" textAlignment="CENTER" />
+                <Button fx:id="btnAbrirSanitario" mnemonicParsing="false" onAction="#abrirFichaSanitario" prefWidth="100.0" styleClass="button-primario" text="Abrir" />
             </children>
         </HBox>
     </children>

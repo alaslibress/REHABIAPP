@@ -18,8 +18,8 @@
       <Label fx:id="lblPregunta" textAlignment="CENTER" />
       <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" spacing="20.0">
          <children>
-            <Button fx:id="btnCancelarPregunta" mnemonicParsing="false" onAction="#cerrarVentana" text="Cancelar" />
-            <Button fx:id="btnConfirmarPregunta" mnemonicParsing="false" onAction="#confirmarPregunta" text="Aceptar" />
+            <Button fx:id="btnCancelarPregunta" mnemonicParsing="false" onAction="#cerrarVentana" styleClass="button-peligro" text="Cancelar" />
+            <Button fx:id="btnConfirmarPregunta" mnemonicParsing="false" onAction="#confirmarPregunta" styleClass="button-primario" text="Aceptar" />
          </children>
       </HBox>
    </children>

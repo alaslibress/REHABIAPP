@@ -12,7 +12,7 @@
         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
     <children>
-        <Label fx:id="lblTituloVentana" style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Informacion del sanitario" />
+        <Label fx:id="lblTituloVentana" styleClass="label-titulo" text="Informacion del sanitario" />
         <Separator prefWidth="200.0" />
 
         <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
@@ -72,7 +72,7 @@
             </VBox.margin>
             <children>
                 <Button fx:id="btnEditar" mnemonicParsing="false" onAction="#abrirEdicion" prefWidth="120.0" text="Editar" />
-                <Button fx:id="btnAceptar" mnemonicParsing="false" onAction="#cerrarVentana" prefWidth="120.0" text="Aceptar" />
+                <Button fx:id="btnAceptar" mnemonicParsing="false" onAction="#cerrarVentana" prefWidth="120.0" styleClass="button-primario" text="Aceptar" />
             </children>
         </HBox>
     </children>

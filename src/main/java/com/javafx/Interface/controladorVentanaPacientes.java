@@ -240,10 +240,14 @@ public class controladorVentanaPacientes {
                 controlador.setModoSoloLectura(true);
             }
 
+            //Crear escena y aplicar CSS
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
             //Crear y mostrar la ventana modal
             Stage stage = new Stage();
             stage.setTitle("Ficha del Paciente");
-            stage.setScene(new Scene(root));
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
             stage.showAndWait();
@@ -277,10 +281,14 @@ public class controladorVentanaPacientes {
             controladorAgregarPaciente controlador = loader.getController();
             controlador.setDniSanitario(dniSanitarioActual);
 
+            //Crear escena y aplicar CSS
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
             //Crear y mostrar la ventana modal
             Stage stage = new Stage();
             stage.setTitle("Nuevo Paciente");
-            stage.setScene(new Scene(root));
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
             stage.showAndWait();
@@ -299,11 +307,102 @@ public class controladorVentanaPacientes {
     }
 
     /**
-     * Filtra los pacientes segun el texto de busqueda
+     * Abre la ventana de filtros avanzados para pacientes
      */
     @FXML
     void abrirFiltrosPacientes(ActionEvent event) {
-        buscarPacientes(event);
+        try {
+            //Cargar la ventana de filtros
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaFiltroPacientes.fxml"));
+            Parent root = loader.load();
+
+            //Obtener el controlador de filtros
+            controladorFiltroPacientes controlador = loader.getController();
+
+            //Crear escena y aplicar CSS
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
+            //Crear y mostrar la ventana modal
+            Stage stage = new Stage();
+            stage.setTitle("Filtrar Pacientes");
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setResizable(false);
+            stage.showAndWait();
+
+            //Si se aplicaron filtros, filtrar la tabla
+            if (controlador.seFiltrosAplicados()) {
+                aplicarFiltros(controlador.getFiltros());
+            }
+
+        } catch (Exception e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "No se pudo abrir la ventana de filtros.",
+                    TipoMensaje.ERROR
+            );
+            System.err.println("Error al abrir ventana de filtros: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Aplica los filtros seleccionados a la lista de pacientes
+     * @param filtros Objeto con los criterios de filtrado
+     */
+    private void aplicarFiltros(controladorFiltroPacientes.FiltrosPaciente filtros) {
+        //Obtener todos los pacientes
+        List<Paciente> todosLosPacientes = pacienteDAO.listarTodos();
+
+        //Filtrar segun los criterios
+        List<Paciente> pacientesFiltrados = todosLosPacientes.stream()
+                .filter(p -> {
+                    //Filtro por protesis
+                    if (filtros.isConProtesis() && !filtros.isSinProtesis()) {
+                        return p.tieneProtesis();
+                    }
+                    if (filtros.isSinProtesis() && !filtros.isConProtesis()) {
+                        return !p.tieneProtesis();
+                    }
+                    return true;
+                })
+                .filter(p -> {
+                    //Filtro por edad
+                    if (filtros.isFiltrarEdad()) {
+                        int edad = p.getEdad();
+                        return edad >= filtros.getEdadMinima() && edad <= filtros.getEdadMaxima();
+                    }
+                    return true;
+                })
+                .sorted((p1, p2) -> {
+                    //Ordenacion
+                    int resultado = 0;
+                    switch (filtros.getOrdenarPor()) {
+                        case "Nombre":
+                            resultado = p1.getNombre().compareToIgnoreCase(p2.getNombre());
+                            break;
+                        case "Apellidos":
+                            resultado = p1.getApellidos().compareToIgnoreCase(p2.getApellidos());
+                            break;
+                        case "DNI":
+                            resultado = p1.getDni().compareToIgnoreCase(p2.getDni());
+                            break;
+                        case "Edad":
+                            resultado = Integer.compare(p1.getEdad(), p2.getEdad());
+                            break;
+                        case "Discapacidad":
+                            String disc1 = p1.getDiscapacidad() != null ? p1.getDiscapacidad() : "";
+                            String disc2 = p2.getDiscapacidad() != null ? p2.getDiscapacidad() : "";
+                            resultado = disc1.compareToIgnoreCase(disc2);
+                            break;
+                    }
+                    return filtros.isOrdenAscendente() ? resultado : -resultado;
+                })
+                .toList();
+
+        //Actualizar la tabla
+        listaPacientes.clear();
+        listaPacientes.addAll(pacientesFiltrados);
     }
 
     /**

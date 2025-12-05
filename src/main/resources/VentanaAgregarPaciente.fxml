@@ -20,7 +20,7 @@
     </padding>
     <children>
         <!-- Titulo -->
-        <Label fx:id="lblTituloVentana" style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Nuevo Paciente" />
+        <Label fx:id="lblTituloVentana" styleClass="label-titulo" text="Nuevo Paciente" />
 
         <!-- Separador -->
         <Separator />
@@ -191,8 +191,8 @@
         <!-- HBox Principal 2: Botones -->
         <HBox alignment="CENTER" spacing="10.0">
             <children>
-                <Button fx:id="btnCancelar" onAction="#cerrarVentana" prefWidth="120.0" text="Cancelar" />
-                <Button fx:id="btnGuardar" onAction="#guardarPaciente" prefWidth="120.0" text="Crear" />
+                <Button fx:id="btnCancelar" onAction="#cerrarVentana" prefWidth="120.0" styleClass="button-peligro" text="Cancelar" />
+                <Button fx:id="btnGuardar" onAction="#guardarPaciente" prefWidth="120.0" styleClass="button-primario" text="Crear" />
             </children>
         </HBox>
     </children>

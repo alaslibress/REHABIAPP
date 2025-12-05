@@ -182,10 +182,14 @@ public class controladorVentanaSanitarios {
             controladorVentanaSanitarioListar controlador = loader.getController();
             controlador.cargarDatosSanitario(sanitarioSeleccionado.getDni());
 
+            //Crear escena y aplicar CSS
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
             //Crear y mostrar la ventana modal
             Stage stage = new Stage();
             stage.setTitle("Informacion del sanitario");
-            stage.setScene(new Scene(root));
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
             stage.showAndWait();
@@ -203,24 +207,105 @@ public class controladorVentanaSanitarios {
     }
 
     /**
-     * Filtra los sanitarios segun el texto del campo de busqueda
+     * Abre la ventana de filtros avanzados para sanitarios
      * @param event Evento del boton
      */
     @FXML
     void abrirFiltrosSanitarios(ActionEvent event) {
-        String textoBusqueda = txfBuscarSanitarios.getText().trim();
+        try {
+            //Cargar la ventana de filtros
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaFiltroSanitarios.fxml"));
+            Parent root = loader.load();
 
-        if (textoBusqueda.isEmpty()) {
-            //Si el campo esta vacio, mostrar todos los sanitarios
-            cargarSanitarios();
-        } else {
-            //Buscar sanitarios que coincidan con el texto
-            List<Sanitario> sanitariosFiltrados = sanitarioDAO.buscarPorTexto(textoBusqueda);
+            //Obtener el controlador de filtros
+            controladorFiltroSanitarios controlador = loader.getController();
 
-            //Actualizar la tabla con los resultados
-            listaSanitarios = FXCollections.observableArrayList(sanitariosFiltrados);
-            tblSanitarios.setItems(listaSanitarios);
+            //Crear escena y aplicar CSS
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
+            //Crear y mostrar la ventana modal
+            Stage stage = new Stage();
+            stage.setTitle("Filtrar Sanitarios");
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setResizable(false);
+            stage.showAndWait();
+
+            //Si se aplicaron filtros, filtrar la tabla
+            if (controlador.seFiltrosAplicados()) {
+                aplicarFiltros(controlador.getFiltros());
+            }
+
+        } catch (Exception e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "No se pudo abrir la ventana de filtros.",
+                    TipoMensaje.ERROR
+            );
+            System.err.println("Error al abrir ventana de filtros: " + e.getMessage());
+            e.printStackTrace();
         }
+    }
+
+    /**
+     * Aplica los filtros seleccionados a la lista de sanitarios
+     * @param filtros Objeto con los criterios de filtrado
+     */
+    private void aplicarFiltros(controladorFiltroSanitarios.FiltrosSanitario filtros) {
+        //Obtener todos los sanitarios
+        List<Sanitario> todosLosSanitarios = sanitarioDAO.listarTodos();
+
+        //Filtrar segun los criterios
+        List<Sanitario> sanitariosFiltrados = todosLosSanitarios.stream()
+                .filter(s -> {
+                    //Filtro por cargo
+                    if (filtros.isSoloEspecialistas() && !filtros.isSoloEnfermeros()) {
+                        return s.getCargo() != null && s.getCargo().toLowerCase().contains("especialista");
+                    }
+                    if (filtros.isSoloEnfermeros() && !filtros.isSoloEspecialistas()) {
+                        return s.getCargo() != null && s.getCargo().toLowerCase().contains("enfermero");
+                    }
+                    return true;
+                })
+                .filter(s -> {
+                    //Filtro por pacientes asignados
+                    if (filtros.isConPacientes() && !filtros.isSinPacientes()) {
+                        return s.getNumPacientes() > 0;
+                    }
+                    if (filtros.isSinPacientes() && !filtros.isConPacientes()) {
+                        return s.getNumPacientes() == 0;
+                    }
+                    return true;
+                })
+                .sorted((s1, s2) -> {
+                    //Ordenacion
+                    int resultado = 0;
+                    switch (filtros.getOrdenarPor()) {
+                        case "Nombre":
+                            resultado = s1.getNombre().compareToIgnoreCase(s2.getNombre());
+                            break;
+                        case "Apellidos":
+                            resultado = s1.getApellidos().compareToIgnoreCase(s2.getApellidos());
+                            break;
+                        case "DNI":
+                            resultado = s1.getDni().compareToIgnoreCase(s2.getDni());
+                            break;
+                        case "Cargo":
+                            String cargo1 = s1.getCargo() != null ? s1.getCargo() : "";
+                            String cargo2 = s2.getCargo() != null ? s2.getCargo() : "";
+                            resultado = cargo1.compareToIgnoreCase(cargo2);
+                            break;
+                        case "Num. Pacientes":
+                            resultado = Integer.compare(s1.getNumPacientes(), s2.getNumPacientes());
+                            break;
+                    }
+                    return filtros.isOrdenAscendente() ? resultado : -resultado;
+                })
+                .toList();
+
+        //Actualizar la tabla
+        listaSanitarios = FXCollections.observableArrayList(sanitariosFiltrados);
+        tblSanitarios.setItems(listaSanitarios);
     }
 
     /**
@@ -234,10 +319,14 @@ public class controladorVentanaSanitarios {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaAgregarSanitario.fxml"));
             Parent root = loader.load();
 
+            //Crear escena y aplicar CSS
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
             //Crear y mostrar la ventana modal
             Stage stage = new Stage();
             stage.setTitle("Nuevo Sanitario");
-            stage.setScene(new Scene(root));
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
             stage.showAndWait();
@@ -328,7 +417,19 @@ public class controladorVentanaSanitarios {
      */
     @FXML
     void buscarSanitarios(ActionEvent event) {
-        abrirFiltrosSanitarios(event);
+        String textoBusqueda = txfBuscarSanitarios.getText().trim();
+
+        if (textoBusqueda.isEmpty()) {
+            //Si el campo esta vacio, mostrar todos los sanitarios
+            cargarSanitarios();
+        } else {
+            //Buscar sanitarios que coincidan con el texto
+            List<Sanitario> sanitariosFiltrados = sanitarioDAO.buscarPorTexto(textoBusqueda);
+
+            //Actualizar la tabla con los resultados
+            listaSanitarios = FXCollections.observableArrayList(sanitariosFiltrados);
+            tblSanitarios.setItems(listaSanitarios);
+        }
     }
 
     /**

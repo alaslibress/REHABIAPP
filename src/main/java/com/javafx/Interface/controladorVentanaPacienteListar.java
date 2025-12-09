@@ -306,6 +306,7 @@ public class controladorVentanaPacienteListar {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
             //Recargar los datos del paciente despues de cerrar la ventana de edicion

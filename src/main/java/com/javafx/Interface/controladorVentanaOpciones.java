@@ -1,5 +1,6 @@
 package com.javafx.Interface;
 
+import com.javafx.Clases.AnimacionUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -340,5 +341,20 @@ public class controladorVentanaOpciones {
      */
     public static int obtenerTamanioPxActual() {
         return obtenerTamanioPx(obtenerTamanioLetraActual());
+    }
+
+    /**
+     * Aplica configuracion CSS y animacion de aparicion a un Stage
+     * Debe llamarse DESPUES de stage.show()
+     * @param stage Stage a animar
+     */
+    public static void aplicarConfiguracionYAnimacion(Stage stage) {
+        if (stage == null || stage.getScene() == null) return;
+
+        // Aplicar CSS y tamaño de fuente
+        aplicarConfiguracionAScene(stage.getScene());
+
+        // Aplicar animacion de aparecer (scale + fade)
+        AnimacionUtil.animarVentana(stage, 300);
     }
 }

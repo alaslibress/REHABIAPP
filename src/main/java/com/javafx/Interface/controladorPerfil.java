@@ -173,6 +173,7 @@ public class controladorPerfil {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
             //Recargar datos si se guardaron cambios
@@ -207,10 +208,12 @@ public class controladorPerfil {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
         dialog.setTitle("Cambiar Contraseña");
+        VentanaUtil.establecerIconoVentana(dialog);
 
         javafx.scene.layout.VBox vbox = new javafx.scene.layout.VBox(10);
         vbox.setPadding(new javafx.geometry.Insets(20));
         vbox.setAlignment(javafx.geometry.Pos.CENTER);
+        vbox.getStyleClass().add("root"); //Importante para tema oscuro
 
         Label lblActual = new Label("Contraseña actual:");
         PasswordField txtActual = new PasswordField();

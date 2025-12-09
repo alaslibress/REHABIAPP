@@ -85,6 +85,14 @@
     -fx-effect: dropshadow(gaussian, rgba(93, 173, 226, 0.3), 8, 0, 0, 0);
 }
 
+/* Campos deshabilitados (como DNI en editar perfil) */
+.text-field:disabled, .password-field:disabled {
+    -fx-background-color: #E8EDF2;
+    -fx-text-fill: #5D6D7E;
+    -fx-opacity: 1.0;
+    -fx-border-color: #BDC3C7;
+}
+
 #txfBusquedaRapida {
     -fx-prompt-text-fill: #95A5A6;
     -fx-background-radius: 0 8px 8px 0;
@@ -147,6 +155,37 @@
     -fx-background-color: #BDC3C7;
     -fx-text-fill: #7F8C8D;
     -fx-opacity: 0.7;
+}
+
+/* Boton primario (crear, guardar, aceptar) */
+.button-primario {
+    -fx-background-color: #5DADE2;
+    -fx-text-fill: #FFFFFF;
+}
+
+.button-primario:hover {
+    -fx-background-color: #4A90E2;
+}
+
+/* Boton peligro (eliminar, cancelar) */
+.button-peligro {
+    -fx-background-color: #E74C3C;
+    -fx-text-fill: #FFFFFF;
+}
+
+.button-peligro:hover {
+    -fx-background-color: #C0392B;
+}
+
+/* Boton con icono */
+.button-icono {
+    -fx-background-color: #E8EDF2;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px;
+}
+
+.button-icono:hover {
+    -fx-background-color: #D5DBDB;
 }
 
 /* Boton secundario */
@@ -284,12 +323,35 @@
     -fx-border-color: #5DADE2;
 }
 
+.combo-box .list-cell {
+    -fx-text-fill: #2C3E50;
+    -fx-background-color: #FFFFFF;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #FFFFFF;
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-text-fill: #2C3E50;
+    -fx-background-color: #FFFFFF;
+}
+
+.combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #E8EDF2;
+}
+
 /* ====== SPINNER ====== */
 .spinner {
     -fx-background-color: #FFFFFF;
     -fx-border-color: #C5CDD4;
     -fx-border-radius: 8px;
     -fx-font-size: inherit;
+}
+
+.spinner .text-field {
+    -fx-text-fill: #2C3E50;
+    -fx-background-color: #FFFFFF;
 }
 
 /* ====== CHECKBOX Y RADIOBUTTON ====== */
@@ -319,6 +381,10 @@
     -fx-border-color: #5DADE2;
 }
 
+.date-picker .text-field {
+    -fx-text-fill: #2C3E50;
+}
+
 /* ====== SEPARATOR ====== */
 .separator .line {
     -fx-border-color: #D5DBDB;
@@ -345,6 +411,31 @@
 
 .scroll-bar .thumb:hover {
     -fx-background-color: #95A5A6;
+}
+
+/* ====== CONTEXT MENU ====== */
+.context-menu {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D5DBDB;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 10, 0, 0, 4);
+}
+
+.context-menu .menu-item {
+    -fx-background-color: transparent;
+}
+
+.context-menu .menu-item .label {
+    -fx-text-fill: #2C3E50;
+}
+
+.context-menu .menu-item:hover {
+    -fx-background-color: #E8EDF2;
+}
+
+.context-menu .menu-item:focused {
+    -fx-background-color: #D6EAF8;
 }
 
 /* ====== VALIDACION ====== */

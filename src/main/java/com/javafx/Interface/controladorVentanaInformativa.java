@@ -43,15 +43,45 @@ public class controladorVentanaInformativa {
      * @param tipo Tipo de mensaje que determina el icono a usar
      */
     public void configurarVentana(String mensaje, TipoMensaje tipo) {
-        //Establecer el texto del mensaje
+        // Establecer el texto del mensaje
         lblInformacion.setText(mensaje);
 
-        //Cargar el icono correspondiente al tipo de mensaje
-        try {
-            Image icono = new Image(getClass().getResourceAsStream(tipo.getIcono()));
-            imgIconoInformacion.setImage(icono);
-        } catch (Exception e) {
-            System.err.println("Error al cargar icono: " + e.getMessage());
+        // Intentar cargar el icono correspondiente
+        java.io.InputStream stream = null;
+        
+        // Probar cada alternativa de nombre de icono
+        for (String nombreIcono : tipo.getIconosAlternativos()) {
+            // Intentar con ruta absoluta
+            stream = getClass().getResourceAsStream("/" + nombreIcono);
+            if (stream != null) {
+                System.out.println("Icono encontrado: /" + nombreIcono);
+                break;
+            }
+            
+            // Intentar sin barra
+            stream = getClass().getResourceAsStream(nombreIcono);
+            if (stream != null) {
+                System.out.println("Icono encontrado: " + nombreIcono);
+                break;
+            }
+        }
+        
+        // Si no se encontró ningún icono alternativo, usar pregunta.png como fallback
+        if (stream == null) {
+            System.err.println("No se encontró icono para " + tipo + ", usando pregunta.png");
+            stream = getClass().getResourceAsStream("/pregunta.png");
+        }
+        
+        // Cargar la imagen
+        if (stream != null) {
+            try {
+                Image icono = new Image(stream);
+                imgIconoInformacion.setImage(icono);
+            } catch (Exception e) {
+                System.err.println("Error al crear imagen: " + e.getMessage());
+            }
+        } else {
+            System.err.println("No se pudo cargar ningún icono");
         }
     }
 

@@ -192,6 +192,7 @@ public class controladorVentanaSanitarios {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
             //Refrescar la tabla por si se modifico algo
@@ -230,6 +231,7 @@ public class controladorVentanaSanitarios {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
             //Si se aplicaron filtros, filtrar la tabla
@@ -329,6 +331,7 @@ public class controladorVentanaSanitarios {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
             //Refrescar la tabla despues de agregar

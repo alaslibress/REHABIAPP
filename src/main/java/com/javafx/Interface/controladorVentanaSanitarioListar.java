@@ -150,6 +150,7 @@ public class controladorVentanaSanitarioListar {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
             //Marcar que se realizaron cambios

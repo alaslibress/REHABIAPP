@@ -36,7 +36,7 @@
             </VBox>
             <VBox prefHeight="119.0" prefWidth="581.0">
                <children>
-                  <Label fx:id="lblBuscarRapido" text="Buscar sanitarios o pacientes:">
+                  <Label fx:id="lblBuscarRapido" text="Buscar citas por fecha o paciente:">
                      <VBox.margin>
                         <Insets bottom="5.0" />
                      </VBox.margin></Label>
@@ -51,10 +51,10 @@
                               </ImageView>
                            </graphic>
                            <tooltip>
-                              <Tooltip text="Buscar" />
+                              <Tooltip text="Buscar citas" />
                            </tooltip>
                         </Button>
-                        <TextField fx:id="txfBusquedaRapida" minHeight="25.0" prefHeight="42.0" prefWidth="527.0" promptText="Buscar:" />
+                        <TextField fx:id="txfBusquedaRapida" minHeight="25.0" prefHeight="42.0" prefWidth="527.0" promptText="Fecha (dd/MM/yyyy) o nombre de paciente..." />
                      </children>
                   </HBox>
                </children>

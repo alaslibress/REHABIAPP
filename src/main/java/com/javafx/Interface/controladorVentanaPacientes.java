@@ -250,6 +250,7 @@ public class controladorVentanaPacientes {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
             //Recargar la lista si hubo cambios
@@ -291,6 +292,7 @@ public class controladorVentanaPacientes {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
             //Recargar la lista de pacientes
@@ -329,6 +331,7 @@ public class controladorVentanaPacientes {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
             //Si se aplicaron filtros, filtrar la tabla

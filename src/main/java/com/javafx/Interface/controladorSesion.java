@@ -1,8 +1,11 @@
 package com.javafx.Interface;
 
+import com.javafx.Clases.AnimacionUtil;
 import com.javafx.Clases.Sanitario;
 import com.javafx.Clases.SesionUsuario;
+import com.javafx.Clases.VentanaUtil;
 import com.javafx.DAO.SanitarioDAO;
+import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -15,11 +18,17 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 /**
  * Controlador para la ventana de inicio de sesion
  * Gestiona la autenticacion de usuarios y el acceso al sistema
+ * 
+ * ANIMACIONES APLICADAS (segun tema 2-6):
+ * - Logo: FadeTransition (aparece poco a poco)
+ * - Campo contraseña: Timeline con efecto brillo
+ * - Botones: ScaleTransition en hover
  */
 public class controladorSesion {
 
@@ -47,8 +56,11 @@ public class controladorSesion {
     @FXML
     private TextField txtInsertarDNI;
 
-    //DAO para autenticacion
+    // DAO para autenticacion
     private SanitarioDAO sanitarioDAO;
+
+    // Timeline para el efecto de brillo (guardar referencia para poder detenerlo)
+    private Timeline timelineBrillo;
 
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML
@@ -57,15 +69,27 @@ public class controladorSesion {
     public void initialize() {
         sanitarioDAO = new SanitarioDAO();
 
-        //Ocultar mensaje de error inicialmente
+        // Ocultar mensaje de error inicialmente
         lblMensajeError.setVisible(false);
 
-        //Verificar y crear usuario admin si no existe
+        // Verificar y crear usuario admin si no existe
         verificarUsuarioAdmin();
 
-        //Configurar eventos de teclado para login con Enter
+        // Configurar eventos de teclado para login con Enter
         txtInsertarDNI.setOnKeyPressed(this::manejarTeclaEnter);
         pssInsertarContrasenia.setOnKeyPressed(this::manejarTeclaEnter);
+
+        // ========== ANIMACIONES ==========
+
+        // 1. Logo aparece poco a poco (FadeTransition)
+        AnimacionUtil.fadeIn(imgLogo, 1500);
+
+        // 2. Efecto brillo suave en campo de contraseña (Timeline con KeyFrames)
+        timelineBrillo = AnimacionUtil.brilloCampoTexto(pssInsertarContrasenia);
+
+        // 3. Efecto hover en botones
+        AnimacionUtil.brilloHover(btnEntrar, Color.rgb(93, 173, 226, 0.8));
+        AnimacionUtil.brilloHover(btnCancelar, Color.rgb(231, 76, 60, 0.8));
     }
 
     /**
@@ -96,6 +120,11 @@ public class controladorSesion {
      */
     @FXML
     void CerrarAPP(ActionEvent event) {
+        // Detener animaciones antes de cerrar
+        if (timelineBrillo != null) {
+            timelineBrillo.stop();
+        }
+
         Stage stage = (Stage) btnCancelar.getScene().getWindow();
         stage.close();
     }
@@ -105,14 +134,14 @@ public class controladorSesion {
      */
     @FXML
     void iniciarSesion(ActionEvent event) {
-        //Ocultar mensaje de error previo
+        // Ocultar mensaje de error previo
         lblMensajeError.setVisible(false);
 
-        //Obtener credenciales
+        // Obtener credenciales
         String dni = txtInsertarDNI.getText().trim().toUpperCase();
         String contrasena = pssInsertarContrasenia.getText();
 
-        //Validar campos vacios
+        // Validar campos vacios
         if (dni.isEmpty()) {
             mostrarError("Introduce tu DNI");
             txtInsertarDNI.requestFocus();
@@ -125,11 +154,16 @@ public class controladorSesion {
             return;
         }
 
-        //Intentar autenticar
+        // Intentar autenticar
         Sanitario sanitario = sanitarioDAO.autenticar(dni, contrasena);
 
         if (sanitario != null) {
-            //Autenticacion exitosa - guardar sesion
+            // Detener animacion de brillo antes de cambiar de ventana
+            if (timelineBrillo != null) {
+                timelineBrillo.stop();
+            }
+
+            // Autenticacion exitosa - guardar sesion
             SesionUsuario sesion = SesionUsuario.getInstancia();
             sesion.iniciarSesion(
                     sanitario.getDni(),
@@ -139,11 +173,11 @@ public class controladorSesion {
                     sanitario.getCargo()
             );
 
-            //Abrir ventana principal
+            // Abrir ventana principal
             abrirVentanaPrincipal();
 
         } else {
-            //Autenticacion fallida
+            // Autenticacion fallida
             mostrarError("DNI o contraseña incorrectos");
             pssInsertarContrasenia.clear();
             pssInsertarContrasenia.requestFocus();
@@ -166,7 +200,7 @@ public class controladorSesion {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaPrincipal.fxml"));
             Parent root = loader.load();
 
-            //Obtener el controlador y pasar datos de sesion si es necesario
+            // Obtener el controlador y pasar datos de sesion si es necesario
             controladorVentanaPrincipal controlador = loader.getController();
             if (controlador != null) {
                 controlador.inicializarSesion();
@@ -174,7 +208,7 @@ public class controladorSesion {
 
             Scene scene = new Scene(root);
             
-            //Aplicar configuracion de tema y tamaño de letra
+            // Aplicar configuracion de tema y tamaño de letra
             controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
 
             Stage stage = new Stage();
@@ -182,15 +216,19 @@ public class controladorSesion {
             stage.setScene(scene);
             stage.setMaximized(true);
             stage.setResizable(true);
+            VentanaUtil.establecerIconoVentana(stage);
 
-            //Manejar cierre de ventana para cerrar sesion
+            // Manejar cierre de ventana para cerrar sesion
             stage.setOnCloseRequest(e -> {
                 SesionUsuario.getInstancia().cerrarSesion();
             });
 
             stage.show();
 
-            //Cerrar ventana de login
+            // Aplicar animacion de aparecer a la ventana principal
+            AnimacionUtil.animarVentana(stage, 400);
+
+            // Cerrar ventana de login
             Stage loginStage = (Stage) btnEntrar.getScene().getWindow();
             loginStage.close();
 

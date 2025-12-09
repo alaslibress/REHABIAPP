@@ -118,9 +118,9 @@ public class controladorPerfilEditar {
         txfApellidosSanitarioCambiar.setText(apellidos);
 
         //DNI (no editable, es la clave primaria)
+        //El campo ya esta deshabilitado en FXML con disable="true"
+        //El estilo lo maneja el CSS con .text-field:disabled
         txfDNISanitarioCambiar.setText(sanitarioActual.getDni());
-        txfDNISanitarioCambiar.setEditable(false);
-        txfDNISanitarioCambiar.setStyle("-fx-background-color: #e0e0e0;");
 
         //Email
         txfEmailSanitarioCambiar.setText(sanitarioActual.getEmail());

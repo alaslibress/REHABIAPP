@@ -22,9 +22,15 @@
     -fx-background-color: transparent;
 }
 
+/* Ventanas modales y contenedores principales */
 #bdpPrincipal .vbox {
     -fx-background-color: #1E1E1E;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 12, 0, 2, 0);
+}
+
+/* Fondo para ventanas emergentes/modales */
+.dialog-pane, .alert {
+    -fx-background-color: #1E1E1E;
 }
 
 /* ====== LABELS ====== */
@@ -77,12 +83,21 @@
     -fx-padding: 8px 12px;
     -fx-font-size: inherit;
     -fx-text-fill: #E8E8E8;
+    -fx-prompt-text-fill: #7F8C8D;
 }
 
 .text-field:focused, .password-field:focused {
     -fx-border-color: #5DADE2;
     -fx-border-width: 2px;
     -fx-effect: dropshadow(gaussian, rgba(93, 173, 226, 0.5), 8, 0, 0, 0);
+}
+
+/* Campos deshabilitados (como DNI en editar perfil) - MUY IMPORTANTE */
+.text-field:disabled, .password-field:disabled {
+    -fx-background-color: #3D3D3D;
+    -fx-text-fill: #A0A0A0;
+    -fx-opacity: 1.0;
+    -fx-border-color: #505050;
 }
 
 #txfBusquedaRapida {
@@ -148,6 +163,37 @@
     -fx-background-color: #404040;
     -fx-text-fill: #7F8C8D;
     -fx-opacity: 0.7;
+}
+
+/* Boton primario (crear, guardar, aceptar) */
+.button-primario {
+    -fx-background-color: #5499C7;
+    -fx-text-fill: #FFFFFF;
+}
+
+.button-primario:hover {
+    -fx-background-color: #6B8EC4;
+}
+
+/* Boton peligro (eliminar, cancelar) */
+.button-peligro {
+    -fx-background-color: #E74C3C;
+    -fx-text-fill: #FFFFFF;
+}
+
+.button-peligro:hover {
+    -fx-background-color: #C0392B;
+}
+
+/* Boton con icono - Fondo claro para que los iconos se vean */
+.button-icono {
+    -fx-background-color: #D5DBDB;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px;
+}
+
+.button-icono:hover {
+    -fx-background-color: #ECF0F1;
 }
 
 /* Boton secundario */
@@ -287,6 +333,20 @@
 
 .combo-box .list-cell {
     -fx-text-fill: #E8E8E8;
+    -fx-background-color: #2D2D2D;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #2D2D2D;
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-text-fill: #E8E8E8;
+    -fx-background-color: #2D2D2D;
+}
+
+.combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #404040;
 }
 
 /* ====== SPINNER ====== */
@@ -299,6 +359,15 @@
 
 .spinner .text-field {
     -fx-text-fill: #E8E8E8;
+    -fx-background-color: #2D2D2D;
+}
+
+.spinner .increment-arrow-button, .spinner .decrement-arrow-button {
+    -fx-background-color: #404040;
+}
+
+.spinner .increment-arrow-button:hover, .spinner .decrement-arrow-button:hover {
+    -fx-background-color: #555555;
 }
 
 /* ====== CHECKBOX Y RADIOBUTTON ====== */
@@ -330,6 +399,32 @@
 
 .date-picker .text-field {
     -fx-text-fill: #E8E8E8;
+    -fx-background-color: #2D2D2D;
+}
+
+.date-picker-popup {
+    -fx-background-color: #2D2D2D;
+}
+
+.date-picker-popup .month-year-pane {
+    -fx-background-color: #1E1E1E;
+}
+
+.date-picker-popup .month-year-pane .label {
+    -fx-text-fill: #FFFFFF;
+}
+
+.date-picker-popup .calendar-grid {
+    -fx-background-color: #2D2D2D;
+}
+
+.date-picker-popup .day-cell {
+    -fx-text-fill: #E8E8E8;
+    -fx-background-color: #2D2D2D;
+}
+
+.date-picker-popup .day-cell:hover {
+    -fx-background-color: #404040;
 }
 
 /* ====== SEPARATOR ====== */
@@ -358,6 +453,39 @@
 
 .scroll-bar .thumb:hover {
     -fx-background-color: #555555;
+}
+
+.scroll-bar .track {
+    -fx-background-color: #1E1E1E;
+}
+
+/* ====== CONTEXT MENU ====== */
+.context-menu {
+    -fx-background-color: #2D2D2D;
+    -fx-border-color: #404040;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 10, 0, 0, 4);
+}
+
+.context-menu .menu-item {
+    -fx-background-color: transparent;
+}
+
+.context-menu .menu-item .label {
+    -fx-text-fill: #E8E8E8;
+}
+
+.context-menu .menu-item:hover {
+    -fx-background-color: #404040;
+}
+
+.context-menu .menu-item:focused {
+    -fx-background-color: #505050;
+}
+
+.context-menu .separator {
+    -fx-background-color: #404040;
 }
 
 /* ====== VALIDACION ====== */

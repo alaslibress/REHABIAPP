@@ -5,6 +5,7 @@
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.TextArea?>
@@ -14,186 +15,190 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="TOP_CENTER" prefHeight="800.0" prefWidth="750.0" spacing="12.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorAgregarPaciente">
-    <padding>
-        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-    </padding>
-    <children>
-        <!-- Titulo -->
-        <Label fx:id="lblTituloVentana" styleClass="label-titulo" text="Nuevo Paciente" />
-
-        <!-- Separador -->
-        <Separator />
-
-        <!-- HBox Principal 1: Datos y Foto -->
-        <HBox alignment="TOP_LEFT" spacing="20.0" VBox.vgrow="ALWAYS">
+<ScrollPane fitToWidth="true" prefHeight="600.0" prefWidth="750.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorAgregarPaciente">
+    <content>
+        <VBox alignment="TOP_CENTER" spacing="10.0" styleClass="root">
+            <padding>
+                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+            </padding>
             <children>
-                <!-- VBox Datos (columna izquierda) -->
-                <VBox alignment="TOP_LEFT" prefWidth="500.0" spacing="7.0">
+                <!-- Titulo -->
+                <Label fx:id="lblTituloVentana" styleClass="label-titulo" text="Nuevo Paciente" />
+
+                <!-- Separador -->
+                <Separator />
+
+                <!-- HBox Principal 1: Datos y Foto -->
+                <HBox alignment="TOP_LEFT" spacing="20.0">
                     <children>
-                        <!-- Sanitario asignado -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <!-- VBox Datos (columna izquierda) -->
+                        <VBox alignment="TOP_LEFT" prefWidth="500.0" spacing="7.0">
                             <children>
-                                <Label prefWidth="140.0" text="Sanitario asignado:" />
-                                <ComboBox fx:id="cmbSanitario" prefWidth="280.0" promptText="Selecciona un sanitario" />
-                            </children>
-                        </HBox>
+                                <!-- Sanitario asignado -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Sanitario asignado:" />
+                                        <ComboBox fx:id="cmbSanitario" prefWidth="280.0" promptText="Selecciona un sanitario" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Nombre -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="Nombre:" />
-                                <TextField fx:id="txtNombre" prefWidth="280.0" promptText="Introduce el nombre" />
-                            </children>
-                        </HBox>
+                                <!-- Nombre -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Nombre:" />
+                                        <TextField fx:id="txtNombre" prefWidth="280.0" promptText="Introduce el nombre" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Apellidos -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="Apellidos:" />
-                                <TextField fx:id="txtApellidos" prefWidth="280.0" promptText="Introduce los apellidos" />
-                            </children>
-                        </HBox>
+                                <!-- Apellidos -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Apellidos:" />
+                                        <TextField fx:id="txtApellidos" prefWidth="280.0" promptText="Introduce los apellidos" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Edad y DNI en la misma fila -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="Edad:" />
-                                <Spinner fx:id="spinnerEdad" editable="true" prefWidth="80.0" />
-                                <Label prefWidth="50.0" text="DNI:" />
-                                <TextField fx:id="txtDNI" prefWidth="140.0" promptText="12345678X" />
-                            </children>
-                        </HBox>
+                                <!-- Edad y DNI en la misma fila -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Edad:" />
+                                        <Spinner fx:id="spinnerEdad" editable="true" prefWidth="80.0" />
+                                        <Label prefWidth="50.0" text="DNI:" />
+                                        <TextField fx:id="txtDNI" prefWidth="140.0" promptText="12345678X" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Email -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="Email:" />
-                                <TextField fx:id="txtEmail" prefWidth="280.0" promptText="ejemplo@correo.com" />
-                            </children>
-                        </HBox>
+                                <!-- Email -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Email:" />
+                                        <TextField fx:id="txtEmail" prefWidth="280.0" promptText="ejemplo@correo.com" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Telefonos -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="Telefonos:" />
-                                <TextField fx:id="txtTelefono1" prefWidth="130.0" promptText="Telefono 1" />
-                                <TextField fx:id="txtTelefono2" prefWidth="130.0" promptText="Telefono 2 (opc)" />
-                            </children>
-                        </HBox>
+                                <!-- Telefonos -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Telefonos:" />
+                                        <TextField fx:id="txtTelefono1" prefWidth="130.0" promptText="Telefono 1" />
+                                        <TextField fx:id="txtTelefono2" prefWidth="130.0" promptText="Telefono 2 (opc)" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Numero Seguridad Social -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="N. Seguridad Social:" />
-                                <TextField fx:id="txtNSS" prefWidth="280.0" promptText="123456789012" />
-                            </children>
-                        </HBox>
+                                <!-- Numero Seguridad Social -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="N. Seguridad Social:" />
+                                        <TextField fx:id="txtNSS" prefWidth="280.0" promptText="123456789012" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Separador para direccion -->
-                        <Separator />
-                        <Label style="-fx-font-weight: bold;" text="Direccion:" />
+                                <!-- Separador para direccion -->
+                                <Separator />
+                                <Label style="-fx-font-weight: bold;" text="Direccion:" />
 
-                        <!-- Calle -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="Calle:" />
-                                <TextField fx:id="txtCalle" prefWidth="280.0" promptText="Nombre de la calle" />
-                            </children>
-                        </HBox>
+                                <!-- Calle -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Calle:" />
+                                        <TextField fx:id="txtCalle" prefWidth="280.0" promptText="Nombre de la calle" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Numero y Piso -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="Numero:" />
-                                <TextField fx:id="txtNumero" prefWidth="80.0" promptText="Num" />
-                                <Label prefWidth="50.0" text="Piso:" />
-                                <TextField fx:id="txtPiso" prefWidth="80.0" promptText="Piso" />
-                            </children>
-                        </HBox>
+                                <!-- Numero y Piso -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Numero:" />
+                                        <TextField fx:id="txtNumero" prefWidth="80.0" promptText="Num" />
+                                        <Label prefWidth="50.0" text="Piso:" />
+                                        <TextField fx:id="txtPiso" prefWidth="80.0" promptText="Piso" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Codigo Postal y Localidad -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="Codigo Postal:" />
-                                <TextField fx:id="txtCodigoPostal" prefWidth="80.0" promptText="CP" />
-                                <Label prefWidth="70.0" text="Localidad:" />
-                                <TextField fx:id="txtLocalidad" prefWidth="120.0" promptText="Ciudad" />
-                            </children>
-                        </HBox>
+                                <!-- Codigo Postal y Localidad -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Codigo Postal:" />
+                                        <TextField fx:id="txtCodigoPostal" prefWidth="80.0" promptText="CP" />
+                                        <Label prefWidth="70.0" text="Localidad:" />
+                                        <TextField fx:id="txtLocalidad" prefWidth="120.0" promptText="Ciudad" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Provincia -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="Provincia:" />
-                                <TextField fx:id="txtProvincia" prefWidth="280.0" promptText="Provincia" />
-                            </children>
-                        </HBox>
+                                <!-- Provincia -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Provincia:" />
+                                        <TextField fx:id="txtProvincia" prefWidth="280.0" promptText="Provincia" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Separador -->
-                        <Separator />
+                                <!-- Separador -->
+                                <Separator />
 
-                        <!-- Discapacidad y Protesis -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="Discapacidad:" />
-                                <TextField fx:id="txtDiscapacidad" prefWidth="150.0" promptText="Tipo" />
-                                <Label prefWidth="60.0" text="Protesis:" />
-                                <RadioButton fx:id="radioProtesisSi" text="Si">
-                                    <toggleGroup>
-                                        <ToggleGroup fx:id="grupoProtesis" />
-                                    </toggleGroup>
-                                </RadioButton>
-                                <RadioButton fx:id="radioProtesisNo" selected="true" text="No" toggleGroup="$grupoProtesis" />
-                            </children>
-                        </HBox>
+                                <!-- Discapacidad y Protesis -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Discapacidad:" />
+                                        <TextField fx:id="txtDiscapacidad" prefWidth="150.0" promptText="Tipo" />
+                                        <Label prefWidth="60.0" text="Protesis:" />
+                                        <RadioButton fx:id="radioProtesisSi" text="Si">
+                                            <toggleGroup>
+                                                <ToggleGroup fx:id="grupoProtesis" />
+                                            </toggleGroup>
+                                        </RadioButton>
+                                        <RadioButton fx:id="radioProtesisNo" selected="true" text="No" toggleGroup="$grupoProtesis" />
+                                    </children>
+                                </HBox>
 
-                        <!-- Estado del paciente -->
-                        <VBox spacing="3.0">
-                            <children>
-                                <Label text="Estado del paciente:" />
-                                <TextArea fx:id="txtAreaEstado" prefHeight="50.0" prefWidth="480.0" promptText="Describe el estado actual del paciente" wrapText="true" />
+                                <!-- Estado del paciente -->
+                                <VBox spacing="3.0">
+                                    <children>
+                                        <Label text="Estado del paciente:" />
+                                        <TextArea fx:id="txtAreaEstado" prefHeight="50.0" prefWidth="480.0" promptText="Describe el estado actual del paciente" wrapText="true" />
+                                    </children>
+                                </VBox>
+
+                                <!-- Tratamiento -->
+                                <VBox spacing="3.0">
+                                    <children>
+                                        <Label text="Tratamiento:" />
+                                        <TextArea fx:id="txtAreaTratamiento" prefHeight="50.0" prefWidth="480.0" promptText="Describe el tratamiento del paciente" wrapText="true" />
+                                    </children>
+                                </VBox>
+
+                                <!-- Informe -->
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Informe:" />
+                                        <Button fx:id="btnImportarInforme" onAction="#importarInformePDF" prefWidth="150.0" text="Importar PDF" />
+                                    </children>
+                                </HBox>
                             </children>
                         </VBox>
 
-                        <!-- Tratamiento -->
-                        <VBox spacing="3.0">
+                        <!-- VBox Foto (columna derecha) -->
+                        <VBox alignment="TOP_CENTER" prefWidth="200.0" spacing="10.0">
                             <children>
-                                <Label text="Tratamiento:" />
-                                <TextArea fx:id="txtAreaTratamiento" prefHeight="50.0" prefWidth="480.0" promptText="Describe el tratamiento del paciente" wrapText="true" />
+                                <Label text="Foto del paciente" />
+                                <ImageView fx:id="imgFotoPaciente" fitHeight="200.0" fitWidth="180.0" preserveRatio="true" />
+                                <Button fx:id="btnAgregarFoto" onAction="#agregarFotoPaciente" text="Agregar Foto" />
                             </children>
                         </VBox>
-
-                        <!-- Informe -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <children>
-                                <Label prefWidth="140.0" text="Informe:" />
-                                <Button fx:id="btnImportarInforme" onAction="#importarInformePDF" prefWidth="150.0" text="Importar PDF" />
-                            </children>
-                        </HBox>
                     </children>
-                </VBox>
+                </HBox>
 
-                <!-- VBox Foto (columna derecha) -->
-                <VBox alignment="TOP_CENTER" prefWidth="200.0" spacing="10.0">
+                <!-- Separador -->
+                <Separator />
+
+                <!-- HBox Principal 2: Botones -->
+                <HBox alignment="CENTER" spacing="10.0">
                     <children>
-                        <Label text="Foto del paciente" />
-                        <ImageView fx:id="imgFotoPaciente" fitHeight="200.0" fitWidth="180.0" preserveRatio="true" />
-                        <Button fx:id="btnAgregarFoto" onAction="#agregarFotoPaciente" text="Agregar Foto" />
+                        <Button fx:id="btnCancelar" onAction="#cerrarVentana" prefWidth="120.0" styleClass="button-peligro" text="Cancelar" />
+                        <Button fx:id="btnGuardar" onAction="#guardarPaciente" prefWidth="120.0" styleClass="button-primario" text="Crear" />
                     </children>
-                </VBox>
+                </HBox>
             </children>
-        </HBox>
-
-        <!-- Separador -->
-        <Separator />
-
-        <!-- HBox Principal 2: Botones -->
-        <HBox alignment="CENTER" spacing="10.0">
-            <children>
-                <Button fx:id="btnCancelar" onAction="#cerrarVentana" prefWidth="120.0" styleClass="button-peligro" text="Cancelar" />
-                <Button fx:id="btnGuardar" onAction="#guardarPaciente" prefWidth="120.0" styleClass="button-primario" text="Crear" />
-            </children>
-        </HBox>
-    </children>
-</VBox>
+        </VBox>
+    </content>
+</ScrollPane>

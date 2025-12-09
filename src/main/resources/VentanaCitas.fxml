@@ -12,13 +12,13 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox fx:id="vboxContenedorPrincipal" prefHeight="700.0" prefWidth="1100.0" spacing="15.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaCitas">
+<VBox fx:id="vboxContenedorPrincipal" prefHeight="700.0" prefWidth="1100.0" spacing="15.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaCitas">
     <padding>
         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
     <children>
         <!-- Titulo -->
-        <Label fx:id="lblTituloPestania" styleClass="label-titulo" text="Gestion de Citas" />
+        <Label fx:id="lblTituloPestania" styleClass="label-titulo" text="Gestión de Citas" />
 
         <Separator />
 
@@ -46,11 +46,11 @@
 
                         <TableView fx:id="tblCitas" prefHeight="300.0" VBox.vgrow="ALWAYS">
                             <columns>
-                                <TableColumn fx:id="colFecha" prefWidth="100.0" text="Fecha" />
-                                <TableColumn fx:id="colHora" prefWidth="80.0" text="Hora" />
-                                <TableColumn fx:id="colPaciente" prefWidth="200.0" text="Paciente" />
-                                <TableColumn fx:id="colDNIPaciente" prefWidth="100.0" text="DNI Paciente" />
-                                <TableColumn fx:id="colSanitario" prefWidth="150.0" text="Sanitario" />
+                                <TableColumn fx:id="colFecha" minWidth="90.0" text="Fecha" />
+                                <TableColumn fx:id="colHora" minWidth="60.0" text="Hora" />
+                                <TableColumn fx:id="colPaciente" minWidth="180.0" text="Paciente" />
+                                <TableColumn fx:id="colDNIPaciente" minWidth="100.0" text="DNI Paciente" />
+                                <TableColumn fx:id="colSanitario" minWidth="150.0" text="Sanitario" />
                             </columns>
                         </TableView>
 

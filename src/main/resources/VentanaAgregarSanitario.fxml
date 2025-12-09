@@ -10,72 +10,72 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="550.0" prefWidth="500.0" spacing="15.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorAgregarSanitario">
+<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="450.0" prefWidth="450.0" spacing="12.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorAgregarSanitario">
     <padding>
-        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
     </padding>
     <children>
         <Label fx:id="lblTituloVentana" styleClass="label-titulo" text="Nuevo Sanitario" />
         <Separator prefWidth="200.0" />
 
-        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
+        <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Nombre:" />
-                <TextField fx:id="txfNombreSanitario" prefWidth="300.0" promptText="Nombre" />
+                <Label prefWidth="110.0" text="Nombre:" />
+                <TextField fx:id="txfNombreSanitario" prefWidth="280.0" promptText="Nombre" />
             </children>
         </HBox>
 
-        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
+        <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Apellidos:" />
-                <TextField fx:id="txfApellidosSanitario" prefWidth="300.0" promptText="Primer apellido Segundo apellido" />
+                <Label prefWidth="110.0" text="Apellidos:" />
+                <TextField fx:id="txfApellidosSanitario" prefWidth="280.0" promptText="Primer apellido Segundo apellido" />
             </children>
         </HBox>
 
-        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
+        <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="DNI:" />
-                <TextField fx:id="txfDNISanitario" prefWidth="300.0" promptText="12345678X" />
+                <Label prefWidth="110.0" text="DNI:" />
+                <TextField fx:id="txfDNISanitario" prefWidth="280.0" promptText="12345678X" />
             </children>
         </HBox>
 
-        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
+        <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Cargo:" />
+                <Label prefWidth="110.0" text="Cargo:" />
                 <CheckBox fx:id="cbxEspecialista" mnemonicParsing="false" text="Medico Especialista" />
             </children>
         </HBox>
 
-        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
+        <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Email:" />
-                <TextField fx:id="txfEmailSanitario" prefWidth="300.0" promptText="ejemplo@correo.com" />
+                <Label prefWidth="110.0" text="Email:" />
+                <TextField fx:id="txfEmailSanitario" prefWidth="280.0" promptText="ejemplo@correo.com" />
             </children>
         </HBox>
 
-        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
+        <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Telefonos:" />
-                <TextField fx:id="txfTelUnoSanitario" prefWidth="130.0" promptText="Telefono 1" />
+                <Label prefWidth="110.0" text="Telefonos:" />
+                <TextField fx:id="txfTelUnoSanitario" prefWidth="120.0" promptText="Telefono 1" />
                 <Separator orientation="VERTICAL" prefHeight="20.0" />
-                <TextField fx:id="txfTelDosSanitario" prefWidth="130.0" promptText="Telefono 2 (opcional)" />
+                <TextField fx:id="txfTelDosSanitario" prefWidth="120.0" promptText="Telefono 2 (opcional)" />
             </children>
         </HBox>
 
-        <HBox alignment="CENTER_LEFT" prefHeight="40.0" prefWidth="200.0" spacing="10.0">
+        <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Label prefWidth="120.0" text="Contrasena:" />
-                <PasswordField fx:id="pssContraseniaNuevoSanitario" prefWidth="300.0" />
+                <Label prefWidth="110.0" text="Contrasena:" />
+                <PasswordField fx:id="pssContraseniaNuevoSanitario" prefWidth="280.0" />
             </children>
         </HBox>
 
-        <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
+        <HBox alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="200.0" spacing="10.0">
             <VBox.margin>
-                <Insets top="20.0" />
+                <Insets top="15.0" />
             </VBox.margin>
             <children>
-                <Button fx:id="btnCancelarSanitarioNuevo" mnemonicParsing="false" onAction="#cerrarVentana" prefWidth="120.0" styleClass="button-peligro" text="Cancelar" />
-                <Button fx:id="btnCrearSanitarioNuevo" mnemonicParsing="false" onAction="#crearNuevoSanitario" prefWidth="120.0" styleClass="button-primario" text="Crear" />
+                <Button fx:id="btnCancelarSanitarioNuevo" mnemonicParsing="false" onAction="#cerrarVentana" prefWidth="110.0" styleClass="button-peligro" text="Cancelar" />
+                <Button fx:id="btnCrearSanitarioNuevo" mnemonicParsing="false" onAction="#crearNuevoSanitario" prefWidth="110.0" styleClass="button-primario" text="Crear" />
             </children>
         </HBox>
     </children>

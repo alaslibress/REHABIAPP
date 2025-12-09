@@ -12,7 +12,7 @@ import javafx.stage.Stage;
  * Clase principal de la aplicacion RehabiAPP
  * Sistema de Gestion de Expedientes para rehabilitacion
  * 
- * MODIFICADO: Aplica CSS externo al iniciar la aplicacion
+ * MODIFICADO: Aplica CSS externo y animaciones al iniciar la aplicacion
  */
 public class Main extends Application {
 
@@ -29,20 +29,41 @@ public class Main extends Application {
         controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
 
         // Configurar el Stage
-        primaryStage.setTitle("RehabiAPP - Inicio de Sesion");
+        primaryStage.setTitle("RehabiAPP - Inicio de Sesión");
         primaryStage.setScene(scene);
         primaryStage.setResizable(false);
 
-        // Intentar cargar el icono de la aplicacion
+        // Intentar cargar el icono de la aplicación (RehabiAPPLogoNoLetras)
         try {
-            Image icono = new Image(getClass().getResourceAsStream("/icono.png"));
-            primaryStage.getIcons().add(icono);
+            // Probar diferentes nombres posibles del icono
+            java.io.InputStream iconStream = null;
+            String[] nombresIcono = {
+                "/RehabiAPPLogoNoLetras.png",
+                "/RehabiAPPLogoNoLetras.jpg",
+                "/rehabiapplogonoletras.png",
+                "/icono.png"
+            };
+            
+            for (String nombre : nombresIcono) {
+                iconStream = getClass().getResourceAsStream(nombre);
+                if (iconStream != null) {
+                    Image icono = new Image(iconStream);
+                    primaryStage.getIcons().add(icono);
+                    System.out.println("Icono de aplicación cargado: " + nombre);
+                    break;
+                }
+            }
+            
+            if (iconStream == null) {
+                System.out.println("No se encontró el icono de la aplicación");
+            }
         } catch (Exception e) {
-            System.out.println("No se pudo cargar el icono de la aplicacion");
+            System.out.println("No se pudo cargar el icono de la aplicación: " + e.getMessage());
         }
 
-        // Mostrar la ventana
+        // Mostrar la ventana con animación (scale + fade)
         primaryStage.show();
+        AnimacionUtil.animarVentana(primaryStage, 500);
     }
 
     public static void main(String[] args) {

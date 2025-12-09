@@ -1,5 +1,6 @@
 package com.javafx.Interface;
 
+import com.javafx.Clases.AnimacionUtil;
 import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
@@ -9,9 +10,13 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
@@ -20,6 +25,8 @@ import javafx.stage.Stage;
 /**
  * Controlador para la ventana principal de la aplicacion
  * Gestiona la navegacion entre pestañas y las acciones del usuario
+ * 
+ * CORREGIDO: Carga de pestaña Citas y añadido menú contextual
  */
 public class controladorVentanaPrincipal {
 
@@ -71,16 +78,70 @@ public class controladorVentanaPrincipal {
     @FXML
     private VBox vboxMenuLateral;
 
-    //Pestaña actualmente cargada
+    // Pestaña actualmente cargada
     private String pestaniaActual = "";
+
+    // Menu contextual para acceso rapido
+    private ContextMenu menuContextual;
 
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML
      */
     @FXML
     public void initialize() {
-        //Cargar pestaña de pacientes por defecto
+        // Crear menu contextual
+        crearMenuContextual();
+
+        // Permitir busqueda con Enter
+        txfBusquedaRapida.setOnAction(e -> busquedaRapida(null));
+
+        // Cargar pestaña de pacientes por defecto
         cargarPestania("Pacientes");
+    }
+
+    /**
+     * Crea el menu contextual con accesos rapidos
+     */
+    private void crearMenuContextual() {
+        menuContextual = new ContextMenu();
+
+        // Item: Perfil
+        MenuItem itemPerfil = new MenuItem("Mi Perfil");
+        itemPerfil.setOnAction(e -> abrirVentanaPerfil(null));
+
+        // Item: Configuracion
+        MenuItem itemConfiguracion = new MenuItem("Configuración");
+        itemConfiguracion.setOnAction(e -> abrirVentanaOpciones(null));
+
+        // Item: Ayuda
+        MenuItem itemAyuda = new MenuItem("Ayuda");
+        itemAyuda.setOnAction(e -> cargarPestania("Ayuda"));
+
+        // Separador
+        SeparatorMenuItem separador = new SeparatorMenuItem();
+
+        // Item: Cerrar sesion
+        MenuItem itemCerrarSesion = new MenuItem("Cerrar Sesión");
+        itemCerrarSesion.setOnAction(e -> cerrarSesion(null));
+
+        // Añadir todos los items al menu
+        menuContextual.getItems().addAll(
+                itemPerfil,
+                itemConfiguracion,
+                itemAyuda,
+                separador,
+                itemCerrarSesion
+        );
+
+        // Configurar evento de click derecho en el BorderPane principal
+        bdpPrincipal.setOnMouseClicked(event -> {
+            if (event.getButton() == MouseButton.SECONDARY) {
+                menuContextual.show(bdpPrincipal, event.getScreenX(), event.getScreenY());
+            } else {
+                // Ocultar menu si se hace click izquierdo
+                menuContextual.hide();
+            }
+        });
     }
 
     /**
@@ -93,7 +154,7 @@ public class controladorVentanaPrincipal {
             lblNombreTemporal.setText(sesion.getNombreCompleto());
             lblCargoTemporal.setText(sesion.getCargo());
 
-            //Ocultar pestaña de sanitarios si no es especialista
+            // Ocultar pestaña de sanitarios si no es especialista
             if (!sesion.esEspecialista()) {
                 btnPestaniaSanitarios.setVisible(false);
                 btnPestaniaSanitarios.setManaged(false);
@@ -102,11 +163,11 @@ public class controladorVentanaPrincipal {
     }
 
     /**
-     * Carga una pestaña en el contenido principal
-     * @param nombrePestania Nombre de la pestaña a cargar
+     * Carga una pestaña generica en el contenido principal
+     * @param nombrePestania Nombre de la pestaña a cargar (Sanitarios, Pacientes, Ayuda)
      */
     private void cargarPestania(String nombrePestania) {
-        //Evitar recargar la misma pestaña
+        // Evitar recargar la misma pestaña
         if (nombrePestania.equals(pestaniaActual)) {
             return;
         }
@@ -116,7 +177,7 @@ public class controladorVentanaPrincipal {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(rutaFXML));
             Parent contenido = loader.load();
 
-            //Configurar permisos segun el controlador
+            // Configurar permisos segun el controlador
             Object controlador = loader.getController();
             if (controlador instanceof controladorVentanaSanitarios) {
                 ((controladorVentanaSanitarios) controlador).configurarPermisos();
@@ -124,7 +185,7 @@ public class controladorVentanaPrincipal {
                 ((controladorVentanaPacientes) controlador).configurarPermisos();
             }
 
-            //Cargar contenido en el centro del BorderPane
+            // Cargar contenido en el centro del BorderPane
             bdpPrincipal.setCenter(contenido);
             pestaniaActual = nombrePestania;
 
@@ -133,6 +194,84 @@ public class controladorVentanaPrincipal {
         } catch (Exception e) {
             System.err.println("Error al cargar pestaña " + nombrePestania + ": " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    // Referencia al controlador de citas para poder filtrar desde búsqueda
+    private controladorVentanaCitas controladorCitasActual;
+
+    /**
+     * Carga la pestaña de citas con configuración especial
+     * La pestaña de citas requiere establecer el DNI del sanitario actual
+     */
+    private void cargarPestaniaCitas() {
+        // Evitar recargar la misma pestaña
+        if ("Citas".equals(pestaniaActual)) {
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaCitas.fxml"));
+            Parent contenido = loader.load();
+
+            // Obtener controlador y configurar el DNI del sanitario actual
+            controladorCitasActual = loader.getController();
+            if (controladorCitasActual != null) {
+                SesionUsuario sesion = SesionUsuario.getInstancia();
+                if (sesion.haySesionActiva()) {
+                    controladorCitasActual.setDniSanitario(sesion.getDniUsuario());
+                }
+            }
+
+            // Cargar contenido en el centro del BorderPane
+            bdpPrincipal.setCenter(contenido);
+            pestaniaActual = "Citas";
+
+            System.out.println("Pestaña cargada: Citas");
+
+        } catch (Exception e) {
+            System.err.println("Error al cargar pestaña Citas: " + e.getMessage());
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error al cargar la pestaña de citas.",
+                    TipoMensaje.ERROR
+            );
+        }
+    }
+
+    /**
+     * Carga la pestaña de citas y aplica un filtro de búsqueda
+     * @param textoBusqueda Texto a buscar (fecha o nombre de paciente)
+     */
+    private void cargarPestaniaCitasConFiltro(String textoBusqueda) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaCitas.fxml"));
+            Parent contenido = loader.load();
+
+            // Obtener controlador
+            controladorCitasActual = loader.getController();
+            if (controladorCitasActual != null) {
+                SesionUsuario sesion = SesionUsuario.getInstancia();
+                if (sesion.haySesionActiva()) {
+                    controladorCitasActual.setDniSanitario(sesion.getDniUsuario());
+                }
+                // Aplicar el filtro de búsqueda
+                controladorCitasActual.filtrarPorTexto(textoBusqueda);
+            }
+
+            // Cargar contenido en el centro del BorderPane
+            bdpPrincipal.setCenter(contenido);
+            pestaniaActual = "Citas";
+
+            System.out.println("Pestaña Citas cargada con filtro: " + textoBusqueda);
+
+        } catch (Exception e) {
+            System.err.println("Error al cargar pestaña Citas con filtro: " + e.getMessage());
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error al cargar la pestaña de citas.",
+                    TipoMensaje.ERROR
+            );
         }
     }
 
@@ -157,7 +296,7 @@ public class controladorVentanaPrincipal {
      */
     @FXML
     void abrirPestaniaCitas(ActionEvent event) {
-        cargarPestania("Citas");
+        cargarPestaniaCitas();
     }
 
     /**
@@ -169,7 +308,9 @@ public class controladorVentanaPrincipal {
     }
 
     /**
-     * Realiza una busqueda rapida
+     * Realiza una búsqueda rápida de citas
+     * Busca por fecha (dd/MM/yyyy) o por nombre de paciente
+     * Lleva automáticamente a la pestaña de Citas con el filtro aplicado
      */
     @FXML
     void busquedaRapida(ActionEvent event) {
@@ -177,18 +318,17 @@ public class controladorVentanaPrincipal {
 
         if (textoBusqueda.isEmpty()) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Introduce un texto para buscar.",
+                    "Introduce una fecha (dd/MM/yyyy) o nombre de paciente para buscar citas.",
                     TipoMensaje.ADVERTENCIA
             );
             return;
         }
 
-        //Buscar en la pestaña actual
-        //Obtener el controlador de la pestaña actual
-        if (bdpPrincipal.getCenter() != null) {
-            //Dependiendo de la pestaña actual, ejecutar la busqueda
-            System.out.println("Busqueda rapida: " + textoBusqueda + " en pestaña " + pestaniaActual);
-        }
+        // Cargar pestaña de citas con el filtro aplicado
+        cargarPestaniaCitasConFiltro(textoBusqueda);
+        
+        // Limpiar campo de búsqueda
+        txfBusquedaRapida.clear();
     }
 
     /**
@@ -200,7 +340,7 @@ public class controladorVentanaPrincipal {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaOpciones.fxml"));
             Parent root = loader.load();
 
-            //Crear escena y aplicar CSS
+            // Crear escena y aplicar CSS
             Scene scene = new Scene(root);
             controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
 
@@ -209,9 +349,16 @@ public class controladorVentanaPrincipal {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            
+            // Establecer icono
+            VentanaUtil.establecerIconoVentana(stage);
+            
+            // Mostrar con animación
+            stage.show();
+            AnimacionUtil.animarVentanaModal(stage);
             stage.showAndWait();
 
-            //Recargar configuracion en la ventana principal despues de cerrar opciones
+            // Recargar configuracion en la ventana principal despues de cerrar opciones
             controladorVentanaOpciones.aplicarConfiguracionAScene(bdpPrincipal.getScene());
 
         } catch (Exception e) {
@@ -229,11 +376,11 @@ public class controladorVentanaPrincipal {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaPerfil.fxml"));
             Parent root = loader.load();
 
-            //Obtener controlador y cargar datos
+            // Obtener controlador y cargar datos
             controladorPerfil controlador = loader.getController();
             controlador.cargarDatosUsuario();
 
-            //Crear escena y aplicar CSS
+            // Crear escena y aplicar CSS
             Scene scene = new Scene(root);
             controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
 
@@ -242,7 +389,17 @@ public class controladorVentanaPrincipal {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            
+            // Establecer icono
+            VentanaUtil.establecerIconoVentana(stage);
+            
+            // Mostrar con animación
+            stage.show();
+            AnimacionUtil.animarVentanaModal(stage);
             stage.showAndWait();
+
+            // Actualizar datos del usuario en caso de cambios
+            inicializarSesion();
 
         } catch (Exception e) {
             System.err.println("Error al abrir ventana de perfil: " + e.getMessage());
@@ -256,29 +413,35 @@ public class controladorVentanaPrincipal {
     @FXML
     void cerrarSesion(ActionEvent event) {
         boolean confirmado = VentanaUtil.mostrarVentanaPregunta(
-                "¿Esta seguro de que desea cerrar sesion?"
+                "¿Está seguro de que desea cerrar sesión?"
         );
 
         if (confirmado) {
-            //Cerrar sesion
+            // Cerrar sesion
             SesionUsuario.getInstancia().cerrarSesion();
 
             try {
-                //Cargar ventana de login
+                // Cargar ventana de login
                 FXMLLoader loader = new FXMLLoader(getClass().getResource("/SGEInicioSesion.fxml"));
                 Parent root = loader.load();
 
-                //Crear escena y aplicar CSS
+                // Crear escena y aplicar CSS
                 Scene scene = new Scene(root);
                 controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
 
                 Stage stage = new Stage();
-                stage.setTitle("RehabiAPP - Inicio de Sesion");
+                stage.setTitle("RehabiAPP - Inicio de Sesión");
                 stage.setScene(scene);
                 stage.setResizable(false);
+                
+                // Establecer icono
+                VentanaUtil.establecerIconoVentana(stage);
+                
+                // Mostrar con animación
                 stage.show();
+                AnimacionUtil.animarVentana(stage, 400);
 
-                //Cerrar ventana actual
+                // Cerrar ventana actual
                 Stage ventanaActual = (Stage) btnSalir.getScene().getWindow();
                 ventanaActual.close();
 

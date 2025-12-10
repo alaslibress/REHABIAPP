@@ -11,6 +11,7 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.StackPane?>
 
 <VBox fx:id="vboxContenedorPrincipal" prefHeight="700.0" prefWidth="1100.0" spacing="15.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaCitas">
     <padding>
@@ -26,25 +27,27 @@
         <HBox spacing="20.0" VBox.vgrow="ALWAYS">
             <children>
                 <!-- Columna izquierda: Calendario y lista de citas -->
-                <VBox prefWidth="600.0" spacing="15.0" HBox.hgrow="ALWAYS">
+                <VBox prefWidth="720.0" spacing="10.0" HBox.hgrow="ALWAYS">
                     <children>
-                        <!-- Seccion calendario -->
-                        <Label style="-fx-font-weight: bold;" text="Seleccionar fecha:" />
-
-                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                        <!-- Contenedor para calendario personalizado -->
+                        <HBox spacing="10.0" alignment="CENTER_LEFT">
                             <children>
-                                <DatePicker fx:id="dpFechaSeleccionada" onAction="#seleccionarFecha" prefWidth="200.0" />
-                                <Button fx:id="btnHoy" onAction="#irAHoy" text="Hoy" />
-                                <Button fx:id="btnVerTodas" onAction="#verTodasLasCitas" text="Ver todas" />
+                                <Label style="-fx-font-weight: bold;" text="Calendario:" />
+                                <Button fx:id="btnHoy" onAction="#irAHoy" text="Hoy" styleClass="button-primario" />
+                                <Button fx:id="btnVerTodas" onAction="#verTodasLasCitas" text="Ver todas las citas" />
                             </children>
                         </HBox>
+                        
+                        <!-- Contenedor donde se insertará el calendario CalendarFX -->
+                        <StackPane fx:id="contenedorCalendario" prefHeight="350.0" minHeight="320.0" VBox.vgrow="SOMETIMES">
+                        </StackPane>
 
                         <Separator />
 
                         <!-- Tabla de citas -->
-                        <Label style="-fx-font-weight: bold;" text="Citas programadas:" />
+                        <Label style="-fx-font-weight: bold;" text="Citas del día seleccionado:" />
 
-                        <TableView fx:id="tblCitas" prefHeight="300.0" VBox.vgrow="ALWAYS">
+                        <TableView fx:id="tblCitas" prefHeight="200.0" VBox.vgrow="ALWAYS">
                             <columns>
                                 <TableColumn fx:id="colFecha" minWidth="90.0" text="Fecha" />
                                 <TableColumn fx:id="colHora" minWidth="60.0" text="Hora" />
@@ -68,7 +71,7 @@
                 <Separator orientation="VERTICAL" />
 
                 <!-- Columna derecha: Nueva cita -->
-                <VBox prefWidth="400.0" spacing="15.0">
+                <VBox prefWidth="380.0" spacing="15.0">
                     <children>
                         <Label styleClass="label-titulo" text="Nueva Cita" />
 
@@ -88,11 +91,11 @@
                             </children>
                         </VBox>
 
-                        <!-- Fecha de la cita -->
+                        <!-- Fecha de la cita (usa la fecha seleccionada en el calendario) -->
                         <VBox spacing="5.0">
                             <children>
                                 <Label text="Fecha de la cita:" />
-                                <DatePicker fx:id="dpFechaNuevaCita" prefWidth="200.0" />
+                                <Label fx:id="lblFechaSeleccionada" style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Seleccione en el calendario" />
                             </children>
                         </VBox>
 

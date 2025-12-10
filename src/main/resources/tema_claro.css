@@ -11,6 +11,13 @@
     -fx-background: #F0F3F7;
     -fx-focus-color: #5DADE2;
     -fx-accent: #4A90E2;
+
+    /* CalendarFX - Colores base para estilos personalizados */
+    -style1-color: rgba(52, 152, 219, 0.9); /* Azul para días normales #3498DB */
+    -style2-color: rgba(39, 174, 96, 0.9); /* Verde para hoy #27AE60 */
+    -style3-color: rgba(243, 156, 18, 0.9); /* Naranja #F39C12 */
+    -style4-color: rgba(231, 76, 60, 0.9); /* Rojo para fines de semana #E74C3C */
+    -style5-color: rgba(155, 89, 182, 0.9); /* Púrpura #9B59B6 */
 }
 
 /* ====== CONTENEDORES PRINCIPALES ====== */
@@ -233,6 +240,15 @@
     -fx-text-fill: #4A90E2;
 }
 
+/* Pestaña seleccionada */
+.pestania-seleccionada {
+    -fx-background-color: #E8EDF2 !important;
+    -fx-text-fill: #2980B9 !important;
+    -fx-border-color: #2980B9 !important;
+    -fx-border-width: 0 0 0 4px !important;
+    -fx-font-weight: bold !important;
+}
+
 /* ====== BOTONES CON ICONOS ====== */
 #btnAjustes, #btnSalir, #btnPerfil {
     -fx-background-color: #E8EDF2;
@@ -452,4 +468,499 @@
 .advertencia {
     -fx-border-color: #F39C12;
     -fx-border-width: 2px;
+}
+
+/* ====== CALENDARFX - TEMA CLARO ====== */
+
+/* Contenedor principal del calendario */
+.calendar-view {
+    -fx-background-color: #FFFFFF;
+}
+
+/* MonthView - Vista de mes */
+.month-view {
+    -fx-background-color: #FFFFFF;
+}
+
+.month-view > .container {
+    -fx-background-color: #FFFFFF;
+}
+
+/* Header del mes (navegación) */
+.month-view > .header {
+    -fx-background-color: #F5F7FA;
+    -fx-padding: 10px;
+}
+
+.month-view > .header > .button {
+    -fx-background-color: #5DADE2;
+    -fx-text-fill: #FFFFFF;
+}
+
+.month-view > .header > .button:hover {
+    -fx-background-color: #3498DB;
+}
+
+.month-view > .header > .label {
+    -fx-text-fill: #2C3E50;
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+}
+
+/* Días de la semana (Lu, Ma, Mi...) */
+.month-view > .month-header-view {
+    -fx-background-color: #F5F7FA;
+}
+
+.month-view .day-of-week-label {
+    -fx-text-fill: #3498DB;
+    -fx-font-weight: bold;
+    -fx-background-color: #F5F7FA;
+}
+
+/* Número de semana */
+.month-view .week-number-label {
+    -fx-text-fill: #95A5A6;
+    -fx-background-color: #FFFFFF;
+}
+
+/* Celdas de los días */
+.month-view .day-cell {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E8E8E8;
+    -fx-border-width: 0.5px;
+}
+
+.month-view .day-cell:hover {
+    -fx-background-color: #ECF0F1;
+}
+
+.month-view .day-cell:selected {
+    -fx-background-color: #D6EAF8;
+    -fx-border-color: #3498DB;
+    -fx-border-width: 2px;
+}
+
+.month-view .day-cell:focused {
+    -fx-background-color: #D6EAF8;
+}
+
+/* Número del día */
+.month-view .day-cell > .day-label {
+    -fx-text-fill: #2C3E50;
+    -fx-font-size: 14px;
+}
+
+.month-view .day-cell:selected > .day-label {
+    -fx-text-fill: #2980B9;
+    -fx-font-weight: bold;
+}
+
+/* Día de hoy */
+.month-view .day-cell.today {
+    -fx-background-color: #D6EAF8;
+}
+
+.month-view .day-cell.today > .day-label {
+    -fx-text-fill: #2980B9;
+    -fx-font-weight: bold;
+}
+
+/* Días de otros meses (grises) */
+.month-view .day-cell.other-month {
+    -fx-background-color: #FAFAFA;
+}
+
+.month-view .day-cell.other-month > .day-label {
+    -fx-text-fill: #BDC3C7;
+}
+
+/* Días del fin de semana */
+.month-view .day-cell.weekend > .day-label {
+    -fx-text-fill: #E74C3C;
+}
+
+/* Entradas/Eventos en el calendario */
+.month-view .day-cell .entry {
+    -fx-background-color: #3498DB;
+    -fx-background-radius: 3px;
+    -fx-padding: 2px 4px;
+}
+
+.month-view .day-cell .entry > .label {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 10px;
+}
+
+/* DateControl general */
+.date-control {
+    -fx-background-color: #FFFFFF;
+}
+
+.date-control > .header {
+    -fx-background-color: #F5F7FA;
+}
+
+.date-control > .header > .label {
+    -fx-text-fill: #2C3E50;
+}
+
+/* YearMonthView */
+.year-month-view {
+    -fx-background-color: #FFFFFF;
+}
+
+.year-month-view > .header {
+    -fx-background-color: #F5F7FA;
+}
+
+.year-month-view .month-label {
+    -fx-text-fill: #2C3E50;
+}
+
+.year-month-view .year-label {
+    -fx-text-fill: #2C3E50;
+    -fx-font-weight: bold;
+}
+
+/* Botones de navegación del calendario */
+.calendar-header-view .button {
+    -fx-background-color: #5DADE2;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 4px;
+}
+
+.calendar-header-view .button:hover {
+    -fx-background-color: #3498DB;
+}
+
+.calendar-header-view .label {
+    -fx-text-fill: #2C3E50;
+}
+
+/* Popover de detalles */
+.popover {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D5DBDB;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 10, 0, 0, 4);
+}
+
+.popover > .content {
+    -fx-background-color: #FFFFFF;
+}
+
+.popover > .title {
+    -fx-background-color: #F5F7FA;
+}
+
+.popover .label {
+    -fx-text-fill: #2C3E50;
+}
+
+/* Estilos para diferentes calendarios (STYLE1-7) */
+.calendar-style1 {
+    -fx-background-color: #3498DB;
+}
+
+.calendar-style2 {
+    -fx-background-color: #2ECC71;
+}
+
+.calendar-style3 {
+    -fx-background-color: #F1C40F;
+}
+
+.calendar-style4 {
+    -fx-background-color: #E74C3C;
+}
+
+.calendar-style5 {
+    -fx-background-color: #9B59B6;
+}
+
+/* StackPane contenedor del calendario */
+#contenedorCalendario {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D5DBDB;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}
+
+/* ====== CALENDARFX - TEMA CLARO (OPTIMIZADO) ====== */
+
+/* Fondo base */
+.month-view,
+.month-view > *,
+.month-view .container,
+.date-control,
+.calendar-view {
+    -fx-background-color: #FFFFFF;
+}
+
+/* Header de navegación */
+.month-view > .header,
+.month-view .header,
+.date-control > .header {
+    -fx-background-color: #F5F7FA;
+    -fx-padding: 8px;
+}
+
+.month-view .header .label,
+.month-view > .header > .label {
+    -fx-text-fill: #2C3E50;
+    -fx-font-weight: bold;
+    -fx-font-size: 15px;
+}
+
+.month-view .header .button,
+.month-view > .header > .button {
+    -fx-background-color: #3498DB;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 4px;
+    -fx-cursor: hand;
+}
+
+.month-view .header .button:hover,
+.month-view > .header > .button:hover {
+    -fx-background-color: #2980B9;
+}
+
+/* Días de la semana */
+.month-view .day-of-week-label {
+    -fx-text-fill: #3498DB;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-background-color: #F5F7FA;
+}
+
+/* Celdas de días */
+.month-view .day-cell {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #ECF0F1;
+    -fx-border-width: 0.5px;
+}
+
+.month-view .day-cell:hover {
+    -fx-background-color: #EBF5FB;
+}
+
+.month-view .day-cell:selected,
+.month-view .day-cell:focused {
+    -fx-background-color: #D6EAF8;
+    -fx-border-color: #3498DB;
+    -fx-border-width: 2px;
+}
+
+/* Número del día */
+.month-view .day-cell .day-label {
+    -fx-text-fill: #2C3E50;
+    -fx-font-size: 13px;
+    -fx-background-color: transparent;
+}
+
+.month-view .day-cell:selected .day-label {
+    -fx-text-fill: #2980B9;
+    -fx-font-weight: bold;
+}
+
+/* Día de hoy */
+.month-view .day-cell.today {
+    -fx-background-color: #D6EAF8;
+}
+
+.month-view .day-cell.today .day-label {
+    -fx-text-fill: #2980B9;
+    -fx-font-weight: bold;
+}
+
+/* Otros meses */
+.month-view .day-cell.other-month {
+    -fx-background-color: #FAFAFA;
+}
+
+.month-view .day-cell.other-month .day-label {
+    -fx-text-fill: #BDC3C7;
+}
+
+/* Fines de semana */
+.month-view .day-cell.weekend {
+    -fx-background-color: #FDF2F2;
+}
+
+.month-view .day-cell.weekend .day-label {
+    -fx-text-fill: #E74C3C;
+}
+
+.month-view .day-cell.weekend.other-month {
+    -fx-background-color: #FAFAFA;
+}
+
+.month-view .day-cell.weekend.other-month .day-label {
+    -fx-text-fill: #D5A6A6;
+}
+
+/* Entradas/Eventos */
+.month-view .day-cell .entry,
+.month-view .entry-view,
+.entry-view {
+    -fx-background-color: #3498DB;
+    -fx-background-radius: 3px;
+    -fx-padding: 2px 5px;
+}
+
+.month-view .day-cell .entry .label,
+.month-view .entry-view .label,
+.entry-view .label {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 10px;
+    -fx-background-color: transparent;
+}
+
+/* Full-day entry */
+.month-view .full-day-entry-view {
+    -fx-background-color: #3498DB;
+    -fx-background-radius: 3px;
+}
+
+.month-view .full-day-entry-view .label {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 10px;
+}
+
+/* Indicador "más entradas" */
+.month-view .day-cell .more-entries-label {
+    -fx-text-fill: #3498DB;
+    -fx-font-size: 9px;
+    -fx-background-color: transparent;
+}
+
+/* ====== CALENDARFX - ESTILOS PERSONALIZADOS CON DERIVE() ====== */
+
+/* STYLE1 - Días normales (Azul) */
+.calendar-style1 .entry,
+.calendar-style1 .entry-view,
+.calendar-style1 .full-day-entry-view {
+    -fx-background-color: derive(-style1-color, 20%) !important;
+    -fx-border-color: -style1-color !important;
+    -fx-border-width: 1px;
+}
+
+.calendar-style1 .entry .label,
+.calendar-style1 .entry-view .label,
+.calendar-style1 .full-day-entry-view .label {
+    -fx-text-fill: white !important;
+    -fx-font-weight: bold !important;
+}
+
+.calendar-style1 .entry:selected,
+.calendar-style1 .entry-view:selected,
+.calendar-style1 .full-day-entry-view:selected {
+    -fx-background-color: -style1-color !important;
+}
+
+/* STYLE2 - Día de hoy (Verde brillante) */
+.calendar-style2 .entry,
+.calendar-style2 .entry-view,
+.calendar-style2 .full-day-entry-view {
+    -fx-background-color: derive(-style2-color, 20%) !important;
+    -fx-border-color: -style2-color !important;
+    -fx-border-width: 2px;
+}
+
+.calendar-style2 .entry .label,
+.calendar-style2 .entry-view .label,
+.calendar-style2 .full-day-entry-view .label {
+    -fx-text-fill: white !important;
+    -fx-font-weight: bold !important;
+}
+
+.calendar-style2 .entry:selected,
+.calendar-style2 .entry-view:selected,
+.calendar-style2 .full-day-entry-view:selected {
+    -fx-background-color: -style2-color !important;
+}
+
+/* STYLE3 - Naranja (reservado) */
+.calendar-style3 .entry,
+.calendar-style3 .entry-view,
+.calendar-style3 .full-day-entry-view {
+    -fx-background-color: derive(-style3-color, 20%) !important;
+    -fx-border-color: -style3-color !important;
+}
+
+.calendar-style3 .entry .label,
+.calendar-style3 .entry-view .label,
+.calendar-style3 .full-day-entry-view .label {
+    -fx-text-fill: white !important;
+    -fx-font-weight: bold !important;
+}
+
+/* STYLE4 - Fines de semana (Rojo) */
+.calendar-style4 .entry,
+.calendar-style4 .entry-view,
+.calendar-style4 .full-day-entry-view {
+    -fx-background-color: derive(-style4-color, 20%) !important;
+    -fx-border-color: -style4-color !important;
+    -fx-border-width: 1px;
+}
+
+.calendar-style4 .entry .label,
+.calendar-style4 .entry-view .label,
+.calendar-style4 .full-day-entry-view .label {
+    -fx-text-fill: white !important;
+    -fx-font-weight: bold !important;
+}
+
+.calendar-style4 .entry:selected,
+.calendar-style4 .entry-view:selected,
+.calendar-style4 .full-day-entry-view:selected {
+    -fx-background-color: -style4-color !important;
+}
+
+/* STYLE5 - Púrpura (reservado) */
+.calendar-style5 .entry,
+.calendar-style5 .entry-view,
+.calendar-style5 .full-day-entry-view {
+    -fx-background-color: derive(-style5-color, 20%) !important;
+    -fx-border-color: -style5-color !important;
+}
+
+.calendar-style5 .entry .label,
+.calendar-style5 .entry-view .label,
+.calendar-style5 .full-day-entry-view .label {
+    -fx-text-fill: white !important;
+    -fx-font-weight: bold !important;
+}
+
+/* Popover */
+.popover {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D5DBDB;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 8, 0, 0, 2);
+}
+
+.popover .label {
+    -fx-text-fill: #2C3E50;
+}
+
+/* ====== INDICADOR DE CONEXIÓN BD ====== */
+#hboxIndicadorConexion {
+    -fx-padding: 5px 10px;
+    -fx-background-color: #F5F7FA;
+    -fx-background-radius: 15px;
+    -fx-border-radius: 15px;
+    -fx-border-color: #D5DBDB;
+    -fx-border-width: 1px;
+}
+
+#lblEstadoConexion {
+    -fx-font-size: 11px;
+}
+
+#circuloConexion {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 3, 0, 0, 1);
 }

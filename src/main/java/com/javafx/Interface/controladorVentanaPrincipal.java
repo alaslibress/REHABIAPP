@@ -1,9 +1,13 @@
 package com.javafx.Interface;
 
 import com.javafx.Clases.AnimacionUtil;
+import com.javafx.Clases.ConexionBD;
 import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
+import javafx.animation.KeyFrame;
+import javafx.animation.ScaleTransition;
+import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -18,15 +22,19 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 /**
  * Controlador para la ventana principal de la aplicacion
  * Gestiona la navegacion entre pestañas y las acciones del usuario
  * 
- * CORREGIDO: Carga de pestaña Citas y añadido menú contextual
+ * ACTUALIZADO: Indicador de conexión a BD + Animaciones de pestañas
  */
 public class controladorVentanaPrincipal {
 
@@ -77,6 +85,16 @@ public class controladorVentanaPrincipal {
 
     @FXML
     private VBox vboxMenuLateral;
+    
+    // Indicador de conexión a BD
+    @FXML
+    private HBox hboxIndicadorConexion;
+    
+    @FXML
+    private Circle circuloConexion;
+    
+    @FXML
+    private Label lblEstadoConexion;
 
     // Pestaña actualmente cargada
     private String pestaniaActual = "";
@@ -84,11 +102,31 @@ public class controladorVentanaPrincipal {
     // Menu contextual para acceso rapido
     private ContextMenu menuContextual;
 
+    // Botón de pestaña actualmente seleccionado
+    private Button botonPestaniaActual = null;
+
+    // Timeline para verificación periódica de conexión BD
+    private Timeline verificadorConexion;
+
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML
      */
     @FXML
     public void initialize() {
+        // Verificar conexión a BD inicialmente
+        verificarConexionBD();
+
+        // Iniciar verificador periódico (cada 5 segundos)
+        iniciarVerificadorConexion();
+
+        // Permitir reconexión manual al hacer clic en el indicador
+        hboxIndicadorConexion.setOnMouseClicked(e -> {
+            if (e.getButton() == MouseButton.PRIMARY) {
+                verificarConexionBD();
+            }
+        });
+        hboxIndicadorConexion.setStyle(hboxIndicadorConexion.getStyle() + "; -fx-cursor: hand;");
+
         // Crear menu contextual
         crearMenuContextual();
 
@@ -97,6 +135,67 @@ public class controladorVentanaPrincipal {
 
         // Cargar pestaña de pacientes por defecto
         cargarPestania("Pacientes");
+
+        // Marcar pestaña inicial como seleccionada
+        marcarPestaniaSeleccionada(btnPestaniaPacientes);
+    }
+
+    /**
+     * Inicia un verificador periódico que actualiza el estado de la conexión cada 5 segundos
+     */
+    private void iniciarVerificadorConexion() {
+        verificadorConexion = new Timeline(
+            new KeyFrame(Duration.seconds(5), e -> verificarConexionBD())
+        );
+        verificadorConexion.setCycleCount(Timeline.INDEFINITE);
+        verificadorConexion.play();
+    }
+
+    /**
+     * Verifica la conexión a la base de datos y actualiza el indicador visual
+     */
+    private void verificarConexionBD() {
+        boolean conectado = ConexionBD.probarConexion();
+        
+        if (conectado) {
+            circuloConexion.setFill(Color.web("#27AE60")); // Verde
+            lblEstadoConexion.setText("Conectado");
+            lblEstadoConexion.setStyle("-fx-text-fill: #27AE60; -fx-font-size: 11px;");
+        } else {
+            circuloConexion.setFill(Color.web("#E74C3C")); // Rojo
+            lblEstadoConexion.setText("Sin conexión");
+            lblEstadoConexion.setStyle("-fx-text-fill: #E74C3C; -fx-font-size: 11px;");
+        }
+    }
+
+    /**
+     * Marca visualmente la pestaña seleccionada con animación
+     */
+    private void marcarPestaniaSeleccionada(Button botonSeleccionado) {
+        // Quitar estilo de selección del botón anterior
+        if (botonPestaniaActual != null) {
+            botonPestaniaActual.getStyleClass().remove("pestania-seleccionada");
+            // Animación de deselección
+            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(150), botonPestaniaActual);
+            scaleOut.setToX(1.0);
+            scaleOut.setToY(1.0);
+            scaleOut.play();
+        }
+        
+        // Aplicar estilo al nuevo botón seleccionado
+        if (botonSeleccionado != null) {
+            botonSeleccionado.getStyleClass().add("pestania-seleccionada");
+            
+            // Animación de selección
+            ScaleTransition scaleIn = new ScaleTransition(Duration.millis(200), botonSeleccionado);
+            scaleIn.setFromX(1.0);
+            scaleIn.setFromY(1.0);
+            scaleIn.setToX(1.05);
+            scaleIn.setToY(1.05);
+            scaleIn.play();
+            
+            botonPestaniaActual = botonSeleccionado;
+        }
     }
 
     /**
@@ -115,7 +214,10 @@ public class controladorVentanaPrincipal {
 
         // Item: Ayuda
         MenuItem itemAyuda = new MenuItem("Ayuda");
-        itemAyuda.setOnAction(e -> cargarPestania("Ayuda"));
+        itemAyuda.setOnAction(e -> {
+            cargarPestania("Ayuda");
+            marcarPestaniaSeleccionada(btnPestaniaAyuda);
+        });
 
         // Separador
         SeparatorMenuItem separador = new SeparatorMenuItem();
@@ -262,6 +364,9 @@ public class controladorVentanaPrincipal {
             // Cargar contenido en el centro del BorderPane
             bdpPrincipal.setCenter(contenido);
             pestaniaActual = "Citas";
+            
+            // Marcar pestaña como seleccionada
+            marcarPestaniaSeleccionada(btnPestaniaCitas);
 
             System.out.println("Pestaña Citas cargada con filtro: " + textoBusqueda);
 
@@ -281,6 +386,7 @@ public class controladorVentanaPrincipal {
     @FXML
     void abrirPestaniaSanitarios(ActionEvent event) {
         cargarPestania("Sanitarios");
+        marcarPestaniaSeleccionada(btnPestaniaSanitarios);
     }
 
     /**
@@ -289,6 +395,7 @@ public class controladorVentanaPrincipal {
     @FXML
     void abrirPestaniaPacientes(ActionEvent event) {
         cargarPestania("Pacientes");
+        marcarPestaniaSeleccionada(btnPestaniaPacientes);
     }
 
     /**
@@ -297,6 +404,7 @@ public class controladorVentanaPrincipal {
     @FXML
     void abrirPestaniaCitas(ActionEvent event) {
         cargarPestaniaCitas();
+        marcarPestaniaSeleccionada(btnPestaniaCitas);
     }
 
     /**
@@ -305,6 +413,7 @@ public class controladorVentanaPrincipal {
     @FXML
     void abrirPestaniaAyuda(ActionEvent event) {
         cargarPestania("Ayuda");
+        marcarPestaniaSeleccionada(btnPestaniaAyuda);
     }
 
     /**
@@ -354,8 +463,7 @@ public class controladorVentanaPrincipal {
             VentanaUtil.establecerIconoVentana(stage);
             
             // Mostrar con animación
-            stage.show();
-            AnimacionUtil.animarVentanaModal(stage);
+            stage.setOnShown(e -> AnimacionUtil.animarVentanaModal(stage));
             stage.showAndWait();
 
             // Recargar configuracion en la ventana principal despues de cerrar opciones
@@ -394,8 +502,7 @@ public class controladorVentanaPrincipal {
             VentanaUtil.establecerIconoVentana(stage);
             
             // Mostrar con animación
-            stage.show();
-            AnimacionUtil.animarVentanaModal(stage);
+            stage.setOnShown(e -> AnimacionUtil.animarVentanaModal(stage));
             stage.showAndWait();
 
             // Actualizar datos del usuario en caso de cambios

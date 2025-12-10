@@ -17,12 +17,12 @@
         <Label fx:id="lblTituloPestania" styleClass="label-titulo" text="Ayuda" />
         <ScrollPane fitToHeight="true" fitToWidth="true" VBox.vgrow="ALWAYS">
             <content>
-                <TextArea fx:id="txtAreaAyuda" editable="false" prefHeight="500.0" wrapText="true" styleClass="text-area-ayuda" />
+                <TextArea fx:id="txtAreaAyuda" editable="false" prefHeight="500.0" styleClass="text-area-ayuda" wrapText="true" />
             </content>
         </ScrollPane>
         <HBox alignment="CENTER_RIGHT" spacing="10.0">
             <children>
-                <Button fx:id="btnContactar" mnemonicParsing="false" onAction="#contactarSoporte" prefHeight="35.0" prefWidth="170.0" styleClass="button-primario" text="Contactar con soporte">
+                <Button fx:id="btnContactar" mnemonicParsing="false" onAction="#contactarSoporte" prefHeight="35.0" prefWidth="220.0" styleClass="button-primario" text="Contactar con soporte">
                     <tooltip>
                         <Tooltip text="Abrir cliente de correo para contactar con soporte" />
                     </tooltip>

@@ -8,14 +8,19 @@ import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.CitaDAO;
 import com.javafx.DAO.PacienteDAO;
+
+import com.calendarfx.model.Calendar;
+import com.calendarfx.model.CalendarSource;
+import com.calendarfx.model.Entry;
+import com.calendarfx.view.MonthView;
+
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.DateCell;
-import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
@@ -23,191 +28,251 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 /**
  * Controlador para la ventana de gestión de citas
- * Incluye lista de citas y formulario para crear nuevas citas
+ * Implementación LIMPIA con CalendarFX MonthView
+ * 
+ * OPTIMIZACIONES:
+ * - Caché de citas para evitar consultas BD repetidas
+ * - Entradas como full-day (sin hora) para evitar "1 más..."
+ * - Listener de fecha con debounce implícito
+ * - Tareas asíncronas para operaciones BD
  */
 public class controladorVentanaCitas {
 
-    // ========== COMPONENTES COLUMNA IZQUIERDA (Lista de citas) ==========
-    @FXML
-    private VBox vboxContenedorPrincipal;
+    // ========== COMPONENTES FXML ==========
+    @FXML private VBox vboxContenedorPrincipal;
+    @FXML private Label lblTituloPestania;
+    @FXML private StackPane contenedorCalendario;
+    @FXML private Button btnHoy;
+    @FXML private Button btnVerTodas;
+    @FXML private TableView<Cita> tblCitas;
+    @FXML private TableColumn<Cita, String> colFecha;
+    @FXML private TableColumn<Cita, String> colHora;
+    @FXML private TableColumn<Cita, String> colPaciente;
+    @FXML private TableColumn<Cita, String> colDNIPaciente;
+    @FXML private TableColumn<Cita, String> colSanitario;
+    @FXML private Button btnEliminarCita;
+    @FXML private Button btnVerCita;
+    @FXML private TextField txtDNIPaciente;
+    @FXML private Button btnBuscarPaciente;
+    @FXML private Label lblNombrePaciente;
+    @FXML private Label lblFechaSeleccionada;
+    @FXML private Spinner<Integer> spnHora;
+    @FXML private Spinner<Integer> spnMinuto;
+    @FXML private Button btnRestablecer;
+    @FXML private Button btnAniadirCita;
 
-    @FXML
-    private Label lblTituloPestania;
+    // ========== CALENDARFX ==========
+    private MonthView monthView;
+    private Calendar calendarioDiasNormales;
+    private Calendar calendarioFinesSemana;
+    private Calendar calendarioHoy;
+    private CalendarSource calendarSource;
 
-    @FXML
-    private DatePicker dpFechaSeleccionada;
-
-    @FXML
-    private Button btnHoy;
-
-    @FXML
-    private Button btnVerTodas;
-
-    @FXML
-    private TableView<Cita> tblCitas;
-
-    @FXML
-    private TableColumn<Cita, String> colFecha;
-
-    @FXML
-    private TableColumn<Cita, String> colHora;
-
-    @FXML
-    private TableColumn<Cita, String> colPaciente;
-
-    @FXML
-    private TableColumn<Cita, String> colDNIPaciente;
-
-    @FXML
-    private TableColumn<Cita, String> colSanitario;
-
-    @FXML
-    private Button btnEliminarCita;
-
-    @FXML
-    private Button btnVerCita;
-
-    // ========== COMPONENTES COLUMNA DERECHA (Nueva cita) ==========
-    @FXML
-    private TextField txtDNIPaciente;
-
-    @FXML
-    private Button btnBuscarPaciente;
-
-    @FXML
-    private Label lblNombrePaciente;
-
-    @FXML
-    private DatePicker dpFechaNuevaCita;
-
-    @FXML
-    private Spinner<Integer> spnHora;
-
-    @FXML
-    private Spinner<Integer> spnMinuto;
-
-    @FXML
-    private Button btnRestablecer;
-
-    @FXML
-    private Button btnAniadirCita;
-
-    // ========== DAOs y variables ==========
+    // ========== DAOs ==========
     private CitaDAO citaDAO;
     private PacienteDAO pacienteDAO;
+
+    // ========== ESTADO ==========
     private String dniSanitarioActual;
     private Paciente pacienteSeleccionado;
+    private LocalDate fechaSeleccionada;
+    
+    // ========== CACHÉ Y ASYNC ==========
+    private List<Cita> cacheCitas = new ArrayList<>();
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
+    
+    // ========== FORMATO ==========
+    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    /**
-     * Método initialize se ejecuta automáticamente al cargar el FXML
-     */
     @FXML
     public void initialize() {
         citaDAO = new CitaDAO();
         pacienteDAO = new PacienteDAO();
 
-        // Configurar columnas de la tabla
         configurarTabla();
-
-        // Configurar spinners de hora
         configurarSpinners();
+        configurarCalendario();
 
-        // Establecer fecha actual
-        dpFechaSeleccionada.setValue(LocalDate.now());
-        dpFechaNuevaCita.setValue(LocalDate.now());
+        fechaSeleccionada = LocalDate.now();
+        actualizarLabelFecha();
 
-        // Configurar DatePicker de nueva cita para no permitir fechas pasadas
-        dpFechaNuevaCita.setDayCellFactory(picker -> new DateCell() {
-            @Override
-            public void updateItem(LocalDate date, boolean empty) {
-                super.updateItem(date, empty);
-                setDisable(empty || date.isBefore(LocalDate.now()));
-            }
-        });
-
-        // Listener para cargar citas al cambiar la fecha
-        dpFechaSeleccionada.valueProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
-                cargarCitasPorFecha(newVal);
-            }
-        });
-
-        // Obtener DNI del sanitario logueado
+        // Cargar datos si hay sesión activa
         SesionUsuario sesion = SesionUsuario.getInstancia();
         if (sesion.haySesionActiva()) {
             dniSanitarioActual = sesion.getDniUsuario();
-            cargarCitasPorFecha(LocalDate.now());
+            cargarCitasAsync();
         }
     }
 
     /**
-     * Permite establecer el DNI del sanitario desde fuera
+     * Configura CalendarFX MonthView de forma LIMPIA y OPTIMIZADA
+     * Usa TRES calendarios para aplicar diferentes colores según el tipo de día
      */
-    public void setDniSanitario(String dni) {
-        this.dniSanitarioActual = dni;
-        if (dni != null) {
-            cargarCitasPorFecha(dpFechaSeleccionada.getValue() != null ? 
-                    dpFechaSeleccionada.getValue() : LocalDate.now());
+    private void configurarCalendario() {
+        // Crear MonthView
+        monthView = new MonthView();
+
+        // Crear tres calendarios para diferentes tipos de días
+        calendarioDiasNormales = new Calendar("Citas - Días Normales");
+        calendarioDiasNormales.setStyle(Calendar.Style.STYLE1); // Azul - definido en CSS
+        calendarioDiasNormales.setReadOnly(true);
+
+        calendarioFinesSemana = new Calendar("Citas - Fines de Semana");
+        calendarioFinesSemana.setStyle(Calendar.Style.STYLE4); // Rojo - definido en CSS
+        calendarioFinesSemana.setReadOnly(true);
+
+        calendarioHoy = new Calendar("Citas - Hoy");
+        calendarioHoy.setStyle(Calendar.Style.STYLE2); // Verde/Azul claro - definido en CSS
+        calendarioHoy.setReadOnly(true);
+
+        // Crear source y añadir calendarios
+        calendarSource = new CalendarSource("RehabiAPP");
+        calendarSource.getCalendars().addAll(calendarioDiasNormales, calendarioFinesSemana, calendarioHoy);
+
+        // Configurar MonthView
+        monthView.getCalendarSources().add(calendarSource);
+        monthView.setDate(LocalDate.now());
+        monthView.setShowToday(true);
+        monthView.setShowWeekNumbers(false);
+
+        // Desactivar la creación de entradas por click (usamos formulario)
+        monthView.setEntryFactory(param -> null);
+
+        // Listener para cambio de fecha seleccionada
+        monthView.dateProperty().addListener((obs, oldDate, newDate) -> {
+            if (newDate != null && !newDate.equals(fechaSeleccionada)) {
+                fechaSeleccionada = newDate;
+                actualizarLabelFecha();
+                filtrarCitasPorFecha(newDate);
+            }
+        });
+
+        // Añadir al contenedor y hacer responsive
+        contenedorCalendario.getChildren().add(monthView);
+        monthView.prefWidthProperty().bind(contenedorCalendario.widthProperty());
+        monthView.prefHeightProperty().bind(contenedorCalendario.heightProperty());
+    }
+
+    /**
+     * Carga las citas en segundo plano (no bloquea UI)
+     */
+    private void cargarCitasAsync() {
+        Task<List<Cita>> task = new Task<>() {
+            @Override
+            protected List<Cita> call() {
+                return citaDAO.listarPorSanitario(dniSanitarioActual);
+            }
+        };
+
+        task.setOnSucceeded(e -> {
+            cacheCitas = new ArrayList<>(task.getValue());
+            actualizarEntradasCalendario();
+            filtrarCitasPorFecha(fechaSeleccionada);
+        });
+
+        task.setOnFailed(e -> {
+            System.err.println("Error cargando citas: " + task.getException().getMessage());
+        });
+
+        executor.submit(task);
+    }
+
+    /**
+     * Actualiza las entradas del calendario desde la caché
+     * Usa entradas FULL-DAY para evitar el problema "1 más..."
+     * Asigna cada entrada al calendario correcto según el tipo de día
+     */
+    private void actualizarEntradasCalendario() {
+        // Limpiar entradas existentes de todos los calendarios
+        calendarioDiasNormales.clear();
+        calendarioFinesSemana.clear();
+        calendarioHoy.clear();
+
+        // Agrupar citas por fecha para mostrar contador
+        var citasPorFecha = cacheCitas.stream()
+            .collect(Collectors.groupingBy(Cita::getFecha));
+
+        // Crear una entrada por cada día que tiene citas
+        for (var entry : citasPorFecha.entrySet()) {
+            LocalDate fecha = entry.getKey();
+            int numCitas = entry.getValue().size();
+
+            // Crear entrada full-day (sin hora específica)
+            Entry<String> calEntry = new Entry<>(numCitas + (numCitas == 1 ? " cita" : " citas"));
+            calEntry.setFullDay(true);
+            calEntry.setInterval(fecha, fecha);
+
+            // Asignar al calendario correcto según el tipo de día
+            Calendar calendarioDestino = seleccionarCalendario(fecha);
+            calEntry.setCalendar(calendarioDestino);
         }
     }
 
     /**
-     * Filtra las citas por texto de búsqueda
-     * Puede ser una fecha (dd/MM/yyyy) o un nombre de paciente
-     * @param textoBusqueda Texto a buscar
+     * Selecciona el calendario apropiado según la fecha
+     * @param fecha La fecha a evaluar
+     * @return El calendario correcto (hoy, fin de semana, o día normal)
      */
-    public void filtrarPorTexto(String textoBusqueda) {
-        if (textoBusqueda == null || textoBusqueda.isEmpty()) {
-            return;
+    private Calendar seleccionarCalendario(LocalDate fecha) {
+        // Verificar si es hoy (prioridad máxima)
+        if (fecha.equals(LocalDate.now())) {
+            return calendarioHoy;
         }
 
-        // Intentar parsear como fecha (dd/MM/yyyy)
-        try {
-            java.time.format.DateTimeFormatter formatter = 
-                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-            LocalDate fechaBuscada = LocalDate.parse(textoBusqueda, formatter);
-            
-            // Establecer la fecha en el DatePicker y cargar citas
-            dpFechaSeleccionada.setValue(fechaBuscada);
-            cargarCitasPorFecha(fechaBuscada);
-            return;
-        } catch (Exception e) {
-            // No es una fecha, buscar por nombre de paciente
+        // Verificar si es fin de semana (sábado=6, domingo=7)
+        int diaSemana = fecha.getDayOfWeek().getValue();
+        if (diaSemana == 6 || diaSemana == 7) {
+            return calendarioFinesSemana;
         }
 
-        // Buscar por nombre de paciente en todas las citas
-        if (dniSanitarioActual != null) {
-            List<Cita> todasLasCitas = citaDAO.listarPorSanitario(dniSanitarioActual);
-            List<Cita> citasFiltradas = todasLasCitas.stream()
-                .filter(cita -> cita.getNombrePaciente() != null && 
-                        cita.getNombrePaciente().toLowerCase().contains(textoBusqueda.toLowerCase()))
-                .collect(java.util.stream.Collectors.toList());
-
-            tblCitas.getItems().clear();
-            tblCitas.getItems().addAll(citasFiltradas);
-            dpFechaSeleccionada.setValue(null); // Limpiar filtro de fecha
-
-            System.out.println("Citas filtradas por '" + textoBusqueda + "': " + citasFiltradas.size());
-        }
+        // Día normal
+        return calendarioDiasNormales;
     }
 
     /**
-     * Configura las columnas de la tabla de citas
+     * Filtra citas de la caché por fecha (instantáneo, sin BD)
      */
-    private void configurarTabla() {
-        // Configurar política de redimensionamiento para evitar columna extra vacía
-        tblCitas.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+    private void filtrarCitasPorFecha(LocalDate fecha) {
+        List<Cita> citasFiltradas = cacheCitas.stream()
+            .filter(c -> c.getFecha().equals(fecha))
+            .collect(Collectors.toList());
         
+        tblCitas.getItems().setAll(citasFiltradas);
+    }
+
+    /**
+     * Invalida caché y recarga datos
+     */
+    private void recargarDatos() {
+        cargarCitasAsync();
+    }
+
+    private void actualizarLabelFecha() {
+        if (fechaSeleccionada != null) {
+            lblFechaSeleccionada.setText(fechaSeleccionada.format(FORMATO_FECHA));
+        } else {
+            lblFechaSeleccionada.setText("Seleccione en el calendario");
+        }
+    }
+
+    private void configurarTabla() {
+        tblCitas.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         colFecha.setCellValueFactory(new PropertyValueFactory<>("fechaFormateada"));
         colHora.setCellValueFactory(new PropertyValueFactory<>("horaFormateada"));
         colPaciente.setCellValueFactory(new PropertyValueFactory<>("nombrePaciente"));
@@ -215,144 +280,100 @@ public class controladorVentanaCitas {
         colSanitario.setCellValueFactory(new PropertyValueFactory<>("nombreSanitario"));
     }
 
-    /**
-     * Configura los spinners de hora y minuto
-     */
     private void configurarSpinners() {
-        // Spinner de hora (8-20)
-        SpinnerValueFactory<Integer> factoryHora =
-                new SpinnerValueFactory.IntegerSpinnerValueFactory(8, 20, 9);
-        spnHora.setValueFactory(factoryHora);
-
-        // Spinner de minutos (0, 15, 30, 45)
-        SpinnerValueFactory<Integer> factoryMinuto =
-                new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 45, 0, 15);
-        spnMinuto.setValueFactory(factoryMinuto);
+        spnHora.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(8, 20, 9));
+        spnMinuto.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 45, 0, 15));
     }
 
-    /**
-     * Carga las citas del sanitario para una fecha determinada
-     */
-    private void cargarCitasPorFecha(LocalDate fecha) {
-        if (dniSanitarioActual == null) {
+    // ========== MÉTODOS PÚBLICOS ==========
+
+    public void setDniSanitario(String dni) {
+        this.dniSanitarioActual = dni;
+        if (dni != null) {
+            recargarDatos();
+        }
+    }
+
+    public void filtrarPorTexto(String texto) {
+        if (texto == null || texto.isEmpty()) return;
+
+        // Intentar parsear como fecha
+        try {
+            LocalDate fecha = LocalDate.parse(texto, FORMATO_FECHA);
+            fechaSeleccionada = fecha;
+            monthView.setDate(fecha);
+            actualizarLabelFecha();
+            filtrarCitasPorFecha(fecha);
             return;
-        }
+        } catch (Exception ignored) {}
 
-        List<Cita> citas = citaDAO.obtenerCitasPorSanitarioYFecha(dniSanitarioActual, fecha);
-        tblCitas.getItems().clear();
-        tblCitas.getItems().addAll(citas);
+        // Buscar por nombre de paciente
+        String busqueda = texto.toLowerCase();
+        List<Cita> filtradas = cacheCitas.stream()
+            .filter(c -> c.getNombrePaciente() != null && 
+                        c.getNombrePaciente().toLowerCase().contains(busqueda))
+            .collect(Collectors.toList());
 
-        System.out.println("Citas cargadas para " + fecha + ": " + citas.size());
+        tblCitas.getItems().setAll(filtradas);
     }
 
-    /**
-     * Carga todas las citas del sanitario (sin filtro de fecha)
-     */
-    private void cargarTodasLasCitas() {
-        if (dniSanitarioActual == null) {
-            return;
-        }
+    // ========== ACCIONES FXML ==========
 
-        List<Cita> citas = citaDAO.listarPorSanitario(dniSanitarioActual);
-        tblCitas.getItems().clear();
-        tblCitas.getItems().addAll(citas);
-
-        System.out.println("Todas las citas cargadas: " + citas.size());
-    }
-
-    // ========== MÉTODOS DE LA COLUMNA IZQUIERDA ==========
-
-    /**
-     * Acción del DatePicker al seleccionar fecha
-     */
-    @FXML
-    void seleccionarFecha(ActionEvent event) {
-        LocalDate fecha = dpFechaSeleccionada.getValue();
-        if (fecha != null) {
-            cargarCitasPorFecha(fecha);
-        }
-    }
-
-    /**
-     * Botón "Hoy" - establece la fecha actual
-     */
     @FXML
     void irAHoy(ActionEvent event) {
-        dpFechaSeleccionada.setValue(LocalDate.now());
-        cargarCitasPorFecha(LocalDate.now());
+        fechaSeleccionada = LocalDate.now();
+        monthView.setDate(LocalDate.now());
+        actualizarLabelFecha();
+        filtrarCitasPorFecha(LocalDate.now());
     }
 
-    /**
-     * Botón "Ver todas" - muestra todas las citas sin filtro de fecha
-     */
     @FXML
     void verTodasLasCitas(ActionEvent event) {
-        dpFechaSeleccionada.setValue(null);
-        cargarTodasLasCitas();
+        tblCitas.getItems().setAll(cacheCitas);
+        lblFechaSeleccionada.setText("Mostrando todas");
     }
 
-    /**
-     * Elimina la cita seleccionada en la tabla
-     */
     @FXML
     void eliminarCitaSeleccionada(ActionEvent event) {
-        Cita citaSeleccionada = tblCitas.getSelectionModel().getSelectedItem();
-
-        if (citaSeleccionada == null) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Debe seleccionar una cita para eliminar.",
-                    TipoMensaje.ADVERTENCIA
-            );
+        Cita cita = tblCitas.getSelectionModel().getSelectedItem();
+        if (cita == null) {
+            VentanaUtil.mostrarVentanaInformativa("Seleccione una cita.", TipoMensaje.ADVERTENCIA);
             return;
         }
 
         boolean confirmado = VentanaUtil.mostrarVentanaPregunta(
-                "¿Está seguro de que desea eliminar esta cita?\n\n" +
-                        "Paciente: " + citaSeleccionada.getNombrePaciente() + "\n" +
-                        "Fecha: " + citaSeleccionada.getFechaFormateada() + "\n" +
-                        "Hora: " + citaSeleccionada.getHoraFormateada()
+            "¿Eliminar cita?\n\nPaciente: " + cita.getNombrePaciente() +
+            "\nFecha: " + cita.getFechaFormateada() +
+            "\nHora: " + cita.getHoraFormateada()
         );
 
         if (confirmado) {
-            boolean eliminada = citaDAO.eliminar(
-                    citaSeleccionada.getDniPaciente(),
-                    dniSanitarioActual,
-                    citaSeleccionada.getFecha(),
-                    citaSeleccionada.getHora()
-            );
-
-            if (eliminada) {
-                VentanaUtil.mostrarVentanaInformativa(
-                        "Cita eliminada correctamente.",
-                        TipoMensaje.EXITO
-                );
-                // Recargar citas
-                if (dpFechaSeleccionada.getValue() != null) {
-                    cargarCitasPorFecha(dpFechaSeleccionada.getValue());
-                } else {
-                    cargarTodasLasCitas();
+            Task<Boolean> task = new Task<>() {
+                @Override
+                protected Boolean call() {
+                    return citaDAO.eliminar(cita.getDniPaciente(), dniSanitarioActual, 
+                                           cita.getFecha(), cita.getHora());
                 }
-            } else {
-                VentanaUtil.mostrarVentanaInformativa(
-                        "No se pudo eliminar la cita.",
-                        TipoMensaje.ERROR
-                );
-            }
+            };
+
+            task.setOnSucceeded(e -> {
+                if (task.getValue()) {
+                    VentanaUtil.mostrarVentanaInformativa("Cita eliminada.", TipoMensaje.EXITO);
+                    recargarDatos();
+                } else {
+                    VentanaUtil.mostrarVentanaInformativa("Error al eliminar.", TipoMensaje.ERROR);
+                }
+            });
+
+            executor.submit(task);
         }
     }
 
-    /**
-     * Abre la ventana de detalle de la cita seleccionada
-     */
     @FXML
     void verCitaSeleccionada(ActionEvent event) {
-        Cita citaSeleccionada = tblCitas.getSelectionModel().getSelectedItem();
-
-        if (citaSeleccionada == null) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Debe seleccionar una cita para ver.",
-                    TipoMensaje.ADVERTENCIA
-            );
+        Cita cita = tblCitas.getSelectionModel().getSelectedItem();
+        if (cita == null) {
+            VentanaUtil.mostrarVentanaInformativa("Seleccione una cita.", TipoMensaje.ADVERTENCIA);
             return;
         }
 
@@ -360,16 +381,10 @@ public class controladorVentanaCitas {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaCitaPaciente.fxml"));
             Parent root = loader.load();
 
-            // Obtener controlador y cargar datos
-            controladorCitaPaciente controlador = loader.getController();
-            controlador.cargarDatosCita(
-                    citaSeleccionada.getDniPaciente(),
-                    dniSanitarioActual,
-                    citaSeleccionada.getFecha(),
-                    citaSeleccionada.getHora()
-            );
+            controladorCitaPaciente ctrl = loader.getController();
+            ctrl.cargarDatosCita(cita.getDniPaciente(), dniSanitarioActual, 
+                                cita.getFecha(), cita.getHora());
 
-            // Crear escena y aplicar CSS
             Scene scene = new Scene(root);
             controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
 
@@ -378,161 +393,141 @@ public class controladorVentanaCitas {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
-            
-            // Establecer icono
             VentanaUtil.establecerIconoVentana(stage);
             
-            // Mostrar con animación
-            stage.show();
-            AnimacionUtil.animarVentanaModal(stage);
+            stage.setOnShown(e -> AnimacionUtil.animarVentanaModal(stage));
             stage.showAndWait();
 
-            // Recargar si hubo cambios
-            if (controlador.hayCambiosRealizados()) {
-                if (dpFechaSeleccionada.getValue() != null) {
-                    cargarCitasPorFecha(dpFechaSeleccionada.getValue());
-                } else {
-                    cargarTodasLasCitas();
-                }
+            if (ctrl.hayCambiosRealizados()) {
+                recargarDatos();
             }
-
         } catch (Exception e) {
-            System.err.println("Error al abrir detalle de cita: " + e.getMessage());
-            e.printStackTrace();
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Error al abrir el detalle de la cita.",
-                    TipoMensaje.ERROR
-            );
+            System.err.println("Error: " + e.getMessage());
+            VentanaUtil.mostrarVentanaInformativa("Error al abrir detalle.", TipoMensaje.ERROR);
         }
     }
 
-    // ========== MÉTODOS DE LA COLUMNA DERECHA (Nueva cita) ==========
-
-    /**
-     * Busca el paciente por DNI
-     */
     @FXML
     void buscarPaciente(ActionEvent event) {
         String dni = txtDNIPaciente.getText().trim();
-
         if (dni.isEmpty()) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Introduce el DNI del paciente.",
-                    TipoMensaje.ADVERTENCIA
-            );
+            VentanaUtil.mostrarVentanaInformativa("Introduce el DNI.", TipoMensaje.ADVERTENCIA);
             return;
         }
 
-        pacienteSeleccionado = pacienteDAO.buscarPorDni(dni);
-
-        if (pacienteSeleccionado != null) {
-            String nombreCompleto = pacienteSeleccionado.getNombre() + " " + 
-                    pacienteSeleccionado.getApellido1();
-            if (pacienteSeleccionado.getApellido2() != null && 
-                    !pacienteSeleccionado.getApellido2().isEmpty()) {
-                nombreCompleto += " " + pacienteSeleccionado.getApellido2();
+        Task<Paciente> task = new Task<>() {
+            @Override
+            protected Paciente call() {
+                return pacienteDAO.buscarPorDni(dni);
             }
-            lblNombrePaciente.setText(nombreCompleto);
-            lblNombrePaciente.setStyle("-fx-text-fill: #27AE60;"); // Verde
-        } else {
-            lblNombrePaciente.setText("Paciente no encontrado");
-            lblNombrePaciente.setStyle("-fx-text-fill: #E74C3C;"); // Rojo
-        }
+        };
+
+        task.setOnSucceeded(e -> {
+            pacienteSeleccionado = task.getValue();
+            if (pacienteSeleccionado != null) {
+                String nombre = pacienteSeleccionado.getNombre() + " " + 
+                               pacienteSeleccionado.getApellido1();
+                if (pacienteSeleccionado.getApellido2() != null) {
+                    nombre += " " + pacienteSeleccionado.getApellido2();
+                }
+                lblNombrePaciente.setText(nombre);
+                lblNombrePaciente.setStyle("-fx-text-fill: #27AE60;");
+            } else {
+                lblNombrePaciente.setText("No encontrado");
+                lblNombrePaciente.setStyle("-fx-text-fill: #E74C3C;");
+            }
+        });
+
+        executor.submit(task);
     }
 
-    /**
-     * Limpia el formulario de nueva cita
-     */
     @FXML
     void restablecerFormulario(ActionEvent event) {
         txtDNIPaciente.clear();
         lblNombrePaciente.setText("");
-        dpFechaNuevaCita.setValue(LocalDate.now());
         spnHora.getValueFactory().setValue(9);
         spnMinuto.getValueFactory().setValue(0);
         pacienteSeleccionado = null;
+        
+        fechaSeleccionada = LocalDate.now();
+        monthView.setDate(LocalDate.now());
+        actualizarLabelFecha();
+        filtrarCitasPorFecha(LocalDate.now());
+    }
+
+    @FXML
+    void aniadirCita(ActionEvent event) {
+        // Validaciones
+        if (pacienteSeleccionado == null) {
+            VentanaUtil.mostrarVentanaInformativa("Busque un paciente primero.", TipoMensaje.ADVERTENCIA);
+            return;
+        }
+        if (fechaSeleccionada == null) {
+            VentanaUtil.mostrarVentanaInformativa("Seleccione una fecha.", TipoMensaje.ADVERTENCIA);
+            return;
+        }
+        if (fechaSeleccionada.isBefore(LocalDate.now())) {
+            VentanaUtil.mostrarVentanaInformativa("No puede ser fecha pasada.", TipoMensaje.ADVERTENCIA);
+            return;
+        }
+
+        LocalTime hora = LocalTime.of(spnHora.getValue(), spnMinuto.getValue());
+
+        // Verificar en caché (rápido)
+        boolean existe = cacheCitas.stream()
+            .anyMatch(c -> c.getFecha().equals(fechaSeleccionada) && c.getHora().equals(hora));
+
+        if (existe) {
+            VentanaUtil.mostrarVentanaInformativa("Ya existe cita a esa hora.", TipoMensaje.ADVERTENCIA);
+            return;
+        }
+
+        Cita nueva = new Cita(pacienteSeleccionado.getDni(), dniSanitarioActual,
+                             fechaSeleccionada, hora, null, null);
+
+        final String nombrePac = pacienteSeleccionado.getNombre();
+        final String fechaStr = fechaSeleccionada.format(FORMATO_FECHA);
+
+        Task<Boolean> task = new Task<>() {
+            @Override
+            protected Boolean call() {
+                if (citaDAO.existeCitaEnHorario(dniSanitarioActual, fechaSeleccionada, hora)) {
+                    return false;
+                }
+                return citaDAO.insertar(nueva);
+            }
+        };
+
+        task.setOnSucceeded(e -> {
+            if (task.getValue()) {
+                VentanaUtil.mostrarVentanaInformativa(
+                    "Cita creada.\n\nPaciente: " + nombrePac + 
+                    "\nFecha: " + fechaStr + "\nHora: " + hora,
+                    TipoMensaje.EXITO
+                );
+                
+                // Limpiar formulario
+                txtDNIPaciente.clear();
+                lblNombrePaciente.setText("");
+                pacienteSeleccionado = null;
+                spnHora.getValueFactory().setValue(9);
+                spnMinuto.getValueFactory().setValue(0);
+                
+                recargarDatos();
+            } else {
+                VentanaUtil.mostrarVentanaInformativa("No se pudo crear.", TipoMensaje.ERROR);
+            }
+        });
+
+        executor.submit(task);
     }
 
     /**
-     * Crea una nueva cita con los datos del formulario
+     * Limpieza de recursos
      */
-    @FXML
-    void aniadirCita(ActionEvent event) {
-        // Validar que hay paciente seleccionado
-        if (pacienteSeleccionado == null) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Debe buscar y seleccionar un paciente primero.",
-                    TipoMensaje.ADVERTENCIA
-            );
-            return;
-        }
-
-        // Validar fecha
-        LocalDate fecha = dpFechaNuevaCita.getValue();
-        if (fecha == null) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Debe seleccionar una fecha para la cita.",
-                    TipoMensaje.ADVERTENCIA
-            );
-            return;
-        }
-
-        if (fecha.isBefore(LocalDate.now())) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "No se pueden crear citas en fechas pasadas.",
-                    TipoMensaje.ADVERTENCIA
-            );
-            return;
-        }
-
-        // Obtener hora
-        int hora = spnHora.getValue();
-        int minuto = spnMinuto.getValue();
-        LocalTime horaCita = LocalTime.of(hora, minuto);
-
-        // Verificar que no exista ya una cita en ese horario
-        if (citaDAO.existeCitaEnHorario(dniSanitarioActual, fecha, horaCita)) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Ya existe una cita programada para esa fecha y hora.",
-                    TipoMensaje.ADVERTENCIA
-            );
-            return;
-        }
-
-        // Crear objeto Cita
-        Cita nuevaCita = new Cita(
-                pacienteSeleccionado.getDni(),
-                dniSanitarioActual,
-                fecha,
-                horaCita,
-                null,
-                null
-        );
-
-        // Insertar la cita
-        boolean creada = citaDAO.insertar(nuevaCita);
-
-        if (creada) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Cita creada correctamente.\n\n" +
-                            "Paciente: " + pacienteSeleccionado.getNombre() + "\n" +
-                            "Fecha: " + fecha + "\n" +
-                            "Hora: " + horaCita,
-                    TipoMensaje.EXITO
-            );
-
-            // Limpiar formulario
-            restablecerFormulario(null);
-
-            // Recargar tabla de citas
-            dpFechaSeleccionada.setValue(fecha);
-            cargarCitasPorFecha(fecha);
-
-        } else {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "No se pudo crear la cita.",
-                    TipoMensaje.ERROR
-            );
+    public void cleanup() {
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdown();
         }
     }
 }

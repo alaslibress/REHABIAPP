@@ -17,6 +17,9 @@ dependencies {
     implementation 'org.controlsfx:controlsfx:11.2.2'
     //PostgreSQL Driver
     implementation 'org.postgresql:postgresql:42.6.0'
+
+    // CalendarFX - Calendario visual
+    implementation 'com.calendarfx:view:12.0.1'
 }
 
 java { //Se indica la versión de JDK que ha de utilizar

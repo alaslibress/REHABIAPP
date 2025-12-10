@@ -97,14 +97,67 @@ public class ConexionBD {
         }
     }
 
-    //Metodo para probar la conexion
-    //Retorna true si la conexion es exitosa, false en caso contrario
+    /**
+     * Metodo para probar la conexion a la base de datos
+     * Ejecuta una consulta real para verificar que la base de datos responde
+     *
+     * @return true si la conexion es exitosa y la BD responde, false en caso contrario
+     */
     public static boolean probarConexion() {
+        Connection conn = null;
+        java.sql.Statement stmt = null;
+        java.sql.ResultSet rs = null;
+
         try {
-            Connection conn = getConexion();
-            return conn != null && !conn.isClosed();
-        } catch (SQLException e) {
+            // Intentar obtener o crear una nueva conexión
+            conn = getConexion();
+
+            // Verificar que la conexión no es null y no está cerrada
+            if (conn == null || conn.isClosed()) {
+                return false;
+            }
+
+            // Ejecutar una consulta simple para verificar que la BD responde
+            // SELECT 1 es una consulta universal que funciona en PostgreSQL
+            stmt = conn.createStatement();
+            rs = stmt.executeQuery("SELECT 1");
+
+            // Si la consulta retorna algún resultado, la conexión es válida
+            if (rs.next()) {
+                return true;
+            }
+
+            // Si no retorna nada, hay un problema con la BD
             return false;
+
+        } catch (SQLException e) {
+            System.err.println("Error al verificar conexión con consulta: " + e.getMessage());
+
+            // Resetear la conexión en caso de error
+            try {
+                if (conn != null && !conn.isClosed()) {
+                    conn.close();
+                }
+            } catch (SQLException ex) {
+                // Ignorar
+            }
+            conexion = null;
+
+            return false;
+        } catch (Exception e) {
+            // Capturar cualquier otra excepción (NullPointerException, etc.)
+            System.err.println("Error inesperado al probar conexión: " + e.getMessage());
+            conexion = null;
+            return false;
+        } finally {
+            // Cerrar recursos en orden inverso
+            try {
+                if (rs != null) rs.close();
+                if (stmt != null) stmt.close();
+                // NO cerramos conn porque es la conexión singleton que se reutiliza
+            } catch (SQLException e) {
+                System.err.println("Error al cerrar recursos de prueba: " + e.getMessage());
+            }
         }
     }
 }

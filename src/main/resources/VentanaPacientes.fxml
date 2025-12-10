@@ -19,7 +19,7 @@
     <children>
         <HBox prefHeight="100.0" prefWidth="200.0">
             <children>
-                <Label fx:id="lblTituloPestaniaPacientes" styleClass="label-titulo" text="Pacientes" />
+                <Label fx:id="lblTituloPestaniaPacientes" prefHeight="18.0" prefWidth="200.0" styleClass="label-titulo" text="Pacientes" />
                 <VBox prefHeight="100.0" prefWidth="802.0">
                     <children>
                         <Button fx:id="btnSeleccionarTodoPacientes" mnemonicParsing="false" onAction="#seleccionarTodosPacientes" text="Seleccionar todo">
@@ -77,14 +77,14 @@
         </HBox>
         <HBox alignment="TOP_CENTER" prefWidth="200.0" spacing="10.0" VBox.vgrow="ALWAYS">
             <children>
-                <TableView fx:id="tblPacientes" prefHeight="200.0">
+                <TableView fx:id="tblPacientes" prefHeight="479.0" prefWidth="854.0">
                     <columns>
                         <TableColumn fx:id="colNombre" prefWidth="150.0" text="Nombre" />
                         <TableColumn fx:id="colApellidos" prefWidth="200.0" text="Apellidos" />
-                        <TableColumn fx:id="colDNI" prefWidth="128.0" text="DNI" />
+                        <TableColumn fx:id="colDNI" prefWidth="120.0" text="DNI" />
                         <TableColumn fx:id="colEdad" prefWidth="60.0" text="Edad" />
-                        <TableColumn fx:id="colDiscapacidad" prefWidth="150.0" text="Discapacidad" />
-                        <TableColumn fx:id="colProtesis" prefWidth="70.0" text="Protesis" />
+                        <TableColumn fx:id="colDiscapacidad" prefWidth="200.0" text="Discapacidad" />
+                        <TableColumn fx:id="colProtesis" prefWidth="100.0" text="Protesis" />
                     </columns>
                 </TableView>
                 <Button fx:id="btnFiltrarPacientes" mnemonicParsing="false" onAction="#abrirFiltrosPacientes" prefHeight="40.0" prefWidth="40.0" styleClass="button-icono">
@@ -103,8 +103,8 @@
         </HBox>
         <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Button fx:id="btnEliminarPaciente" mnemonicParsing="false" onAction="#eliminarPacienteSeleccionado" prefWidth="100.0" styleClass="button-peligro" text="Eliminar" textAlignment="CENTER" />
-                <Button fx:id="btnAbrirPaciente" mnemonicParsing="false" onAction="#abrirFichaPaciente" prefWidth="100.0" styleClass="button-primario" text="Abrir" />
+                <Button fx:id="btnEliminarPaciente" mnemonicParsing="false" onAction="#eliminarPacienteSeleccionado" prefHeight="26.0" prefWidth="126.0" styleClass="button-peligro" text="Eliminar" textAlignment="CENTER" />
+                <Button fx:id="btnAbrirPaciente" mnemonicParsing="false" onAction="#abrirFichaPaciente" prefHeight="26.0" prefWidth="126.0" styleClass="button-primario" text="Abrir" />
             </children>
         </HBox>
     </children>

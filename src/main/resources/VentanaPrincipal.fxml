@@ -10,6 +10,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
 
 <BorderPane fx:id="bdpPrincipal" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="750.0" prefWidth="850.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaPrincipal">
    <top>
@@ -34,7 +35,7 @@
                   <Insets right="10.0" />
                </HBox.margin>
             </VBox>
-            <VBox prefHeight="119.0" prefWidth="581.0">
+            <VBox prefHeight="119.0" prefWidth="500.0">
                <children>
                   <Label fx:id="lblBuscarRapido" text="Buscar citas por fecha o paciente:">
                      <VBox.margin>
@@ -54,26 +55,37 @@
                               <Tooltip text="Buscar citas" />
                            </tooltip>
                         </Button>
-                        <TextField fx:id="txfBusquedaRapida" minHeight="25.0" prefHeight="42.0" prefWidth="527.0" promptText="Fecha (dd/MM/yyyy) o nombre de paciente..." />
+                        <TextField fx:id="txfBusquedaRapida" minHeight="25.0" prefHeight="42.0" prefWidth="450.0" promptText="Fecha (dd/MM/yyyy) o nombre de paciente..." />
                      </children>
                   </HBox>
                </children>
             </VBox>
             <Button fx:id="btnPerfil" mnemonicParsing="false" onAction="#abrirVentanaPerfil" styleClass="button-icono">
                <graphic>
-                  <ImageView fitHeight="52.0" fitWidth="54.0" pickOnBounds="true" preserveRatio="true">
+                  <ImageView fitHeight="52.0" fitWidth="90.0" pickOnBounds="true" preserveRatio="true">
                      <image>
                         <Image url="@iconoUser.png" />
                      </image>
                   </ImageView>
                </graphic>
                <HBox.margin>
-                  <Insets left="30.0" top="10.0" />
+                  <Insets left="10.0" top="10.0" />
                </HBox.margin>
                <tooltip>
                   <Tooltip text="Perfil" />
                </tooltip>
             </Button>
+            <VBox prefHeight="73.0" prefWidth="120.0" />
+            <!-- Indicador de conexión a BD -->
+            <HBox fx:id="hboxIndicadorConexion" alignment="CENTER" prefHeight="58.0" prefWidth="106.0" spacing="5.0">
+               <HBox.margin>
+                  <Insets left="10.0" top="15.0" />
+               </HBox.margin>
+               <children>
+                  <Circle fx:id="circuloConexion" radius="8.0" />
+                  <Label fx:id="lblEstadoConexion" text="Conectado" />
+               </children>
+            </HBox>
          </children>
       </HBox>
    </top>
@@ -83,13 +95,6 @@
             <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
          </padding>
          <children>
-            <Button fx:id="btnPestaniaSanitarios" mnemonicParsing="false" onAction="#abrirPestaniaSanitarios" prefHeight="60.0" prefWidth="225.0" text="Sanitarios" />
-            <Button fx:id="btnPestaniaPacientes" mnemonicParsing="false" onAction="#abrirPestaniaPacientes" prefHeight="60.0" prefWidth="225.0" text="Pacientes" />
-            <Button fx:id="btnPestaniaCitas" mnemonicParsing="false" onAction="#abrirPestaniaCitas" prefHeight="60.0" prefWidth="225.0" text="Citas" />
-            <Button fx:id="btnPestaniaAyuda" mnemonicParsing="false" onAction="#abrirPestaniaAyuda" prefHeight="60.0" prefWidth="225.0" text="Ayuda">
-               <VBox.margin>
-                  <Insets />
-               </VBox.margin></Button>
             <VBox alignment="CENTER" prefHeight="191.0" prefWidth="179.0" spacing="25.0">
                <children>
                   <Label fx:id="lblNombreUsuario" text="Usuario:">
@@ -102,6 +107,13 @@
                   <Label fx:id="lblCargoTemporal" text="&quot;El cargo&quot;" />
                </children>
             </VBox>
+            <Button fx:id="btnPestaniaSanitarios" mnemonicParsing="false" onAction="#abrirPestaniaSanitarios" prefHeight="60.0" prefWidth="225.0" text="Sanitarios" />
+            <Button fx:id="btnPestaniaPacientes" mnemonicParsing="false" onAction="#abrirPestaniaPacientes" prefHeight="60.0" prefWidth="225.0" text="Pacientes" />
+            <Button fx:id="btnPestaniaCitas" mnemonicParsing="false" onAction="#abrirPestaniaCitas" prefHeight="60.0" prefWidth="225.0" text="Citas" />
+            <Button fx:id="btnPestaniaAyuda" mnemonicParsing="false" onAction="#abrirPestaniaAyuda" prefHeight="60.0" prefWidth="225.0" text="Ayuda">
+               <VBox.margin>
+                  <Insets />
+               </VBox.margin></Button>
             <HBox alignment="BOTTOM_CENTER" prefHeight="273.0" prefWidth="179.0">
                <children>
                   <Button fx:id="btnAjustes" mnemonicParsing="false" onAction="#abrirVentanaOpciones" styleClass="button-icono">

@@ -226,19 +226,3 @@ BEGIN
         RAISE NOTICE 'El usuario admin ya existe';
     END IF;
 END $$;
-
--- =====================================================
--- NOTAS IMPORTANTES:
--- =====================================================
--- 
--- Credenciales por defecto:
---   Usuario: ADMIN0000
---   Contraseña: admin
---
--- Se recomienda cambiar la contraseña despues del primer inicio de sesion
---
--- Los cargos disponibles son:
---   - Especialista: Acceso completo (CRUD pacientes, sanitarios y citas)
---   - Enfermero: Solo lectura + gestion de citas
---
--- =====================================================

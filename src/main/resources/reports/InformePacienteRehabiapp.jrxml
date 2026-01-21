@@ -1,0 +1,174 @@
+<!-- Created with Jaspersoft Studio version 7.0.3.final using JasperReports Library version 7.0.3-41034ca841d452f3305ba55b9042260aaa1ab5dd  -->
+<jasperReport name="InformePacienteRehabiapp" language="java" pageWidth="842" pageHeight="595" orientation="Landscape" columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="c368610e-5bee-4e75-8f1e-ecda64380534">
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="postgresPrueba"/>
+	<style name="Etiqueta" forecolor="#006699" fontName="SansSerif" fontSize="12.0" bold="true"/>
+	<style name="Valor" forecolor="#333333" fontName="SansSerif" fontSize="12.0" bold="false"/>
+	<dataset name="GraficoCitasDataset" uuid="21b70311-b650-4678-a39c-887917366bf0">
+		<property name="com.jaspersoft.studio.data.defaultdataadapter" value="postgresPrueba"/>
+		<parameter name="dni_paciente_param" class="java.lang.String"/>
+		<query language="SQL"><![CDATA[
+			SELECT
+				TO_CHAR(fecha_cita, 'YYYY-MM') as mes_cita,
+				COUNT(*) as cantidad_citas
+			FROM cita
+			WHERE dni_pac = $P{dni_paciente_param}
+			GROUP BY TO_CHAR(fecha_cita, 'YYYY-MM')
+			ORDER BY mes_cita ASC
+		]]></query>
+		<field name="mes_cita" class="java.lang.String"/>
+		<field name="cantidad_citas" class="java.lang.Long"/>
+	</dataset>
+	<parameter name="dni_paciente_param" class="java.lang.String"/>
+	<query language="SQL"><![CDATA[SELECT
+    p.dni_pac,
+    p.nombre_pac,
+    p.apellido1_pac,
+    p.apellido2_pac,
+    p.email_pac,
+    p.num_ss,
+    p.edad_pac,
+    p.discapacidad_pac,
+    p.tratamiento_pac,
+    p.estado_tratamiento,
+    p.protesis,
+    p.fecha_alta,
+    p.foto,
+    CONCAT(d.calle, ' ', d.numero,
+           CASE WHEN d.piso IS NOT NULL THEN CONCAT(', ', d.piso) ELSE '' END,
+           ', ', d.cp, ' ', l.nombre_localidad, ' (', l.provincia, ')') as direccion_completa,
+    STRING_AGG(DISTINCT tp.telefono, ' / ' ORDER BY tp.telefono) as telefonos
+FROM paciente p
+INNER JOIN direccion d ON p.id_direccion = d.id_direccion
+INNER JOIN cp ON d.cp = cp.cp
+INNER JOIN localidad l ON cp.nombre_localidad = l.nombre_localidad
+LEFT JOIN telefono_paciente tp ON p.dni_pac = tp.dni_pac
+WHERE p.dni_pac = $P{dni_paciente_param}
+GROUP BY
+    p.dni_pac, p.nombre_pac, p.apellido1_pac, p.apellido2_pac,
+    p.email_pac, p.num_ss, p.edad_pac, p.discapacidad_pac,
+    p.tratamiento_pac, p.estado_tratamiento, p.protesis,
+    p.fecha_alta, p.foto, d.calle, d.numero, d.piso, d.cp,
+    l.nombre_localidad, l.provincia]]></query>
+	<field name="dni_pac" class="java.lang.String"/>
+	<field name="nombre_pac" class="java.lang.String"/>
+	<field name="apellido1_pac" class="java.lang.String"/>
+	<field name="apellido2_pac" class="java.lang.String"/>
+	<field name="email_pac" class="java.lang.String"/>
+	<field name="num_ss" class="java.lang.String"/>
+	<field name="edad_pac" class="java.lang.Integer"/>
+	<field name="discapacidad_pac" class="java.lang.String"/>
+	<field name="tratamiento_pac" class="java.lang.String"/>
+	<field name="estado_tratamiento" class="java.lang.String"/>
+	<field name="protesis" class="java.lang.Integer"/>
+	<field name="fecha_alta" class="java.sql.Timestamp"/>
+	<field name="foto" class="java.lang.Object"/>
+	<field name="direccion_completa" class="java.lang.String"/>
+	<field name="telefonos" class="java.lang.String"/>
+	<background splitType="Stretch"/>
+	<title height="60" splitType="Stretch">
+		<element kind="frame" uuid="12345678-1234-1234-1234-123456789001" mode="Opaque" x="-20" y="-10" width="842" height="60" backcolor="#006699">
+			<element kind="staticText" uuid="12345678-1234-1234-1234-123456789002" x="20" y="10" width="800" height="40" forecolor="#FFFFFF" fontSize="24.0" bold="true" hTextAlign="Center" vTextAlign="Middle">
+				<text><![CDATA[FICHA DE PACIENTE - REHABIAPP]]></text>
+			</element>
+		</element>
+	</title>
+	<detail>
+		<band height="460" splitType="Stretch">
+			<element kind="rectangle" uuid="12345678-1234-1234-1234-123456789003" x="0" y="5" width="800" height="445" backcolor="#FAFAFA" radius="10">
+				<pen lineWidth="1.0" lineColor="#999999"/>
+			</element>
+			<element kind="image" uuid="12345678-1234-1234-1234-123456789004" x="20" y="25" width="140" height="150" scaleImage="RetainShape" hImageAlign="Center" vImageAlign="Middle" onErrorType="Blank">
+				<expression><![CDATA[($F{foto} != null) ? new java.io.ByteArrayInputStream((byte[])$F{foto}) : null]]></expression>
+				<box>
+					<pen lineWidth="1.0" lineColor="#666666"/>
+				</box>
+			</element>
+			<element kind="textField" uuid="12345678-1234-1234-1234-123456789005" x="180" y="25" width="600" height="30" fontSize="20.0" bold="true">
+				<expression><![CDATA[$F{nombre_pac} + " " + $F{apellido1_pac} + " " + $F{apellido2_pac}]]></expression>
+			</element>
+			<element kind="staticText" uuid="12345678-1234-1234-1234-123456789006" x="180" y="65" width="40" height="20" style="Etiqueta">
+				<text><![CDATA[DNI:]]></text>
+			</element>
+			<element kind="textField" uuid="12345678-1234-1234-1234-123456789007" x="220" y="65" width="100" height="20" style="Valor">
+				<expression><![CDATA[$F{dni_pac}]]></expression>
+			</element>
+			<element kind="staticText" uuid="12345678-1234-1234-1234-123456789008" x="330" y="65" width="20" height="20" forecolor="#999999" hTextAlign="Center">
+				<text><![CDATA[|]]></text>
+			</element>
+			<element kind="staticText" uuid="12345678-1234-1234-1234-123456789009" x="360" y="65" width="40" height="20" style="Etiqueta">
+				<text><![CDATA[NSS:]]></text>
+			</element>
+			<element kind="textField" uuid="12345678-1234-1234-1234-123456789010" x="400" y="65" width="150" height="20" style="Valor">
+				<expression><![CDATA[$F{num_ss}]]></expression>
+			</element>
+			<element kind="line" uuid="12345678-1234-1234-1234-123456789011" x="180" y="95" width="600" height="1">
+				<pen lineWidth="1.5" lineColor="#006699"/>
+			</element>
+			<element kind="staticText" uuid="801ccd40-dfa3-44b9-a617-934a33c99a96" x="180" y="110" width="70" height="20" style="Etiqueta">
+				<text><![CDATA[Dirección:]]></text>
+			</element>
+			<element kind="textField" uuid="466ee328-dbdc-480e-ae97-7e282ba3c9cd" x="250" y="110" width="530" height="20" style="Valor">
+				<expression><![CDATA[$F{direccion_completa}]]></expression>
+			</element>
+			<element kind="staticText" uuid="9f05d432-d397-4add-9d0f-c0aba1f98dc7" x="180" y="140" width="50" height="20" style="Etiqueta">
+				<text><![CDATA[Email:]]></text>
+			</element>
+			<element kind="textField" uuid="0895a8f5-13ff-45a6-964b-00d7c2a748d4" x="230" y="140" width="220" height="20" style="Valor">
+				<expression><![CDATA[$F{email_pac}]]></expression>
+			</element>
+			<element kind="staticText" uuid="174b32e2-68a2-4212-8bd7-59b3c7b1225a" x="460" y="140" width="20" height="20" forecolor="#999999" hTextAlign="Center">
+				<text><![CDATA[|]]></text>
+			</element>
+			<element kind="staticText" uuid="b500e18e-d062-40a8-a336-b60951904770" x="490" y="140" width="30" height="20" style="Etiqueta">
+				<text><![CDATA[Tlf:]]></text>
+			</element>
+			<element kind="textField" uuid="ec711abf-6886-41ef-91b0-773f6a4ddcbf" x="520" y="140" width="260" height="20" style="Valor">
+				<expression><![CDATA[$F{telefonos}]]></expression>
+			</element>
+			<element kind="line" uuid="12345678-1234-1234-1234-123456789019" x="20" y="190" width="760" height="1">
+				<pen lineWidth="1.0" lineStyle="Dashed" lineColor="#999999"/>
+			</element>
+			<element kind="staticText" uuid="a73a6da3-8312-41b7-b0d8-abb3732f9c0a" x="20" y="210" width="100" height="20" style="Etiqueta">
+				<text><![CDATA[Tratamiento:]]></text>
+			</element>
+			<element kind="textField" uuid="59343119-243c-47b3-ad1c-c5f0fd632b2a" x="120" y="210" width="280" height="20" style="Valor">
+				<expression><![CDATA[$F{tratamiento_pac}]]></expression>
+			</element>
+			<element kind="staticText" uuid="2321261b-54b3-4935-90d1-a12e3a0a9bf5" x="420" y="210" width="60" height="20" style="Etiqueta">
+				<text><![CDATA[Estado:]]></text>
+			</element>
+			<element kind="textField" uuid="1d8bc1f3-96b6-48a1-8b07-08407e5fd7e0" x="480" y="210" width="100" height="20" style="Valor">
+				<expression><![CDATA[$F{estado_tratamiento}]]></expression>
+			</element>
+			<element kind="chart" chartType="bar" uuid="12345678-1234-1234-1234-123456789028" x="40" y="260" width="720" height="180" evaluationTime="Report">
+				<dataset kind="category">
+					<datasetRun uuid="12345678-1234-1234-1234-123456789029" subDataset="GraficoCitasDataset">
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+						<parameter name="dni_paciente_param">
+							<expression><![CDATA[$P{dni_paciente_param}]]></expression>
+						</parameter>
+					</datasetRun>
+					<series>
+						<seriesExpression><![CDATA["Citas"]]></seriesExpression>
+						<categoryExpression><![CDATA[$F{mes_cita}]]></categoryExpression>
+						<valueExpression><![CDATA[$F{cantidad_citas}]]></valueExpression>
+					</series>
+				</dataset>
+				<plot>
+					<itemLabel/>
+				</plot>
+			</element>
+		</band>
+	</detail>
+	<pageFooter height="30" splitType="Stretch">
+		<element kind="frame" uuid="12345678-1234-1234-1234-123456789030" mode="Opaque" x="0" y="5" width="802" height="25" backcolor="#E6E6E6">
+			<element kind="textField" uuid="12345678-1234-1234-1234-123456789031" x="700" y="0" width="100" height="25" hTextAlign="Right" vTextAlign="Middle">
+				<expression><![CDATA["Pág " + $V{PAGE_NUMBER}]]></expression>
+			</element>
+			<element kind="textField" uuid="12345678-1234-1234-1234-123456789032" x="20" y="0" width="200" height="25" pattern="dd/MM/yyyy" vTextAlign="Middle">
+				<expression><![CDATA[new java.util.Date()]]></expression>
+			</element>
+		</element>
+	</pageFooter>
+</jasperReport>

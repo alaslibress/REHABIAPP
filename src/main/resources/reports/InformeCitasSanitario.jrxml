@@ -1,0 +1,89 @@
+<!-- Created with Jaspersoft Studio version 7.0.3.final using JasperReports Library version 7.0.3-41034ca841d452f3305ba55b9042260aaa1ab5dd  -->
+<jasperReport name="InformeCitasSanitario" language="java" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="a1b2c3d4-e5f6-7890-1234-567890abcdef">
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="postgresPrueba"/>
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<style name="CabeceraTabla" mode="Opaque" forecolor="#006699" backcolor="#E6E6E6" hTextAlign="Center" vTextAlign="Middle" fontSize="12.0" bold="true"/>
+	<style name="FilaTabla" mode="Transparent" fontSize="11.0">
+		<conditionalStyle mode="Opaque" backcolor="#F2F2F2">
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+		</conditionalStyle>
+	</style>
+	<parameter name="dni_sanitario_param" class="java.lang.String"/>
+	<query language="SQL"><![CDATA[
+        SELECT
+            c.fecha_cita,
+            c.hora_cita,
+            p.nombre_pac,
+            p.apellido1_pac,
+            p.apellido2_pac,
+            p.dni_pac
+        FROM cita c
+        INNER JOIN paciente p ON c.dni_pac = p.dni_pac
+        WHERE c.dni_san = $P{dni_sanitario_param}
+        ORDER BY c.fecha_cita ASC, c.hora_cita ASC
+    ]]></query>
+	<field name="fecha_cita" class="java.sql.Date"/>
+	<field name="hora_cita" class="java.sql.Time"/>
+	<field name="nombre_pac" class="java.lang.String"/>
+	<field name="apellido1_pac" class="java.lang.String"/>
+	<field name="apellido2_pac" class="java.lang.String"/>
+	<field name="dni_pac" class="java.lang.String"/>
+	<title height="60">
+		<element kind="frame" uuid="3ef00b97-79b0-4658-91b6-4500ab4e39b0" mode="Opaque" x="-20" y="-20" width="595" height="80" backcolor="#006699">
+			<element kind="staticText" uuid="f96370de-2dfa-4e31-b25e-af6a39316a1c" x="20" y="20" width="300" height="43" forecolor="#FFFFFF" fontSize="24.0" bold="true">
+				<text><![CDATA[AGENDA DE CITAS]]></text>
+			</element>
+			<element kind="textField" uuid="957ade19-f0a3-43c9-84b2-9412c6fc8f80" x="350" y="25" width="220" height="30" forecolor="#FFFFFF" fontSize="14.0" hTextAlign="Right">
+				<expression><![CDATA["Sanitario: " + $P{dni_sanitario_param}]]></expression>
+			</element>
+			<element kind="image" uuid="ab0c96eb-b6e3-42e8-9f63-75a1642f2216" x="9" y="3" width="20" height="17" onErrorType="Blank">
+				<expression><![CDATA["logo.png"]]></expression>
+			</element>
+		</element>
+	</title>
+	<columnHeader height="30">
+		<element kind="staticText" uuid="5b317ebc-1bff-4313-ba33-d6bf45d6a480" x="0" y="0" width="80" height="30" style="CabeceraTabla">
+			<text><![CDATA[FECHA]]></text>
+		</element>
+		<element kind="staticText" uuid="1debc431-45c8-4710-a0d9-4b596970d80c" x="80" y="0" width="70" height="30" style="CabeceraTabla">
+			<text><![CDATA[HORA]]></text>
+		</element>
+		<element kind="staticText" uuid="1e24d210-4a03-4d7f-9d6a-b2a179089464" x="150" y="0" width="250" height="30" style="CabeceraTabla">
+			<text><![CDATA[PACIENTE]]></text>
+		</element>
+		<element kind="staticText" uuid="5c502c56-03ff-44ae-9b5b-9bded5941e7c" x="400" y="0" width="100" height="30" style="CabeceraTabla">
+			<text><![CDATA[DNI PAC.]]></text>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="25">
+			<element kind="frame" uuid="815d1e68-2030-49bd-90cb-02d76a880d5d" x="0" y="0" width="555" height="25" style="FilaTabla">
+				<element kind="textField" uuid="fd68a3d6-ba28-46a2-b141-407ac2247969" x="0" y="0" width="80" height="25" pattern="dd/MM/yyyy" hTextAlign="Center" vTextAlign="Middle">
+					<expression><![CDATA[$F{fecha_cita}]]></expression>
+				</element>
+				<element kind="textField" uuid="f478776f-60b2-4bbf-8e9c-79e87659ac9a" x="80" y="0" width="70" height="25" pattern="HH:mm" hTextAlign="Center" vTextAlign="Middle">
+					<expression><![CDATA[$F{hora_cita}]]></expression>
+				</element>
+				<element kind="textField" uuid="0a504720-87aa-445b-a8cd-9a8a254e4598" x="150" y="0" width="250" height="25" vTextAlign="Middle">
+					<expression><![CDATA[$F{nombre_pac} + " " + $F{apellido1_pac} + " " + $F{apellido2_pac}]]></expression>
+					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
+					<box leftPadding="5"/>
+				</element>
+				<element kind="textField" uuid="c770601d-e98d-4a30-b8a3-521069fc6e87" x="400" y="0" width="100" height="25" hTextAlign="Center" vTextAlign="Middle">
+					<expression><![CDATA[$F{dni_pac}]]></expression>
+				</element>
+			</element>
+		</band>
+	</detail>
+	<pageFooter height="20">
+		<element kind="textField" uuid="99161ceb-ff01-4a13-9f8b-9d80acef9a2c" x="435" y="0" width="80" height="20" hTextAlign="Right">
+			<expression><![CDATA["Página " + $V{PAGE_NUMBER} + " de"]]></expression>
+		</element>
+		<element kind="textField" uuid="891f8524-f32e-4ab3-bbfa-a46c5d67e79f" x="515" y="0" width="40" height="20" evaluationTime="Report">
+			<expression><![CDATA[" " + $V{PAGE_NUMBER}]]></expression>
+		</element>
+		<element kind="textField" uuid="ebd4a065-ac84-490e-b3eb-33b7189bb1d9" x="0" y="0" width="100" height="20" pattern="dd/MM/yyyy HH:mm">
+			<expression><![CDATA[new java.util.Date()]]></expression>
+		</element>
+	</pageFooter>
+</jasperReport>

@@ -96,6 +96,27 @@ public class VentanaUtil {
     }
 
     /**
+     * Establece el icono info.png en un Stage (para ventanas informativas)
+     * @param stage Stage al que añadir el icono
+     */
+    public static void establecerIconoInfo(Stage stage) {
+        if (stage == null) return;
+
+        try {
+            java.io.InputStream stream = VentanaUtil.class.getResourceAsStream("/info.png");
+            if (stream != null) {
+                Image icono = new Image(stream);
+                stage.getIcons().add(icono);
+                System.out.println("Icono info.png cargado para ventana informativa");
+            } else {
+                System.out.println("No se encontró el icono info.png");
+            }
+        } catch (Exception e) {
+            System.err.println("Error al cargar icono info.png: " + e.getMessage());
+        }
+    }
+
+    /**
      * Muestra una ventana informativa con un mensaje y tipo especifico
      * @param mensaje Texto a mostrar
      * @param tipo Tipo de mensaje (determina el icono)
@@ -121,9 +142,9 @@ public class VentanaUtil {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
-            
-            // Establecer icono de la aplicación
-            establecerIconoVentana(stage);
+
+            // Establecer icono info.png para las ventanas informativas
+            establecerIconoInfo(stage);
             
             // Aplicar animación cuando la ventana se muestre
             stage.setOnShown(e -> AnimacionUtil.animarVentanaModal(stage));

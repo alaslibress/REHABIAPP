@@ -741,7 +741,13 @@ public class PacienteDAO {
             if (rs.next()) {
                 byte[] fotoBytes = rs.getBytes("foto");
                 if (fotoBytes != null && fotoBytes.length > 0) {
-                    return new Image(new ByteArrayInputStream(fotoBytes));
+                    try {
+                        return new Image(new ByteArrayInputStream(fotoBytes));
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Error: Los datos de la foto no tienen un formato de imagen válido para el paciente " + dniPaciente);
+                        System.err.println("Detalles: " + e.getMessage());
+                        return null;
+                    }
                 }
             }
 

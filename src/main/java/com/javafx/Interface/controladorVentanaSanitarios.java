@@ -1,5 +1,6 @@
 package com.javafx.Interface;
 
+import com.javafx.Clases.InformeService;
 import com.javafx.Clases.Sanitario;
 import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
@@ -45,6 +46,9 @@ public class controladorVentanaSanitarios {
 
     @FXML
     private Button btnFiltrarSanitarios;
+
+    @FXML
+    private Button btnGenerarPDFSanitarios;
 
     @FXML
     private Button btnSeleccionarTodo;
@@ -448,6 +452,43 @@ public class controladorVentanaSanitarios {
             listaSanitarios.clear();
             List<Sanitario> sanitariosEncontrados = sanitarioDAO.buscarPorTexto(textoBusqueda);
             listaSanitarios.addAll(sanitariosEncontrados);
+        }
+    }
+
+    /**
+     * Genera un informe PDF con el listado de todos los sanitarios
+     * @param event Evento del boton
+     */
+    @FXML
+    void generarInformeSanitarios(ActionEvent event) {
+        try {
+            System.out.println("Generando informe de listado de sanitarios...");
+
+            // Generar el informe usando InformeService
+            boolean exito = InformeService.generarInformeSanitarios();
+
+            if (exito) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "El informe PDF de sanitarios se ha generado correctamente.\n" +
+                        "Se ha guardado en la carpeta 'informes' y se abrirá automáticamente.",
+                        TipoMensaje.EXITO
+                );
+            } else {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "No se pudo generar el informe PDF.\n" +
+                        "Por favor, revise la consola para más detalles.",
+                        TipoMensaje.ERROR
+                );
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al generar el informe: " + e.getMessage());
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error inesperado al generar el informe.\n" +
+                    "Detalles: " + e.getMessage(),
+                    TipoMensaje.ERROR
+            );
         }
     }
 }

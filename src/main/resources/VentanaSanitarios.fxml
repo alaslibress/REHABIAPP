@@ -101,6 +101,11 @@
         </HBox>
         <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
             <children>
+                <Button fx:id="btnGenerarPDFSanitarios" mnemonicParsing="false" onAction="#generarInformeSanitarios" prefHeight="26.0" prefWidth="180.0" styleClass="button-secundario" text="Generar Listado PDF">
+                    <tooltip>
+                        <Tooltip text="Generar informe PDF de todos los sanitarios" />
+                    </tooltip>
+                </Button>
                 <Button fx:id="btnEliminarSanitario" mnemonicParsing="false" onAction="#eliminarSanitarioSeleccionado" prefHeight="26.0" prefWidth="126.0" styleClass="button-peligro" text="Eliminar" textAlignment="CENTER" />
                 <Button fx:id="btnAbrirSanitario" mnemonicParsing="false" onAction="#abrirFichaSanitario" prefHeight="26.0" prefWidth="126.0" styleClass="button-primario" text="Abrir" />
             </children>

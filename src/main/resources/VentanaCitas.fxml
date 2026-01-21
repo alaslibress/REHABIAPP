@@ -35,6 +35,7 @@
                                 <Label style="-fx-font-weight: bold;" text="Calendario:" />
                                 <Button fx:id="btnHoy" onAction="#irAHoy" text="Hoy" styleClass="button-primario" />
                                 <Button fx:id="btnVerTodas" onAction="#verTodasLasCitas" text="Ver todas las citas" />
+                                <Button fx:id="btnVerAgenda" onAction="#verAgendaSanitario" text="📅 Ver Mi Agenda" styleClass="button-exito" />
                             </children>
                         </HBox>
                         

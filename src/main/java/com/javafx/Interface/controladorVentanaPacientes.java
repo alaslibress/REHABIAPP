@@ -1,5 +1,6 @@
 package com.javafx.Interface;
 
+import com.javafx.Clases.InformeService;
 import com.javafx.Clases.Paciente;
 import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
@@ -45,6 +46,9 @@ public class controladorVentanaPacientes {
 
     @FXML
     private Button btnFiltrarPacientes;
+
+    @FXML
+    private Button btnGenerarPDFPaciente;
 
     @FXML
     private Button btnSeleccionarTodoPacientes;
@@ -474,5 +478,56 @@ public class controladorVentanaPacientes {
     @FXML
     void seleccionarTodosPacientes(ActionEvent event) {
         tblPacientes.getSelectionModel().selectAll();
+    }
+
+    /**
+     * Genera un informe PDF del paciente seleccionado
+     */
+    @FXML
+    void generarInformePaciente(ActionEvent event) {
+        // Obtener el paciente seleccionado
+        Paciente pacienteSeleccionado = tblPacientes.getSelectionModel().getSelectedItem();
+
+        // Validar que hay un paciente seleccionado
+        if (pacienteSeleccionado == null) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Debe seleccionar un paciente de la lista para generar el informe.",
+                    TipoMensaje.ADVERTENCIA
+            );
+            return;
+        }
+
+        try {
+            // Obtener el DNI del paciente
+            String dniPaciente = pacienteSeleccionado.getDni();
+
+            System.out.println("Generando informe para paciente con DNI: " + dniPaciente);
+
+            // Generar el informe usando InformeService
+            boolean exito = InformeService.generarInformePaciente(dniPaciente);
+
+            if (exito) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "El informe PDF se ha generado correctamente.\n" +
+                        "Se ha guardado en la carpeta 'informes' y se abrirá automáticamente.",
+                        TipoMensaje.EXITO
+                );
+            } else {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "No se pudo generar el informe PDF.\n" +
+                        "Por favor, revise la consola para más detalles.",
+                        TipoMensaje.ERROR
+                );
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al generar el informe: " + e.getMessage());
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error inesperado al generar el informe.\n" +
+                    "Detalles: " + e.getMessage(),
+                    TipoMensaje.ERROR
+            );
+        }
     }
 }

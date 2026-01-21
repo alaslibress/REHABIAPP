@@ -2,6 +2,7 @@ package com.javafx.Interface;
 
 import com.javafx.Clases.AnimacionUtil;
 import com.javafx.Clases.Cita;
+import com.javafx.Clases.InformeService;
 import com.javafx.Clases.Paciente;
 import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
@@ -60,6 +61,7 @@ public class controladorVentanaCitas {
     @FXML private StackPane contenedorCalendario;
     @FXML private Button btnHoy;
     @FXML private Button btnVerTodas;
+    @FXML private Button btnVerAgenda;
     @FXML private TableView<Cita> tblCitas;
     @FXML private TableColumn<Cita, String> colFecha;
     @FXML private TableColumn<Cita, String> colHora;
@@ -520,6 +522,44 @@ public class controladorVentanaCitas {
         });
 
         executor.submit(task);
+    }
+
+    /**
+     * MÉTODO PARA VER AGENDA DE CITAS DEL SANITARIO ACTUAL
+     * Muestra el informe de citas en una ventana modal integrada (WebView)
+     *
+     * Para usar este método desde el FXML, añade un botón con:
+     * <Button text="Ver Mi Agenda" onAction="#verAgendaSanitario" />
+     *
+     * @param event Evento de acción del botón
+     */
+    @FXML
+    void verAgendaSanitario(ActionEvent event) {
+        // Validación: verificar que hay un sanitario activo en sesión
+        if (dniSanitarioActual == null || dniSanitarioActual.isEmpty()) {
+            VentanaUtil.mostrarVentanaInformativa(
+                "Error: No se pudo identificar al sanitario.\n" +
+                "Asegúrese de haber iniciado sesión correctamente.",
+                TipoMensaje.ERROR
+            );
+            return;
+        }
+
+        // Mostrar mensaje de carga (opcional pero recomendado)
+        System.out.println("Generando agenda para sanitario: " + dniSanitarioActual);
+
+        // Llamar al servicio de informes para mostrar la agenda
+        try {
+            InformeService.mostrarAgendaSanitario(dniSanitarioActual);
+        } catch (Exception e) {
+            System.err.println("Error al mostrar la agenda: " + e.getMessage());
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                "Error inesperado al mostrar la agenda.\n" +
+                "Por favor, revise la consola para más detalles.",
+                TipoMensaje.ERROR
+            );
+        }
     }
 
     /**

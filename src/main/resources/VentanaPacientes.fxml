@@ -89,7 +89,7 @@
         </HBox>
         <HBox alignment="TOP_CENTER" spacing="10.0" VBox.vgrow="ALWAYS">
             <children>
-                <TableView fx:id="tblPacientes" maxHeight="Infinity" maxWidth="Infinity" HBox.hgrow="ALWAYS" prefHeight="479.0">
+                <TableView fx:id="tblPacientes" maxHeight="Infinity" maxWidth="Infinity" prefHeight="479.0" HBox.hgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="colNombre" prefWidth="150.0" text="Nombre" />
                         <TableColumn fx:id="colApellidos" prefWidth="200.0" text="Apellidos" />
@@ -106,7 +106,7 @@
         </HBox>
         <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Button fx:id="btnGenerarPDFPaciente" mnemonicParsing="false" onAction="#generarInformePaciente" prefHeight="26.0" prefWidth="150.0" styleClass="button-secundario" text="Generar PDF">
+                <Button fx:id="btnGenerarPDFPaciente" mnemonicParsing="false" onAction="#generarInformePaciente" prefHeight="26.0" prefWidth="180.0" styleClass="button-secundario" text="Generar listado PDF">
                     <tooltip>
                         <Tooltip text="Generar informe PDF del paciente seleccionado" />
                     </tooltip>

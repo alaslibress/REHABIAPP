@@ -25,8 +25,24 @@
     -fx-background-color: #F0F3F7;
 }
 
+.top-bar {
+    -fx-background-color: #FFFFFF;
+    /* Sombra sutil para dar sensación de elevación */
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 5, 0, 0, 2);
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 0 0 1px 0;
+}
+
 .vbox, .hbox {
     -fx-background-color: transparent;
+}
+
+/* Panel de información del usuario (Izquierda) */
+.user-info-panel {
+    -fx-background-color: #E2E7ED; /* Gris un poco más oscuro que el fondo base */
+    -fx-background-radius: 12px;   /* Bordes redondeados */
+    -fx-border-color: #D0D7DE;     /* Borde sutil */
+    -fx-border-radius: 12px;
 }
 
 #bdpPrincipal .vbox {

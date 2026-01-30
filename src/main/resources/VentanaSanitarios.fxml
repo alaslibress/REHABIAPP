@@ -90,7 +90,7 @@
 
         <HBox alignment="TOP_CENTER" spacing="10.0" VBox.vgrow="ALWAYS">
             <children>
-                <TableView fx:id="tblSanitarios" maxHeight="Infinity" maxWidth="Infinity" HBox.hgrow="ALWAYS" prefHeight="479.0">
+                <TableView fx:id="tblSanitarios" maxHeight="Infinity" maxWidth="Infinity" prefHeight="479.0" HBox.hgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="colNombre" prefWidth="200.0" text="Nombre" />
                         <TableColumn fx:id="colApellidos" prefWidth="250.0" text="Apellidos" />
@@ -106,7 +106,7 @@
 
         <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Button fx:id="btnGenerarPDFSanitarios" mnemonicParsing="false" onAction="#generarInformeSanitarios" prefHeight="26.0" prefWidth="180.0" styleClass="button-secundario" text="Generar Listado PDF">
+                <Button fx:id="btnGenerarPDFSanitarios" mnemonicParsing="false" onAction="#generarInformeSanitarios" prefHeight="26.0" prefWidth="180.0" styleClass="button-secundario" text="Generar listado PDF">
                     <tooltip>
                         <Tooltip text="Generar informe PDF de todos los sanitarios" />
                     </tooltip>

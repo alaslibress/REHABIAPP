@@ -25,8 +25,23 @@
     -fx-background-color: #0D1117;
 }
 
+.top-bar {
+    /* Un tono ligeramente más claro que el fondo #0D1117 para diferenciarlo */
+    -fx-background-color: #161B22;
+    -fx-border-color: #30363d;
+    -fx-border-width: 0 0 1px 0;
+}
+
 .vbox, .hbox {
     -fx-background-color: transparent;
+}
+
+/* Panel de información del usuario (Izquierda) */
+.user-info-panel {
+    -fx-background-color: #21262D; /* Gris intermedio para tema oscuro */
+    -fx-background-radius: 12px;   /* Bordes redondeados */
+    -fx-border-color: #30363D;     /* Borde sutil */
+    -fx-border-radius: 12px;
 }
 
 /* Ventanas modales y contenedores principales */

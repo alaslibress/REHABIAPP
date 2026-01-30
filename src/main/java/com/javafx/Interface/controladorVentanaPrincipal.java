@@ -282,7 +282,7 @@ public class controladorVentanaPrincipal {
 
     /**
      * Carga la pestaña de citas y aplica un filtro de búsqueda
-     * @param textoBusqueda Texto a buscar (fecha o nombre de paciente)
+     * @param textoBusqueda Texto a buscar (fecha, nombre de paciente o DNI)
      */
     private void cargarPestaniaCitasConFiltro(String textoBusqueda) {
         try {
@@ -291,23 +291,34 @@ public class controladorVentanaPrincipal {
 
             // Obtener controlador
             controladorCitasActual = loader.getController();
+            int numResultados = 0;
+
             if (controladorCitasActual != null) {
                 SesionUsuario sesion = SesionUsuario.getInstancia();
                 if (sesion.haySesionActiva()) {
                     controladorCitasActual.setDniSanitario(sesion.getDniUsuario());
                 }
-                // Aplicar el filtro de búsqueda
-                controladorCitasActual.filtrarPorTexto(textoBusqueda);
+                // Aplicar el filtro de búsqueda y obtener número de resultados
+                numResultados = controladorCitasActual.filtrarPorTexto(textoBusqueda);
+            }
+
+            // Si no hay resultados, mostrar mensaje y no cambiar de pestaña
+            if (numResultados == 0) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "Cita no encontrada.\n\nNo se encontraron citas con el criterio de búsqueda: " + textoBusqueda,
+                        TipoMensaje.INFORMACION
+                );
+                return;
             }
 
             // Cargar contenido en el centro del BorderPane
             bdpPrincipal.setCenter(contenido);
             pestaniaActual = "Citas";
-            
+
             // Marcar pestaña como seleccionada
             marcarPestaniaSeleccionada(btnPestaniaCitas);
 
-            System.out.println("Pestaña Citas cargada con filtro: " + textoBusqueda);
+            System.out.println("Pestaña Citas cargada con filtro: " + textoBusqueda + " (" + numResultados + " resultados)");
 
         } catch (Exception e) {
             System.err.println("Error al cargar pestaña Citas con filtro: " + e.getMessage());
@@ -357,8 +368,9 @@ public class controladorVentanaPrincipal {
 
     /**
      * Realiza una búsqueda rápida de citas
-     * Busca por fecha (dd/MM/yyyy) o por nombre de paciente
-     * Lleva automáticamente a la pestaña de Citas con el filtro aplicado
+     * Busca por fecha (dd/MM/yyyy), nombre de paciente o DNI de paciente
+     * Si encuentra resultados, lleva automáticamente a la pestaña de Citas con el filtro aplicado
+     * Si no encuentra resultados, muestra un mensaje informativo
      */
     @FXML
     void busquedaRapida(ActionEvent event) {
@@ -366,7 +378,7 @@ public class controladorVentanaPrincipal {
 
         if (textoBusqueda.isEmpty()) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Introduce una fecha (dd/MM/yyyy) o nombre de paciente para buscar citas.",
+                    "Introduce una fecha (dd/MM/yyyy), nombre de paciente o DNI para buscar citas.",
                     TipoMensaje.ADVERTENCIA
             );
             return;
@@ -374,7 +386,7 @@ public class controladorVentanaPrincipal {
 
         // Cargar pestaña de citas con el filtro aplicado
         cargarPestaniaCitasConFiltro(textoBusqueda);
-        
+
         // Limpiar campo de búsqueda
         txfBusquedaRapida.clear();
     }

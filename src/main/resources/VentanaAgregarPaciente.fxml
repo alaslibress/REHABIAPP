@@ -22,19 +22,15 @@
                 <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
             </padding>
             <children>
-                <!-- Titulo -->
                 <Label fx:id="lblTituloVentana" styleClass="label-titulo" text="Nuevo Paciente" />
 
-                <!-- Separador -->
                 <Separator />
 
-                <!-- HBox Principal 1: Datos y Foto -->
+
                 <HBox alignment="TOP_LEFT" spacing="20.0">
                     <children>
-                        <!-- VBox Datos (columna izquierda) -->
                         <VBox alignment="TOP_LEFT" prefWidth="500.0" spacing="7.0">
                             <children>
-                                <!-- Sanitario asignado -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Sanitario asignado:" />
@@ -42,7 +38,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Nombre -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Nombre:" />
@@ -50,7 +45,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Apellidos -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Apellidos:" />
@@ -58,7 +52,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Edad y DNI en la misma fila -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Edad:" />
@@ -68,7 +61,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Email -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Email:" />
@@ -76,7 +68,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Telefonos -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Telefonos:" />
@@ -85,7 +76,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Numero Seguridad Social -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="N. Seguridad Social:" />
@@ -93,11 +83,10 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Separador para direccion -->
                                 <Separator />
                                 <Label style="-fx-font-weight: bold;" text="Direccion:" />
 
-                                <!-- Calle -->
+
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Calle:" />
@@ -105,7 +94,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Numero y Piso -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Numero:" />
@@ -115,7 +103,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Codigo Postal y Localidad -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Codigo Postal:" />
@@ -125,7 +112,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Provincia -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Provincia:" />
@@ -133,10 +119,9 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Separador -->
                                 <Separator />
 
-                                <!-- Discapacidad y Protesis -->
+
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Discapacidad:" />
@@ -151,7 +136,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Estado del paciente -->
                                 <VBox spacing="3.0">
                                     <children>
                                         <Label text="Estado del paciente:" />
@@ -159,7 +143,6 @@
                                     </children>
                                 </VBox>
 
-                                <!-- Tratamiento -->
                                 <VBox spacing="3.0">
                                     <children>
                                         <Label text="Tratamiento:" />
@@ -167,7 +150,6 @@
                                     </children>
                                 </VBox>
 
-                                <!-- Informe -->
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Informe:" />
@@ -177,7 +159,6 @@
                             </children>
                         </VBox>
 
-                        <!-- VBox Foto (columna derecha) -->
                         <VBox alignment="TOP_CENTER" prefWidth="200.0" spacing="10.0">
                             <children>
                                 <Label text="Foto del paciente" />
@@ -188,10 +169,9 @@
                     </children>
                 </HBox>
 
-                <!-- Separador -->
                 <Separator />
 
-                <!-- HBox Principal 2: Botones -->
+
                 <HBox alignment="CENTER" spacing="10.0">
                     <children>
                         <Button fx:id="btnCancelar" onAction="#cerrarVentana" prefWidth="120.0" styleClass="button-peligro" text="Cancelar" />

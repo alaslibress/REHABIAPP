@@ -19,18 +19,15 @@
         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
     <children>
-        <!-- Titulo -->
         <Label fx:id="lblTituloPestania" styleClass="label-titulo" text="Gestión de Citas" />
 
         <Separator />
 
-        <!-- Contenido principal -->
+
         <HBox spacing="20.0" VBox.vgrow="ALWAYS">
             <children>
-                <!-- Columna izquierda: Calendario y lista de citas -->
                 <VBox prefWidth="720.0" spacing="10.0" HBox.hgrow="ALWAYS">
                     <children>
-                        <!-- Contenedor para calendario personalizado -->
                         <HBox spacing="10.0" alignment="CENTER_LEFT">
                             <children>
                                 <Label style="-fx-font-weight: bold;" text="Calendario:" />
@@ -39,14 +36,13 @@
                                 <Button fx:id="btnVerAgenda" onAction="#verAgendaSanitario" text="📅 Ver Mi Agenda" styleClass="button-exito" />
                             </children>
                         </HBox>
-                        
-                        <!-- Contenedor donde se insertará el calendario CalendarFX -->
+
                         <StackPane fx:id="contenedorCalendario" prefHeight="350.0" minHeight="320.0" VBox.vgrow="SOMETIMES">
                         </StackPane>
 
                         <Separator />
 
-                        <!-- Tabla de citas -->
+
                         <Label style="-fx-font-weight: bold;" text="Citas del día seleccionado:" />
 
                         <TableView fx:id="tblCitas" prefHeight="200.0" VBox.vgrow="ALWAYS">
@@ -59,7 +55,6 @@
                             </columns>
                         </TableView>
 
-                        <!-- Botones de accion -->
                         <HBox alignment="CENTER_RIGHT" spacing="10.0">
                             <children>
                                 <Button fx:id="btnEliminarCita" onAction="#eliminarCitaSeleccionada" prefWidth="100.0" styleClass="button-peligro" text="Eliminar" />
@@ -69,17 +64,15 @@
                     </children>
                 </VBox>
 
-                <!-- Separador vertical -->
                 <Separator orientation="VERTICAL" />
 
-                <!-- Columna derecha: Nueva cita -->
                 <VBox prefWidth="380.0" spacing="15.0">
                     <children>
                         <Label styleClass="label-titulo" text="Nueva Cita" />
 
                         <Separator />
 
-                        <!-- Paciente con Autocompletado -->
+
                         <VBox spacing="5.0">
                             <children>
                                 <Label text="Buscar Paciente:" />
@@ -88,7 +81,6 @@
                             </children>
                         </VBox>
 
-                        <!-- Fecha de la cita -->
                         <VBox spacing="5.0">
                             <children>
                                 <Label text="Fecha de la cita:" />
@@ -97,7 +89,6 @@
                             </children>
                         </VBox>
 
-                        <!-- Hora de la cita -->
                         <VBox spacing="5.0">
                             <children>
                                 <Label text="Hora de la cita:" />
@@ -112,7 +103,6 @@
                             </children>
                         </VBox>
 
-                        <!-- Botones -->
                         <HBox alignment="CENTER_RIGHT" spacing="10.0">
                             <VBox.margin>
                                 <Insets top="20.0" />

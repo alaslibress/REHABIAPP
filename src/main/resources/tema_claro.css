@@ -121,6 +121,18 @@
     -fx-background-radius: 0 8px 8px 0;
     -fx-border-radius: 0 8px 8px 0;
     -fx-border-width: 1.5px 1.5px 1.5px 0;
+    -fx-pref-height: 40px;
+    -fx-min-height: 40px;
+    -fx-max-height: 40px;
+}
+
+/* Campos de búsqueda en pestañas Sanitarios y Pacientes */
+#txfBuscarSanitarios, #txfBuscarPacientes {
+    -fx-background-radius: 0 8px 8px 0;
+    -fx-border-radius: 0 8px 8px 0;
+    -fx-pref-height: 40px;
+    -fx-min-height: 40px;
+    -fx-max-height: 40px;
 }
 
 /* ====== TEXT AREA ====== */
@@ -203,12 +215,14 @@
 /* Boton con icono */
 .button-icono {
     -fx-background-color: #E8EDF2;
+    -fx-text-fill: #1A1A1A;
     -fx-background-radius: 8px;
     -fx-padding: 8px;
 }
 
 .button-icono:hover {
     -fx-background-color: #D5DBDB;
+    -fx-text-fill: #1A1A1A;
 }
 
 /* Boton secundario */
@@ -268,6 +282,7 @@
 /* ====== BOTONES CON ICONOS ====== */
 #btnAjustes, #btnSalir, #btnPerfil {
     -fx-background-color: #E8EDF2;
+    -fx-text-fill: #1A1A1A;
     -fx-background-radius: 8px;
     -fx-padding: 10px;
     -fx-cursor: hand;
@@ -275,14 +290,21 @@
 
 #btnAjustes:hover, #btnSalir:hover, #btnPerfil:hover {
     -fx-background-color: #D5DBDB;
+    -fx-text-fill: #1A1A1A;
 }
 
 #btnBuscar, #btnBuscarSanitarios, #btnBuscarPacientes {
     -fx-background-color: #5DADE2;
     -fx-background-radius: 8px 0 0 8px;
     -fx-border-radius: 8px 0 0 8px;
-    -fx-padding: 8px;
+    -fx-padding: 0;
     -fx-effect: none;
+    -fx-pref-height: 40px;
+    -fx-min-height: 40px;
+    -fx-max-height: 40px;
+    -fx-pref-width: 40px;
+    -fx-min-width: 40px;
+    -fx-max-width: 40px;
 }
 
 #btnBuscar:hover {
@@ -294,14 +316,48 @@
     -fx-text-fill: #FFFFFF;
 }
 
-#btnAgregar, #btnAbrir, #btnFiltrar, #btnEditar, #btnAnadirSanitario, #btnAnadirPaciente, #btnFiltrarSanitarios, #btnFiltrarPacientes {
+/* Botones de añadir y filtrar (40x40 px) */
+#btnAnadirSanitario, #btnAnadirPaciente, #btnFiltrarSanitarios, #btnFiltrarPacientes {
     -fx-background-color: #E8EDF2;
+    -fx-text-fill: #1A1A1A;
+    -fx-background-radius: 8px;
+    -fx-padding: 0;
+    -fx-min-width: 40px;
+    -fx-max-width: 40px;
+    -fx-min-height: 40px;
+    -fx-max-height: 40px;
+}
+
+#btnAnadirSanitario:hover, #btnAnadirPaciente:hover, #btnFiltrarSanitarios:hover, #btnFiltrarPacientes:hover {
+    -fx-background-color: #D5DBDB;
+    -fx-text-fill: #1A1A1A;
+}
+
+/* Botones estándar con iconos */
+#btnAgregar, #btnAbrir, #btnFiltrar {
+    -fx-background-color: #E8EDF2;
+    -fx-text-fill: #1A1A1A;
     -fx-background-radius: 8px;
     -fx-padding: 8px;
 }
 
-#btnAgregar:hover, #btnAbrir:hover, #btnFiltrar:hover, #btnEditar:hover, #btnAnadirSanitario:hover, #btnAnadirPaciente:hover {
+#btnAgregar:hover, #btnAbrir:hover, #btnFiltrar:hover {
     -fx-background-color: #D5DBDB;
+    -fx-text-fill: #1A1A1A;
+}
+
+/* Botón editar (mismo tamaño que Aceptar - 120px) */
+#btnEditar {
+    -fx-background-color: #E8EDF2;
+    -fx-text-fill: #1A1A1A;
+    -fx-background-radius: 8px;
+    -fx-padding: 10px 20px;
+    -fx-min-width: 120px;
+}
+
+#btnEditar:hover {
+    -fx-background-color: #D5DBDB;
+    -fx-text-fill: #1A1A1A;
 }
 
 /* ====== TABLAS ====== */
@@ -518,7 +574,7 @@
 }
 
 .month-view > .header > .label {
-    -fx-text-fill: #2C3E50;
+    -fx-text-fill: #000000;
     -fx-font-weight: bold;
     -fx-font-size: 16px;
 }
@@ -529,14 +585,14 @@
 }
 
 .month-view .day-of-week-label {
-    -fx-text-fill: #3498DB;
+    -fx-text-fill: #000000;
     -fx-font-weight: bold;
     -fx-background-color: #F5F7FA;
 }
 
 /* Número de semana */
 .month-view .week-number-label {
-    -fx-text-fill: #95A5A6;
+    -fx-text-fill: #000000;
     -fx-background-color: #FFFFFF;
 }
 
@@ -563,12 +619,12 @@
 
 /* Número del día */
 .month-view .day-cell > .day-label {
-    -fx-text-fill: #2C3E50;
+    -fx-text-fill: #000000;
     -fx-font-size: 14px;
 }
 
 .month-view .day-cell:selected > .day-label {
-    -fx-text-fill: #2980B9;
+    -fx-text-fill: #000000;
     -fx-font-weight: bold;
 }
 
@@ -578,7 +634,7 @@
 }
 
 .month-view .day-cell.today > .day-label {
-    -fx-text-fill: #2980B9;
+    -fx-text-fill: #000000;
     -fx-font-weight: bold;
 }
 
@@ -588,7 +644,7 @@
 }
 
 .month-view .day-cell.other-month > .day-label {
-    -fx-text-fill: #BDC3C7;
+    -fx-text-fill: #999999;
 }
 
 /* Días del fin de semana */
@@ -618,7 +674,7 @@
 }
 
 .date-control > .header > .label {
-    -fx-text-fill: #2C3E50;
+    -fx-text-fill: #000000;
 }
 
 /* YearMonthView */
@@ -631,11 +687,11 @@
 }
 
 .year-month-view .month-label {
-    -fx-text-fill: #2C3E50;
+    -fx-text-fill: #000000;
 }
 
 .year-month-view .year-label {
-    -fx-text-fill: #2C3E50;
+    -fx-text-fill: #000000;
     -fx-font-weight: bold;
 }
 
@@ -651,7 +707,7 @@
 }
 
 .calendar-header-view .label {
-    -fx-text-fill: #2C3E50;
+    -fx-text-fill: #000000;
 }
 
 /* Popover de detalles */
@@ -672,7 +728,7 @@
 }
 
 .popover .label {
-    -fx-text-fill: #2C3E50;
+    -fx-text-fill: #000000;
 }
 
 /* Estilos para diferentes calendarios (STYLE1-7) */
@@ -725,7 +781,7 @@
 
 .month-view .header .label,
 .month-view > .header > .label {
-    -fx-text-fill: #2C3E50;
+    -fx-text-fill: #000000;
     -fx-font-weight: bold;
     -fx-font-size: 15px;
 }
@@ -745,7 +801,7 @@
 
 /* Días de la semana */
 .month-view .day-of-week-label {
-    -fx-text-fill: #3498DB;
+    -fx-text-fill: #000000;
     -fx-font-weight: bold;
     -fx-font-size: 12px;
     -fx-background-color: #F5F7FA;
@@ -771,13 +827,13 @@
 
 /* Número del día */
 .month-view .day-cell .day-label {
-    -fx-text-fill: #2C3E50;
+    -fx-text-fill: #000000;
     -fx-font-size: 13px;
     -fx-background-color: transparent;
 }
 
 .month-view .day-cell:selected .day-label {
-    -fx-text-fill: #2980B9;
+    -fx-text-fill: #000000;
     -fx-font-weight: bold;
 }
 
@@ -787,7 +843,7 @@
 }
 
 .month-view .day-cell.today .day-label {
-    -fx-text-fill: #2980B9;
+    -fx-text-fill: #000000;
     -fx-font-weight: bold;
 }
 
@@ -797,7 +853,7 @@
 }
 
 .month-view .day-cell.other-month .day-label {
-    -fx-text-fill: #BDC3C7;
+    -fx-text-fill: #999999;
 }
 
 /* Fines de semana */

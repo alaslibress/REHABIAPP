@@ -88,11 +88,12 @@
                             </children>
                         </VBox>
 
-                        <!-- Fecha de la cita (usa la fecha seleccionada en el calendario) -->
+                        <!-- Fecha de la cita -->
                         <VBox spacing="5.0">
                             <children>
                                 <Label text="Fecha de la cita:" />
-                                <Label fx:id="lblFechaSeleccionada" style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Seleccione en el calendario" />
+                                <DatePicker fx:id="dtpFechaCita" prefWidth="320.0" promptText="Seleccione una fecha" />
+                                <Label fx:id="lblFechaSeleccionada" style="-fx-font-size: 11px; -fx-text-fill: #666666;" text="También puede seleccionar en el calendario" />
                             </children>
                         </VBox>
 

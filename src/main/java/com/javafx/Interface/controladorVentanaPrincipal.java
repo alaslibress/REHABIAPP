@@ -291,24 +291,14 @@ public class controladorVentanaPrincipal {
 
             // Obtener controlador
             controladorCitasActual = loader.getController();
-            int numResultados = 0;
 
             if (controladorCitasActual != null) {
                 SesionUsuario sesion = SesionUsuario.getInstancia();
                 if (sesion.haySesionActiva()) {
+                    // Establecer el texto de búsqueda pendiente ANTES de cargar las citas
+                    controladorCitasActual.setTextoBusquedaPendiente(textoBusqueda);
                     controladorCitasActual.setDniSanitario(sesion.getDniUsuario());
                 }
-                // Aplicar el filtro de búsqueda y obtener número de resultados
-                numResultados = controladorCitasActual.filtrarPorTexto(textoBusqueda);
-            }
-
-            // Si no hay resultados, mostrar mensaje y no cambiar de pestaña
-            if (numResultados == 0) {
-                VentanaUtil.mostrarVentanaInformativa(
-                        "Cita no encontrada.\n\nNo se encontraron citas con el criterio de búsqueda: " + textoBusqueda,
-                        TipoMensaje.INFORMACION
-                );
-                return;
             }
 
             // Cargar contenido en el centro del BorderPane
@@ -318,7 +308,7 @@ public class controladorVentanaPrincipal {
             // Marcar pestaña como seleccionada
             marcarPestaniaSeleccionada(btnPestaniaCitas);
 
-            System.out.println("Pestaña Citas cargada con filtro: " + textoBusqueda + " (" + numResultados + " resultados)");
+            System.out.println("Pestaña Citas cargada con filtro pendiente: " + textoBusqueda);
 
         } catch (Exception e) {
             System.err.println("Error al cargar pestaña Citas con filtro: " + e.getMessage());

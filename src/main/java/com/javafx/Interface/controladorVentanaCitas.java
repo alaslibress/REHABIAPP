@@ -77,6 +77,7 @@ public class controladorVentanaCitas {
     @FXML private Button btnVerCita;
     @FXML private ComboBox<Paciente> cmbPacientes;
     @FXML private Label lblInfoPaciente;
+    @FXML private javafx.scene.control.DatePicker dtpFechaCita;
     @FXML private Label lblFechaSeleccionada;
     @FXML private Spinner<Integer> spnHora;
     @FXML private Spinner<Integer> spnMinuto;
@@ -98,7 +99,8 @@ public class controladorVentanaCitas {
     private String dniSanitarioActual;
     private Paciente pacienteSeleccionado;
     private LocalDate fechaSeleccionada;
-    
+    private String textoBusquedaPendiente = null;
+
     // ========== CACHÉ Y ASYNC ==========
     private List<Cita> cacheCitas = new ArrayList<>();
     private ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -118,6 +120,7 @@ public class controladorVentanaCitas {
         configurarTabla();
         configurarSpinners();
         configurarCalendario();
+        configurarDatePicker();
         configurarAutocompletadoPacientes();
 
         //Configurar doble clic para abrir detalles de la cita
@@ -172,6 +175,7 @@ public class controladorVentanaCitas {
         monthView.dateProperty().addListener((obs, oldDate, newDate) -> {
             if (newDate != null && !newDate.equals(fechaSeleccionada)) {
                 fechaSeleccionada = newDate;
+                dtpFechaCita.setValue(newDate); // Sincronizar con DatePicker
                 actualizarLabelFecha();
                 filtrarCitasPorFecha(newDate);
             }
@@ -197,7 +201,14 @@ public class controladorVentanaCitas {
         task.setOnSucceeded(e -> {
             cacheCitas = new ArrayList<>(task.getValue());
             actualizarEntradasCalendario();
-            filtrarCitasPorFecha(fechaSeleccionada);
+
+            // Si hay una búsqueda pendiente, aplicarla
+            if (textoBusquedaPendiente != null && !textoBusquedaPendiente.isEmpty()) {
+                filtrarPorTexto(textoBusquedaPendiente);
+                textoBusquedaPendiente = null; // Limpiar después de aplicar
+            } else {
+                filtrarCitasPorFecha(fechaSeleccionada);
+            }
         });
 
         task.setOnFailed(e -> {
@@ -313,6 +324,41 @@ public class controladorVentanaCitas {
     }
 
     /**
+     * Configura el DatePicker para selección de fecha
+     * - Establece la fecha actual por defecto
+     * - Bloquea fechas pasadas
+     * - Sincroniza con el calendario
+     */
+    private void configurarDatePicker() {
+        // Establecer fecha actual
+        dtpFechaCita.setValue(LocalDate.now());
+
+        // Bloquear fechas pasadas
+        dtpFechaCita.setDayCellFactory(picker -> new javafx.scene.control.DateCell() {
+            @Override
+            public void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+
+                // Deshabilitar fechas anteriores a hoy
+                if (date != null && date.isBefore(LocalDate.now())) {
+                    setDisable(true);
+                    setStyle("-fx-background-color: #ffc0cb;"); // Rosa claro para fechas deshabilitadas
+                }
+            }
+        });
+
+        // Sincronizar con el calendario y la variable fechaSeleccionada
+        dtpFechaCita.valueProperty().addListener((obs, oldDate, newDate) -> {
+            if (newDate != null) {
+                fechaSeleccionada = newDate;
+                monthView.setDate(newDate);
+                actualizarLabelFecha();
+                filtrarCitasPorFecha(newDate);
+            }
+        });
+    }
+
+    /**
      * Configura el sistema de autocompletado para buscar pacientes
      */
     private void configurarAutocompletadoPacientes() {
@@ -354,17 +400,37 @@ public class controladorVentanaCitas {
 
             @Override
             public Paciente fromString(String string) {
-                // No necesitamos convertir de texto a objeto
-                return null;
+                // Mantener el paciente seleccionado aunque el texto cambie
+                return pacienteSeleccionado;
             }
         });
 
+        // Bandera para controlar si estamos procesando una selección
+        final boolean[] procesandoSeleccion = {false};
+
         // Implementar filtrado mientras el usuario escribe
         cmbPacientes.getEditor().textProperty().addListener((obs, oldValue, newValue) -> {
+            // No procesar si estamos en medio de una selección
+            if (procesandoSeleccion[0]) {
+                return;
+            }
+
+            // Si hay un paciente ya seleccionado del ComboBox, no filtrar
+            Paciente seleccionado = cmbPacientes.getSelectionModel().getSelectedItem();
+            if (seleccionado != null) {
+                // Verificar si el texto coincide con el paciente seleccionado
+                String textoEsperado = cmbPacientes.getConverter().toString(seleccionado);
+                if (newValue != null && newValue.equals(textoEsperado)) {
+                    return;
+                }
+            }
+
             if (newValue == null || newValue.isEmpty()) {
                 pacientesFiltrados.setAll(todosLosPacientes);
                 lblInfoPaciente.setText("Escribe para ver sugerencias");
+                lblInfoPaciente.setStyle("-fx-text-fill: #666666; -fx-font-size: 11px;");
                 cmbPacientes.hide();
+                pacienteSeleccionado = null;
                 return;
             }
 
@@ -399,13 +465,30 @@ public class controladorVentanaCitas {
         // Cuando se selecciona un paciente de la lista
         cmbPacientes.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
+                procesandoSeleccion[0] = true;
                 pacienteSeleccionado = newVal;
+
+                // Actualizar el texto del editor
+                cmbPacientes.getEditor().setText(cmbPacientes.getConverter().toString(newVal));
+
                 String info = String.format("✓ Seleccionado: %s %s (NSS: %s)",
                     newVal.getNombre(),
                     newVal.getApellido1(),
                     newVal.getNumSS() != null ? newVal.getNumSS() : "N/A");
                 lblInfoPaciente.setText(info);
                 lblInfoPaciente.setStyle("-fx-text-fill: #27AE60; -fx-font-size: 11px;");
+
+                // Ocultar el dropdown
+                cmbPacientes.hide();
+
+                procesandoSeleccion[0] = false;
+            } else {
+                // Se limpió la selección
+                if (pacienteSeleccionado != null) {
+                    pacienteSeleccionado = null;
+                    lblInfoPaciente.setText("Escribe para ver sugerencias");
+                    lblInfoPaciente.setStyle("-fx-text-fill: #666666; -fx-font-size: 11px;");
+                }
             }
         });
     }
@@ -417,6 +500,14 @@ public class controladorVentanaCitas {
         if (dni != null) {
             recargarDatos();
         }
+    }
+
+    /**
+     * Establece un texto de búsqueda que se aplicará cuando las citas se carguen
+     * @param texto El texto a buscar
+     */
+    public void setTextoBusquedaPendiente(String texto) {
+        this.textoBusquedaPendiente = texto;
     }
 
     /**
@@ -434,7 +525,16 @@ public class controladorVentanaCitas {
             monthView.setDate(fecha);
             actualizarLabelFecha();
             filtrarCitasPorFecha(fecha);
-            return tblCitas.getItems().size();
+            int numResultados = tblCitas.getItems().size();
+
+            if (numResultados == 0) {
+                VentanaUtil.mostrarVentanaInformativa(
+                    "Cita no encontrada.\n\nNo se encontraron citas para la fecha: " + texto,
+                    TipoMensaje.INFORMACION
+                );
+            }
+
+            return numResultados;
         } catch (Exception ignored) {}
 
         // Buscar por nombre de paciente o DNI de paciente
@@ -460,6 +560,10 @@ public class controladorVentanaCitas {
             lblFechaSeleccionada.setText("Resultados de búsqueda: " + filtradas.size() + " cita(s)");
         } else {
             lblFechaSeleccionada.setText("Sin resultados");
+            VentanaUtil.mostrarVentanaInformativa(
+                "Cita no encontrada.\n\nNo se encontraron citas con el criterio de búsqueda: " + texto,
+                TipoMensaje.INFORMACION
+            );
         }
 
         return filtradas.size();
@@ -470,6 +574,7 @@ public class controladorVentanaCitas {
     @FXML
     void irAHoy(ActionEvent event) {
         fechaSeleccionada = LocalDate.now();
+        dtpFechaCita.setValue(LocalDate.now()); // Actualizar DatePicker
         monthView.setDate(LocalDate.now());
         actualizarLabelFecha();
         filtrarCitasPorFecha(LocalDate.now());
@@ -566,6 +671,7 @@ public class controladorVentanaCitas {
         pacienteSeleccionado = null;
 
         fechaSeleccionada = LocalDate.now();
+        dtpFechaCita.setValue(LocalDate.now()); // Actualizar DatePicker
         monthView.setDate(LocalDate.now());
         actualizarLabelFecha();
         filtrarCitasPorFecha(LocalDate.now());

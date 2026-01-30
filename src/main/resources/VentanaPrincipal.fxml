@@ -62,7 +62,7 @@
                     </children>
                 </VBox>
 
-                <Button fx:id="btnPerfil" mnemonicParsing="false" onAction="#abrirVentanaPerfil" prefHeight="58.0" prefWidth="113.0" styleClass="button-icono">
+                <Button fx:id="btnPerfil" mnemonicParsing="false" onAction="#abrirVentanaPerfil" styleClass="button-icono">
                     <graphic>
                         <ImageView fitHeight="52.0" fitWidth="90.0" pickOnBounds="true" preserveRatio="true">
                             <image>

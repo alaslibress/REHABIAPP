@@ -127,6 +127,18 @@
     -fx-background-radius: 0 8px 8px 0;
     -fx-border-radius: 0 8px 8px 0;
     -fx-border-width: 1.5px 1.5px 1.5px 0;
+    -fx-pref-height: 40px;
+    -fx-min-height: 40px;
+    -fx-max-height: 40px;
+}
+
+/* Campos de búsqueda en pestañas Sanitarios y Pacientes */
+#txfBuscarSanitarios, #txfBuscarPacientes {
+    -fx-background-radius: 0 8px 8px 0;
+    -fx-border-radius: 0 8px 8px 0;
+    -fx-pref-height: 40px;
+    -fx-min-height: 40px;
+    -fx-max-height: 40px;
 }
 
 /* ====== TEXT AREA ====== */
@@ -210,12 +222,14 @@
 /* Boton con icono - Fondo claro para que los iconos se vean */
 .button-icono {
     -fx-background-color: #D5DBDB;
+    -fx-text-fill: #1A1A1A;
     -fx-background-radius: 8px;
     -fx-padding: 8px;
 }
 
 .button-icono:hover {
     -fx-background-color: #ECF0F1;
+    -fx-text-fill: #1A1A1A;
 }
 
 /* Boton secundario */
@@ -275,6 +289,7 @@
 /* ====== BOTONES CON ICONOS ====== */
 #btnAjustes, #btnSalir, #btnPerfil {
     -fx-background-color: #D5DBDB;
+    -fx-text-fill: #1A1A1A;
     -fx-background-radius: 8px;
     -fx-padding: 10px;
     -fx-cursor: hand;
@@ -282,18 +297,27 @@
 
 #btnAjustes:hover, #btnSalir:hover, #btnPerfil:hover {
     -fx-background-color: #ECF0F1;
+    -fx-text-fill: #1A1A1A;
 }
 
 #btnBuscar, #btnBuscarSanitarios, #btnBuscarPacientes {
     -fx-background-color: #5499C7;
+    -fx-text-fill: #FFFFFF;
     -fx-background-radius: 8px 0 0 8px;
     -fx-border-radius: 8px 0 0 8px;
-    -fx-padding: 8px;
+    -fx-padding: 0;
     -fx-effect: none;
+    -fx-pref-height: 40px;
+    -fx-min-height: 40px;
+    -fx-max-height: 40px;
+    -fx-pref-width: 40px;
+    -fx-min-width: 40px;
+    -fx-max-width: 40px;
 }
 
 #btnBuscar:hover {
     -fx-background-color: #6B8EC4;
+    -fx-text-fill: #FFFFFF;
 }
 
 #btnSeleccionarTodo, #btnSeleccionarTodoPacientes {
@@ -301,14 +325,48 @@
     -fx-text-fill: #FFFFFF;
 }
 
-#btnAgregar, #btnAbrir, #btnFiltrar, #btnEditar, #btnAnadirSanitario, #btnAnadirPaciente, #btnFiltrarSanitarios, #btnFiltrarPacientes {
+/* Botones de añadir y filtrar (40x40 px) */
+#btnAnadirSanitario, #btnAnadirPaciente, #btnFiltrarSanitarios, #btnFiltrarPacientes {
     -fx-background-color: #D5DBDB;
+    -fx-text-fill: #1A1A1A;
+    -fx-background-radius: 8px;
+    -fx-padding: 0;
+    -fx-min-width: 40px;
+    -fx-max-width: 40px;
+    -fx-min-height: 40px;
+    -fx-max-height: 40px;
+}
+
+#btnAnadirSanitario:hover, #btnAnadirPaciente:hover, #btnFiltrarSanitarios:hover, #btnFiltrarPacientes:hover {
+    -fx-background-color: #ECF0F1;
+    -fx-text-fill: #1A1A1A;
+}
+
+/* Botones estándar con iconos */
+#btnAgregar, #btnAbrir, #btnFiltrar {
+    -fx-background-color: #D5DBDB;
+    -fx-text-fill: #1A1A1A;
     -fx-background-radius: 8px;
     -fx-padding: 8px;
 }
 
-#btnAgregar:hover, #btnAbrir:hover, #btnFiltrar:hover, #btnEditar:hover, #btnAnadirSanitario:hover, #btnAnadirPaciente:hover {
+#btnAgregar:hover, #btnAbrir:hover, #btnFiltrar:hover {
     -fx-background-color: #ECF0F1;
+    -fx-text-fill: #1A1A1A;
+}
+
+/* Botón editar (mismo tamaño que Aceptar - 120px) */
+#btnEditar {
+    -fx-background-color: #D5DBDB;
+    -fx-text-fill: #1A1A1A;
+    -fx-background-radius: 8px;
+    -fx-padding: 10px 20px;
+    -fx-min-width: 120px;
+}
+
+#btnEditar:hover {
+    -fx-background-color: #ECF0F1;
+    -fx-text-fill: #1A1A1A;
 }
 
 /* ====== TABLAS ====== */
@@ -535,410 +593,344 @@
     -fx-border-width: 2px;
 }
 
+/* ====== CALENDARFX - TEMA OSCURO CON REGLAS ESPECÍFICAS ====== */
+
 /* StackPane contenedor del calendario */
 #contenedorCalendario {
-    -fx-background-color: #1E1E1E;
-    -fx-border-color: #404040;
+    -fx-background-color: #1E1E1E !important;
+    -fx-border-color: #404040 !important;
     -fx-border-radius: 8px;
     -fx-background-radius: 8px;
 }
 
-/* ====== CALENDARFX - TEMA OSCURO (OPTIMIZADO) ====== */
-
-/* Fondo base para todo el calendario */
-.month-view,
-.month-view > *,
-.month-view .container,
-.date-control,
+/* Contenedor principal del calendario */
 .calendar-view {
-    -fx-background-color: #1E1E1E;
+    -fx-background-color: #1E1E1E !important;
 }
 
-/* Header de navegación (mes/año y botones) */
-.month-view > .header,
-.month-view .header,
-.date-control > .header {
-    -fx-background-color: #2D2D2D;
-    -fx-padding: 8px;
+/* MonthView - Vista de mes */
+.month-view {
+    -fx-background-color: #1E1E1E !important;
 }
 
-.month-view .header .label,
-.month-view > .header > .label {
-    -fx-text-fill: #FFFFFF;
-    -fx-font-weight: bold;
-    -fx-font-size: 15px;
+.month-view > .container {
+    -fx-background-color: #1E1E1E !important;
 }
 
-.month-view .header .button,
+.month-view .container {
+    -fx-background-color: #1E1E1E !important;
+}
+
+.month-view * {
+    -fx-background-color: transparent;
+}
+
+/* Header del mes (navegación) */
+.month-view > .header {
+    -fx-background-color: #2D2D2D !important;
+    -fx-padding: 10px;
+}
+
+.month-view .header {
+    -fx-background-color: #2D2D2D !important;
+}
+
 .month-view > .header > .button {
-    -fx-background-color: #404040;
-    -fx-text-fill: #FFFFFF;
-    -fx-background-radius: 4px;
-    -fx-cursor: hand;
+    -fx-background-color: #5DADE2 !important;
+    -fx-text-fill: #FFFFFF !important;
 }
 
-.month-view .header .button:hover,
 .month-view > .header > .button:hover {
-    -fx-background-color: #5DADE2;
+    -fx-background-color: #3498DB !important;
 }
 
-/* Días de la semana (Lun, Mar, etc.) */
-.month-view .day-of-week-label {
-    -fx-text-fill: #5DADE2;
+.month-view > .header > .label {
+    -fx-text-fill: #FFFFFF !important;
     -fx-font-weight: bold;
-    -fx-font-size: 12px;
-    -fx-background-color: #2D2D2D;
+    -fx-font-size: 16px;
 }
 
-/* Celdas de días */
+/* Días de la semana (Lu, Ma, Mi...) */
+.month-view > .month-header-view {
+    -fx-background-color: #2D2D2D !important;
+}
+
+.month-view .day-of-week-label {
+    -fx-text-fill: #5DADE2 !important;
+    -fx-font-weight: bold;
+    -fx-background-color: #2D2D2D !important;
+}
+
+/* Número de semana */
+.month-view .week-number-label {
+    -fx-text-fill: #E8E8E8 !important;
+    -fx-background-color: #1E1E1E !important;
+}
+
+/* Celdas de los días - FONDO OSCURO */
 .month-view .day-cell {
-    -fx-background-color: #1E1E1E;
-    -fx-border-color: #333333;
+    -fx-background-color: #2D2D2D !important;
+    -fx-border-color: #404040 !important;
     -fx-border-width: 0.5px;
 }
 
 .month-view .day-cell:hover {
-    -fx-background-color: #353535;
+    -fx-background-color: #353535 !important;
 }
 
-.month-view .day-cell:selected,
-.month-view .day-cell:focused {
-    -fx-background-color: #404040;
-    -fx-border-color: #5DADE2;
+.month-view .day-cell:selected {
+    -fx-background-color: #404040 !important;
+    -fx-border-color: #5DADE2 !important;
     -fx-border-width: 2px;
 }
 
-/* Número del día */
-.month-view .day-cell .day-label {
-    -fx-text-fill: #E8E8E8;
-    -fx-font-size: 13px;
-    -fx-background-color: transparent;
+.month-view .day-cell:focused {
+    -fx-background-color: #404040 !important;
+    -fx-border-color: #5DADE2 !important;
 }
 
+/* Número del día - TEXTO BLANCO */
+.month-view .day-cell > .day-label,
+.month-view .day-cell .day-label {
+    -fx-text-fill: #E8E8E8 !important;
+    -fx-font-size: 14px;
+    -fx-background-color: transparent !important;
+}
+
+.month-view .day-cell:selected > .day-label,
 .month-view .day-cell:selected .day-label {
-    -fx-text-fill: #FFFFFF;
+    -fx-text-fill: #FFFFFF !important;
     -fx-font-weight: bold;
 }
 
 /* Día de hoy */
 .month-view .day-cell.today {
-    -fx-background-color: #2D4A6D;
+    -fx-background-color: #2D4A6D !important;
 }
 
+.month-view .day-cell.today > .day-label,
 .month-view .day-cell.today .day-label {
-    -fx-text-fill: #5DADE2;
+    -fx-text-fill: #5DADE2 !important;
     -fx-font-weight: bold;
 }
 
-/* Otros meses */
+/* Días de otros meses */
 .month-view .day-cell.other-month {
-    -fx-background-color: #151515;
+    -fx-background-color: #1A1A1A !important;
 }
 
+.month-view .day-cell.other-month > .day-label,
 .month-view .day-cell.other-month .day-label {
-    -fx-text-fill: #555555;
+    -fx-text-fill: #555555 !important;
 }
 
-/* Fines de semana */
+/* Días del fin de semana */
 .month-view .day-cell.weekend {
-    -fx-background-color: #2C1E1E !important;
-}
-
-.month-view .day-cell.weekend .day-label {
-    -fx-text-fill: #E74C3C !important;
-}
-
-/* Fin de semana seleccionado o enfocado */
-.month-view .day-cell.weekend:selected,
-.month-view .day-cell.weekend:focused {
-    -fx-background-color: #4A2D2D !important;
-    -fx-border-color: #E74C3C !important;
-}
-
-.month-view .day-cell.weekend:selected .day-label,
-.month-view .day-cell.weekend:focused .day-label {
-    -fx-text-fill: #FF6B6B !important;
-    -fx-font-weight: bold;
-}
-
-/* Fin de semana en hover */
-.month-view .day-cell.weekend:hover {
     -fx-background-color: #3D2626 !important;
 }
 
-/* Fin de semana que es hoy */
-.month-view .day-cell.weekend.today {
-    -fx-background-color: #3D2E4A !important;
-    -fx-border-color: #E74C3C !important;
-    -fx-border-width: 2px;
-}
-
-.month-view .day-cell.weekend.today .day-label {
+.month-view .day-cell.weekend > .day-label,
+.month-view .day-cell.weekend .day-label {
     -fx-text-fill: #FF6B6B !important;
-    -fx-font-weight: bold;
 }
 
-/* Fines de semana de otros meses */
+.month-view .day-cell.weekend:selected {
+    -fx-background-color: #4A2D2D !important;
+}
+
 .month-view .day-cell.weekend.other-month {
     -fx-background-color: #1A1212 !important;
 }
 
+.month-view .day-cell.weekend.other-month > .day-label,
 .month-view .day-cell.weekend.other-month .day-label {
     -fx-text-fill: #663333 !important;
 }
 
-/* ====== ENTRADAS/EVENTOS (Full-day entries) ====== */
-/* Entradas estándar */
+/* Entradas/Eventos en el calendario - FONDO AZUL CON TEXTO BLANCO */
 .month-view .day-cell .entry,
 .month-view .entry-view,
 .entry-view {
     -fx-background-color: #5499C7 !important;
-    -fx-background-radius: 4px;
-    -fx-padding: 3px 6px;
-    -fx-border-color: #6B8EC4;
+    -fx-background-radius: 3px;
+    -fx-padding: 2px 4px;
+    -fx-border-color: #6B8EC4 !important;
     -fx-border-width: 1px;
-    -fx-border-radius: 4px;
 }
 
+.month-view .day-cell .entry > .label,
 .month-view .day-cell .entry .label,
 .month-view .entry-view .label,
 .entry-view .label {
     -fx-text-fill: #FFFFFF !important;
-    -fx-font-size: 11px;
+    -fx-font-size: 10px;
     -fx-font-weight: 600;
     -fx-background-color: transparent !important;
 }
 
-/* Full-day entry específico */
+/* Full-day entries */
 .month-view .full-day-entry-view {
     -fx-background-color: #5499C7 !important;
-    -fx-background-radius: 4px;
-    -fx-border-color: #6B8EC4;
-    -fx-border-width: 1px;
-    -fx-border-radius: 4px;
-    -fx-padding: 3px 6px;
+    -fx-background-radius: 3px;
+    -fx-border-color: #6B8EC4 !important;
 }
 
 .month-view .full-day-entry-view .label {
     -fx-text-fill: #FFFFFF !important;
-    -fx-font-size: 11px;
-    -fx-font-weight: 600;
-    -fx-background-color: transparent !important;
-}
-
-/* Entradas en día seleccionado */
-.month-view .day-cell:selected .entry,
-.month-view .day-cell:selected .entry-view,
-.month-view .day-cell:selected .full-day-entry-view {
-    -fx-background-color: #6B8EC4 !important;
-    -fx-border-color: #7FB3D5 !important;
-}
-
-.month-view .day-cell:selected .entry .label,
-.month-view .day-cell:selected .entry-view .label,
-.month-view .day-cell:selected .full-day-entry-view .label {
-    -fx-text-fill: #FFFFFF !important;
-    -fx-font-weight: bold;
-}
-
-/* Entradas en día enfocado */
-.month-view .day-cell:focused .entry,
-.month-view .day-cell:focused .entry-view,
-.month-view .day-cell:focused .full-day-entry-view {
-    -fx-background-color: #6B8EC4 !important;
-    -fx-border-color: #7FB3D5 !important;
-}
-
-.month-view .day-cell:focused .entry .label,
-.month-view .day-cell:focused .entry-view .label,
-.month-view .day-cell:focused .full-day-entry-view .label {
-    -fx-text-fill: #FFFFFF !important;
-}
-
-/* Entradas en fin de semana */
-.month-view .day-cell.weekend .entry,
-.month-view .day-cell.weekend .entry-view,
-.month-view .day-cell.weekend .full-day-entry-view {
-    -fx-background-color: #E74C3C !important;
-    -fx-border-color: #C0392B !important;
-}
-
-.month-view .day-cell.weekend .entry .label,
-.month-view .day-cell.weekend .entry-view .label,
-.month-view .day-cell.weekend .full-day-entry-view .label {
-    -fx-text-fill: #FFFFFF !important;
-    -fx-font-weight: 600;
-}
-
-/* Entradas en fin de semana seleccionado */
-.month-view .day-cell.weekend:selected .entry,
-.month-view .day-cell.weekend:selected .entry-view,
-.month-view .day-cell.weekend:selected .full-day-entry-view {
-    -fx-background-color: #C0392B !important;
-    -fx-border-color: #E74C3C !important;
-}
-
-.month-view .day-cell.weekend:selected .entry .label,
-.month-view .day-cell.weekend:selected .entry-view .label,
-.month-view .day-cell.weekend:selected .full-day-entry-view .label {
-    -fx-text-fill: #FFFFFF !important;
-    -fx-font-weight: bold;
-}
-
-/* Entradas en día de hoy */
-.month-view .day-cell.today .entry,
-.month-view .day-cell.today .entry-view,
-.month-view .day-cell.today .full-day-entry-view {
-    -fx-background-color: #5DADE2 !important;
-    -fx-border-color: #7FB3D5 !important;
-    -fx-border-width: 2px;
-}
-
-.month-view .day-cell.today .entry .label,
-.month-view .day-cell.today .entry-view .label,
-.month-view .day-cell.today .full-day-entry-view .label {
-    -fx-text-fill: #FFFFFF !important;
-    -fx-font-weight: bold;
-}
-
-/* Entradas en días de otros meses */
-.month-view .day-cell.other-month .entry,
-.month-view .day-cell.other-month .entry-view,
-.month-view .day-cell.other-month .full-day-entry-view {
-    -fx-background-color: #404040 !important;
-    -fx-border-color: #555555 !important;
-}
-
-.month-view .day-cell.other-month .entry .label,
-.month-view .day-cell.other-month .entry-view .label,
-.month-view .day-cell.other-month .full-day-entry-view .label {
-    -fx-text-fill: #AAAAAA !important;
-}
-
-/* Indicador "más entradas" */
-.month-view .day-cell .more-entries-label {
-    -fx-text-fill: #5DADE2 !important;
     -fx-font-size: 10px;
-    -fx-font-weight: bold;
+    -fx-font-weight: 600;
     -fx-background-color: transparent !important;
 }
 
-.month-view .day-cell.weekend .more-entries-label {
-    -fx-text-fill: #FF6B6B !important;
+/* DateControl general */
+.date-control {
+    -fx-background-color: #1E1E1E !important;
 }
 
-.month-view .day-cell:selected .more-entries-label {
-    -fx-text-fill: #7FB3D5 !important;
+.date-control > .header {
+    -fx-background-color: #2D2D2D !important;
 }
 
-/* ====== CALENDARFX - ESTILOS PERSONALIZADOS CON DERIVE() ====== */
+.date-control > .header > .label {
+    -fx-text-fill: #E8E8E8 !important;
+}
 
-/* STYLE1 - Días normales (Azul) */
+/* YearMonthView */
+.year-month-view {
+    -fx-background-color: #1E1E1E !important;
+}
+
+.year-month-view > .header {
+    -fx-background-color: #2D2D2D !important;
+}
+
+.year-month-view .month-label {
+    -fx-text-fill: #E8E8E8 !important;
+}
+
+.year-month-view .year-label {
+    -fx-text-fill: #FFFFFF !important;
+    -fx-font-weight: bold;
+}
+
+/* Botones de navegación del calendario */
+.calendar-header-view .button {
+    -fx-background-color: #5DADE2 !important;
+    -fx-text-fill: #FFFFFF !important;
+    -fx-background-radius: 4px;
+}
+
+.calendar-header-view .button:hover {
+    -fx-background-color: #3498DB !important;
+}
+
+.calendar-header-view .label {
+    -fx-text-fill: #E8E8E8 !important;
+}
+
+/* Popover de detalles */
+.popover {
+    -fx-background-color: #2D2D2D !important;
+    -fx-border-color: #404040 !important;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 10, 0, 0, 4);
+}
+
+.popover > .content {
+    -fx-background-color: #2D2D2D !important;
+}
+
+.popover > .title {
+    -fx-background-color: #1E1E1E !important;
+}
+
+.popover .label {
+    -fx-text-fill: #E8E8E8 !important;
+}
+
+/* Estilos para diferentes calendarios (STYLE1-5) - Tema Oscuro */
 .calendar-style1 .entry,
 .calendar-style1 .entry-view,
 .calendar-style1 .full-day-entry-view {
-    -fx-background-color: derive(-style1-color, 20%) !important;
-    -fx-border-color: -style1-color !important;
-    -fx-border-width: 1px;
+    -fx-background-color: #5499C7 !important;
+    -fx-border-color: #6B8EC4 !important;
 }
 
 .calendar-style1 .entry .label,
 .calendar-style1 .entry-view .label,
 .calendar-style1 .full-day-entry-view .label {
-    -fx-text-fill: white !important;
-    -fx-font-weight: bold !important;
+    -fx-text-fill: #FFFFFF !important;
+    -fx-font-weight: bold;
 }
 
-.calendar-style1 .entry:selected,
-.calendar-style1 .entry-view:selected,
-.calendar-style1 .full-day-entry-view:selected {
-    -fx-background-color: -style1-color !important;
-}
-
-/* STYLE2 - Día de hoy (Azul claro brillante) */
 .calendar-style2 .entry,
 .calendar-style2 .entry-view,
 .calendar-style2 .full-day-entry-view {
-    -fx-background-color: derive(-style2-color, 20%) !important;
-    -fx-border-color: -style2-color !important;
+    -fx-background-color: #5DADE2 !important;
+    -fx-border-color: #7FB3D5 !important;
     -fx-border-width: 2px;
 }
 
 .calendar-style2 .entry .label,
 .calendar-style2 .entry-view .label,
 .calendar-style2 .full-day-entry-view .label {
-    -fx-text-fill: white !important;
-    -fx-font-weight: bold !important;
+    -fx-text-fill: #FFFFFF !important;
+    -fx-font-weight: bold;
 }
 
-.calendar-style2 .entry:selected,
-.calendar-style2 .entry-view:selected,
-.calendar-style2 .full-day-entry-view:selected {
-    -fx-background-color: -style2-color !important;
-}
-
-/* STYLE3 - Amarillo (reservado) */
 .calendar-style3 .entry,
 .calendar-style3 .entry-view,
 .calendar-style3 .full-day-entry-view {
-    -fx-background-color: derive(-style3-color, 20%) !important;
-    -fx-border-color: -style3-color !important;
+    -fx-background-color: #F4D03F !important;
+    -fx-border-color: #F1C40F !important;
 }
 
 .calendar-style3 .entry .label,
 .calendar-style3 .entry-view .label,
 .calendar-style3 .full-day-entry-view .label {
-    -fx-text-fill: white !important;
-    -fx-font-weight: bold !important;
+    -fx-text-fill: #000000 !important;
+    -fx-font-weight: bold;
 }
 
-/* STYLE4 - Fines de semana (Rojo) */
 .calendar-style4 .entry,
 .calendar-style4 .entry-view,
 .calendar-style4 .full-day-entry-view {
-    -fx-background-color: derive(-style4-color, 20%) !important;
-    -fx-border-color: -style4-color !important;
-    -fx-border-width: 1px;
+    -fx-background-color: #E74C3C !important;
+    -fx-border-color: #C0392B !important;
 }
 
 .calendar-style4 .entry .label,
 .calendar-style4 .entry-view .label,
 .calendar-style4 .full-day-entry-view .label {
-    -fx-text-fill: white !important;
-    -fx-font-weight: bold !important;
+    -fx-text-fill: #FFFFFF !important;
+    -fx-font-weight: bold;
 }
 
-.calendar-style4 .entry:selected,
-.calendar-style4 .entry-view:selected,
-.calendar-style4 .full-day-entry-view:selected {
-    -fx-background-color: -style4-color !important;
-}
-
-/* STYLE5 - Púrpura (reservado) */
 .calendar-style5 .entry,
 .calendar-style5 .entry-view,
 .calendar-style5 .full-day-entry-view {
-    -fx-background-color: derive(-style5-color, 20%) !important;
-    -fx-border-color: -style5-color !important;
+    -fx-background-color: #AF7AC5 !important;
+    -fx-border-color: #9B59B6 !important;
 }
 
 .calendar-style5 .entry .label,
 .calendar-style5 .entry-view .label,
 .calendar-style5 .full-day-entry-view .label {
-    -fx-text-fill: white !important;
-    -fx-font-weight: bold !important;
+    -fx-text-fill: #FFFFFF !important;
+    -fx-font-weight: bold;
 }
 
-/* Popover de detalles */
-.popover {
-    -fx-background-color: #2D2D2D;
-    -fx-border-color: #404040;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
+/* Indicador "más entradas" */
+.month-view .day-cell .more-entries-label {
+    -fx-text-fill: #5DADE2 !important;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-background-color: transparent !important;
 }
 
-.popover .label {
-    -fx-text-fill: #E8E8E8;
+.month-view .day-cell.weekend .more-entries-label {
+    -fx-text-fill: #FF6B6B !important;
 }
 
 /* ====== INDICADOR DE CONEXIÓN BD ====== */

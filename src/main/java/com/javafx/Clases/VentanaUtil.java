@@ -26,7 +26,7 @@ public class VentanaUtil {
      * Si no existen, se usará pregunta.png como fallback
      */
     public enum TipoMensaje {
-        EXITO("exito.png", "confirmacion.png", "check.png", "ok.png"),
+        EXITO("correcto.png", "exito.png", "confirmacion.png", "check.png", "ok.png"),
         ERROR("error.png", "cruz.png", "x.png"),
         ADVERTENCIA("advertencia.png", "warning.png", "alerta.png"),
         INFORMACION("informacion.png", "info.png", "information.png");

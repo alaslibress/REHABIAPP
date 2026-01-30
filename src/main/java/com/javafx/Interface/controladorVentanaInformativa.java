@@ -66,10 +66,10 @@ public class controladorVentanaInformativa {
             }
         }
         
-        // Si no se encontró ningún icono alternativo, usar pregunta.png como fallback
+        // Si no se encontró ningún icono alternativo, usar info.png como fallback
         if (stream == null) {
-            System.err.println("No se encontró icono para " + tipo + ", usando pregunta.png");
-            stream = getClass().getResourceAsStream("/pregunta.png");
+            System.err.println("No se encontró icono para " + tipo + ", usando info.png");
+            stream = getClass().getResourceAsStream("/info.png");
         }
         
         // Cargar la imagen

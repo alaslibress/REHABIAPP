@@ -20,6 +20,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -112,8 +114,24 @@ public class controladorVentanaPacientes {
         //Permitir seleccion multiple
         tblPacientes.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
+        //Configurar doble clic para abrir ficha del paciente
+        tblPacientes.setOnMouseClicked(this::manejarDobleClicTabla);
+
         //Cargar pacientes automaticamente
         cargarPacientes();
+    }
+
+    /**
+     * Maneja el evento de clic en la tabla de pacientes
+     * Si es doble clic, abre la ficha del paciente
+     */
+    private void manejarDobleClicTabla(MouseEvent event) {
+        if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+            Paciente pacienteSeleccionado = tblPacientes.getSelectionModel().getSelectedItem();
+            if (pacienteSeleccionado != null) {
+                abrirFichaPaciente(null);
+            }
+        }
     }
 
     /**

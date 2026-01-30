@@ -43,7 +43,7 @@
 /* ====== LABELS ====== */
 .label {
     -fx-text-fill: #E8E8E8;
-    -fx-font-size: inherit;
+    -fx-font-size: 14px;
 }
 
 .label-titulo {
@@ -88,7 +88,7 @@
     -fx-border-radius: 8px;
     -fx-border-width: 1.5px;
     -fx-padding: 8px 12px;
-    -fx-font-size: inherit;
+    -fx-font-size: 14px;
     -fx-text-fill: #E8E8E8;
     -fx-prompt-text-fill: #7F8C8D;
 }
@@ -150,7 +150,7 @@
     -fx-text-fill: #FFFFFF;
     -fx-background-radius: 8px;
     -fx-padding: 10px 20px;
-    -fx-font-size: inherit;
+    -fx-font-size: 14px;
     -fx-font-weight: 500;
     -fx-cursor: hand;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 4, 0, 0, 2);
@@ -232,7 +232,7 @@
     -fx-text-fill: #BDC3C7;
     -fx-background-radius: 0;
     -fx-padding: 16px 20px;
-    -fx-font-size: inherit;
+    -fx-font-size: 14px;
     -fx-font-weight: 500;
     -fx-alignment: CENTER-LEFT;
     -fx-border-width: 0 0 0 4px;
@@ -340,7 +340,7 @@
     -fx-border-color: #404040;
     -fx-border-radius: 8px;
     -fx-border-width: 1.5px;
-    -fx-font-size: inherit;
+    -fx-font-size: 14px;
 }
 
 .combo-box:focused {
@@ -370,7 +370,7 @@
     -fx-background-color: #2D2D2D;
     -fx-border-color: #404040;
     -fx-border-radius: 8px;
-    -fx-font-size: inherit;
+    -fx-font-size: 14px;
 }
 
 .spinner .text-field {
@@ -389,7 +389,7 @@
 /* ====== CHECKBOX Y RADIOBUTTON ====== */
 .check-box, .radio-button {
     -fx-text-fill: #E8E8E8;
-    -fx-font-size: inherit;
+    -fx-font-size: 14px;
 }
 
 .check-box .box, .radio-button .radio {
@@ -406,7 +406,7 @@
     -fx-background-color: #2D2D2D;
     -fx-border-color: #404040;
     -fx-border-radius: 8px;
-    -fx-font-size: inherit;
+    -fx-font-size: 14px;
 }
 
 .date-picker:focused {

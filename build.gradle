@@ -47,6 +47,15 @@ java {
     }
 }
 
+// Configuración de encoding UTF-8
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc).configureEach {
+    options.encoding = 'UTF-8'
+}
+
 application {
     mainClass = 'com.javafx.Clases.Main'
 }
@@ -70,6 +79,8 @@ tasks.withType(JavaExec).configureEach {
             "--add-opens=java.base/java.text=ALL-UNNAMED",
             "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
             "--add-opens=java.desktop/java.awt.geom=ALL-UNNAMED",
-            "--add-opens=java.base/java.io=ALL-UNNAMED"
+            "--add-opens=java.base/java.io=ALL-UNNAMED",
+            // Habilitar acceso nativo para JavaFX (elimina warnings de restricted methods)
+            "--enable-native-access=javafx.graphics"
     ]
 }

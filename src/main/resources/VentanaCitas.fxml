@@ -2,6 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Separator?>
@@ -78,17 +79,12 @@
 
                         <Separator />
 
-                        <!-- DNI Paciente -->
+                        <!-- Paciente con Autocompletado -->
                         <VBox spacing="5.0">
                             <children>
-                                <Label text="DNI del Paciente:" />
-                                <HBox alignment="CENTER_LEFT" spacing="10.0">
-                                    <children>
-                                        <TextField fx:id="txtDNIPaciente" prefWidth="150.0" promptText="12345678X" />
-                                        <Button fx:id="btnBuscarPaciente" onAction="#buscarPaciente" text="Buscar" />
-                                    </children>
-                                </HBox>
-                                <Label fx:id="lblNombrePaciente" style="-fx-text-fill: #666666;" text="" />
+                                <Label text="Buscar Paciente:" />
+                                <ComboBox fx:id="cmbPacientes" editable="true" prefWidth="320.0" promptText="Escribe DNI o nombre del paciente..." />
+                                <Label fx:id="lblInfoPaciente" style="-fx-text-fill: #666666; -fx-font-size: 11px;" text="Escribe para ver sugerencias" />
                             </children>
                         </VBox>
 

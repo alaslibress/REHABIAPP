@@ -1,13 +1,10 @@
 package com.javafx.Interface;
 
 import com.javafx.Clases.AnimacionUtil;
-import com.javafx.Clases.ConexionBD;
 import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
-import javafx.animation.KeyFrame;
 import javafx.animation.ScaleTransition;
-import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -22,10 +19,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -86,16 +80,6 @@ public class controladorVentanaPrincipal {
     @FXML
     private VBox vboxMenuLateral;
     
-    // Indicador de conexión a BD
-    @FXML
-    private HBox hboxIndicadorConexion;
-    
-    @FXML
-    private Circle circuloConexion;
-    
-    @FXML
-    private Label lblEstadoConexion;
-
     // Pestaña actualmente cargada
     private String pestaniaActual = "";
 
@@ -105,28 +89,11 @@ public class controladorVentanaPrincipal {
     // Botón de pestaña actualmente seleccionado
     private Button botonPestaniaActual = null;
 
-    // Timeline para verificación periódica de conexión BD
-    private Timeline verificadorConexion;
-
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML
      */
     @FXML
     public void initialize() {
-        // Verificar conexión a BD inicialmente
-        verificarConexionBD();
-
-        // Iniciar verificador periódico (cada 5 segundos)
-        iniciarVerificadorConexion();
-
-        // Permitir reconexión manual al hacer clic en el indicador
-        hboxIndicadorConexion.setOnMouseClicked(e -> {
-            if (e.getButton() == MouseButton.PRIMARY) {
-                verificarConexionBD();
-            }
-        });
-        hboxIndicadorConexion.setStyle(hboxIndicadorConexion.getStyle() + "; -fx-cursor: hand;");
-
         // Crear menu contextual
         crearMenuContextual();
 
@@ -138,34 +105,6 @@ public class controladorVentanaPrincipal {
 
         // Marcar pestaña inicial como seleccionada
         marcarPestaniaSeleccionada(btnPestaniaPacientes);
-    }
-
-    /**
-     * Inicia un verificador periódico que actualiza el estado de la conexión cada 5 segundos
-     */
-    private void iniciarVerificadorConexion() {
-        verificadorConexion = new Timeline(
-            new KeyFrame(Duration.seconds(5), e -> verificarConexionBD())
-        );
-        verificadorConexion.setCycleCount(Timeline.INDEFINITE);
-        verificadorConexion.play();
-    }
-
-    /**
-     * Verifica la conexión a la base de datos y actualiza el indicador visual
-     */
-    private void verificarConexionBD() {
-        boolean conectado = ConexionBD.probarConexion();
-        
-        if (conectado) {
-            circuloConexion.setFill(Color.web("#27AE60")); // Verde
-            lblEstadoConexion.setText("Conectado");
-            lblEstadoConexion.setStyle("-fx-text-fill: #27AE60; -fx-font-size: 11px;");
-        } else {
-            circuloConexion.setFill(Color.web("#E74C3C")); // Rojo
-            lblEstadoConexion.setText("Sin conexión");
-            lblEstadoConexion.setStyle("-fx-text-fill: #E74C3C; -fx-font-size: 11px;");
-        }
     }
 
     /**

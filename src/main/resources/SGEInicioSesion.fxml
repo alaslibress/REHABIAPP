@@ -9,6 +9,7 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
 
 <VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorSesion">
    <children>
@@ -19,7 +20,7 @@
       </ImageView>
       <VBox prefHeight="200.0" prefWidth="100.0">
          <children>
-            <Label fx:id="lblInsertarDNI" text="DNI del usuario:">
+            <Label fx:id="lblInsertarDNI" mnemonicParsing="true" text="DNI del usuario:">
                <VBox.margin>
                   <Insets bottom="5.0" />
                </VBox.margin>
@@ -29,7 +30,7 @@
                   <Insets bottom="30.0" />
                </VBox.margin>
             </TextField>
-            <Label fx:id="lblInsertarContrasenia" text="Contraseña:">
+            <Label fx:id="lblInsertarContrasenia" mnemonicParsing="true" text="Contraseña:">
                <VBox.margin>
                   <Insets bottom="5.0" />
                </VBox.margin>
@@ -47,15 +48,28 @@
       </VBox>
       <HBox alignment="TOP_CENTER" prefHeight="100.0" prefWidth="200.0">
          <children>
-            <Button fx:id="btnCancelar" mnemonicParsing="false" onAction="#CerrarAPP" styleClass="button-peligro" text="Cancelar">
+            <Button fx:id="btnCancelar" mnemonicParsing="true" onAction="#CerrarAPP" styleClass="button-peligro" text="Cancelar">
                <HBox.margin>
                   <Insets right="30.0" />
                </HBox.margin>
             </Button>
-            <Button fx:id="btnEntrar" mnemonicParsing="false" onAction="#iniciarSesion" styleClass="button-primario" text="Entrar">
+            <Button fx:id="btnEntrar" mnemonicParsing="true" onAction="#iniciarSesion" styleClass="button-primario" text="Entrar">
                <HBox.margin>
                   <Insets left="30.0" />
                </HBox.margin></Button>
+         </children>
+      </HBox>
+      <!-- Indicador de conexión a BD -->
+      <HBox fx:id="hboxIndicadorConexion" alignment="CENTER" prefHeight="50.0" prefWidth="220.0" spacing="12.0">
+         <VBox.margin>
+            <Insets top="15.0" />
+         </VBox.margin>
+         <padding>
+            <Insets bottom="18.0" left="30.0" right="30.0" top="18.0" />
+         </padding>
+         <children>
+            <Circle fx:id="circuloConexion" radius="7.0" />
+            <Label fx:id="lblEstadoConexion" text="Verificando conexión..." />
          </children>
       </HBox>
    </children>

@@ -19,6 +19,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -97,6 +99,9 @@ public class controladorVentanaSanitarios {
         //Configurar columnas de la tabla
         configurarTabla();
 
+        //Configurar doble clic para abrir ficha del sanitario
+        tblSanitarios.setOnMouseClicked(this::manejarDobleClicTabla);
+
         //Cargar datos de la base de datos
         cargarSanitarios();
     }
@@ -145,6 +150,19 @@ public class controladorVentanaSanitarios {
 
         //Habilitar seleccion multiple
         tblSanitarios.getSelectionModel().setSelectionMode(javafx.scene.control.SelectionMode.MULTIPLE);
+    }
+
+    /**
+     * Maneja el evento de clic en la tabla de sanitarios
+     * Si es doble clic, abre la ficha del sanitario
+     */
+    private void manejarDobleClicTabla(MouseEvent event) {
+        if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+            Sanitario sanitarioSeleccionado = tblSanitarios.getSelectionModel().getSelectedItem();
+            if (sanitarioSeleccionado != null) {
+                abrirFichaSanitario(null);
+            }
+        }
     }
 
     /**

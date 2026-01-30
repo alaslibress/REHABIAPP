@@ -22,6 +22,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
@@ -29,6 +30,10 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
@@ -70,9 +75,8 @@ public class controladorVentanaCitas {
     @FXML private TableColumn<Cita, String> colSanitario;
     @FXML private Button btnEliminarCita;
     @FXML private Button btnVerCita;
-    @FXML private TextField txtDNIPaciente;
-    @FXML private Button btnBuscarPaciente;
-    @FXML private Label lblNombrePaciente;
+    @FXML private ComboBox<Paciente> cmbPacientes;
+    @FXML private Label lblInfoPaciente;
     @FXML private Label lblFechaSeleccionada;
     @FXML private Spinner<Integer> spnHora;
     @FXML private Spinner<Integer> spnMinuto;
@@ -98,7 +102,11 @@ public class controladorVentanaCitas {
     // ========== CACHÉ Y ASYNC ==========
     private List<Cita> cacheCitas = new ArrayList<>();
     private ExecutorService executor = Executors.newSingleThreadExecutor();
-    
+
+    // ========== AUTOCOMPLETADO ==========
+    private ObservableList<Paciente> todosLosPacientes = FXCollections.observableArrayList();
+    private ObservableList<Paciente> pacientesFiltrados = FXCollections.observableArrayList();
+
     // ========== FORMATO ==========
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -110,6 +118,10 @@ public class controladorVentanaCitas {
         configurarTabla();
         configurarSpinners();
         configurarCalendario();
+        configurarAutocompletadoPacientes();
+
+        //Configurar doble clic para abrir detalles de la cita
+        tblCitas.setOnMouseClicked(this::manejarDobleClicTabla);
 
         fechaSeleccionada = LocalDate.now();
         actualizarLabelFecha();
@@ -273,6 +285,19 @@ public class controladorVentanaCitas {
         }
     }
 
+    /**
+     * Maneja el evento de clic en la tabla de citas
+     * Si es doble clic, abre los detalles de la cita
+     */
+    private void manejarDobleClicTabla(MouseEvent event) {
+        if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+            Cita citaSeleccionada = tblCitas.getSelectionModel().getSelectedItem();
+            if (citaSeleccionada != null) {
+                verCitaSeleccionada(null);
+            }
+        }
+    }
+
     private void configurarTabla() {
         tblCitas.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         colFecha.setCellValueFactory(new PropertyValueFactory<>("fechaFormateada"));
@@ -287,6 +312,104 @@ public class controladorVentanaCitas {
         spnMinuto.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 45, 0, 15));
     }
 
+    /**
+     * Configura el sistema de autocompletado para buscar pacientes
+     */
+    private void configurarAutocompletadoPacientes() {
+        // Cargar todos los pacientes en segundo plano
+        Task<List<Paciente>> taskCargarPacientes = new Task<>() {
+            @Override
+            protected List<Paciente> call() {
+                return pacienteDAO.listarTodos();
+            }
+        };
+
+        taskCargarPacientes.setOnSucceeded(e -> {
+            List<Paciente> pacientes = taskCargarPacientes.getValue();
+            if (pacientes != null) {
+                todosLosPacientes.setAll(pacientes);
+                pacientesFiltrados.setAll(pacientes);
+                cmbPacientes.setItems(pacientesFiltrados);
+            }
+        });
+
+        executor.submit(taskCargarPacientes);
+
+        // Configurar StringConverter para mostrar pacientes de forma legible
+        cmbPacientes.setConverter(new javafx.util.StringConverter<Paciente>() {
+            @Override
+            public String toString(Paciente paciente) {
+                if (paciente == null) {
+                    return "";
+                }
+                StringBuilder sb = new StringBuilder();
+                sb.append(paciente.getDni()).append(" - ");
+                sb.append(paciente.getNombre()).append(" ");
+                sb.append(paciente.getApellido1());
+                if (paciente.getApellido2() != null && !paciente.getApellido2().isEmpty()) {
+                    sb.append(" ").append(paciente.getApellido2());
+                }
+                return sb.toString();
+            }
+
+            @Override
+            public Paciente fromString(String string) {
+                // No necesitamos convertir de texto a objeto
+                return null;
+            }
+        });
+
+        // Implementar filtrado mientras el usuario escribe
+        cmbPacientes.getEditor().textProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                pacientesFiltrados.setAll(todosLosPacientes);
+                lblInfoPaciente.setText("Escribe para ver sugerencias");
+                cmbPacientes.hide();
+                return;
+            }
+
+            String textoLower = newValue.toLowerCase();
+            List<Paciente> resultados = todosLosPacientes.stream()
+                .filter(p -> {
+                    String dni = p.getDni() != null ? p.getDni().toLowerCase() : "";
+                    String nombre = p.getNombre() != null ? p.getNombre().toLowerCase() : "";
+                    String apellido1 = p.getApellido1() != null ? p.getApellido1().toLowerCase() : "";
+                    String apellido2 = p.getApellido2() != null ? p.getApellido2().toLowerCase() : "";
+
+                    return dni.contains(textoLower) ||
+                           nombre.contains(textoLower) ||
+                           apellido1.contains(textoLower) ||
+                           apellido2.contains(textoLower);
+                })
+                .collect(Collectors.toList());
+
+            pacientesFiltrados.setAll(resultados);
+
+            if (!resultados.isEmpty()) {
+                lblInfoPaciente.setText(resultados.size() + " paciente(s) encontrado(s)");
+                if (!cmbPacientes.isShowing()) {
+                    cmbPacientes.show();
+                }
+            } else {
+                lblInfoPaciente.setText("No se encontraron pacientes");
+                cmbPacientes.hide();
+            }
+        });
+
+        // Cuando se selecciona un paciente de la lista
+        cmbPacientes.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                pacienteSeleccionado = newVal;
+                String info = String.format("✓ Seleccionado: %s %s (NSS: %s)",
+                    newVal.getNombre(),
+                    newVal.getApellido1(),
+                    newVal.getNumSS() != null ? newVal.getNumSS() : "N/A");
+                lblInfoPaciente.setText(info);
+                lblInfoPaciente.setStyle("-fx-text-fill: #27AE60; -fx-font-size: 11px;");
+            }
+        });
+    }
+
     // ========== MÉTODOS PÚBLICOS ==========
 
     public void setDniSanitario(String dni) {
@@ -296,8 +419,13 @@ public class controladorVentanaCitas {
         }
     }
 
-    public void filtrarPorTexto(String texto) {
-        if (texto == null || texto.isEmpty()) return;
+    /**
+     * Filtra las citas por texto (fecha, nombre de paciente o DNI)
+     * @param texto El texto a buscar
+     * @return El número de resultados encontrados
+     */
+    public int filtrarPorTexto(String texto) {
+        if (texto == null || texto.isEmpty()) return 0;
 
         // Intentar parsear como fecha
         try {
@@ -306,17 +434,35 @@ public class controladorVentanaCitas {
             monthView.setDate(fecha);
             actualizarLabelFecha();
             filtrarCitasPorFecha(fecha);
-            return;
+            return tblCitas.getItems().size();
         } catch (Exception ignored) {}
 
-        // Buscar por nombre de paciente
+        // Buscar por nombre de paciente o DNI de paciente
         String busqueda = texto.toLowerCase();
         List<Cita> filtradas = cacheCitas.stream()
-            .filter(c -> c.getNombrePaciente() != null && 
-                        c.getNombrePaciente().toLowerCase().contains(busqueda))
+            .filter(c -> {
+                // Buscar por nombre de paciente
+                boolean coincideNombre = c.getNombrePaciente() != null &&
+                                        c.getNombrePaciente().toLowerCase().contains(busqueda);
+
+                // Buscar por DNI de paciente
+                boolean coincideDNI = c.getDniPaciente() != null &&
+                                     c.getDniPaciente().toLowerCase().contains(busqueda);
+
+                return coincideNombre || coincideDNI;
+            })
             .collect(Collectors.toList());
 
         tblCitas.getItems().setAll(filtradas);
+
+        // Actualizar label para mostrar que se está filtrando
+        if (!filtradas.isEmpty()) {
+            lblFechaSeleccionada.setText("Resultados de búsqueda: " + filtradas.size() + " cita(s)");
+        } else {
+            lblFechaSeleccionada.setText("Sin resultados");
+        }
+
+        return filtradas.size();
     }
 
     // ========== ACCIONES FXML ==========
@@ -410,47 +556,15 @@ public class controladorVentanaCitas {
     }
 
     @FXML
-    void buscarPaciente(ActionEvent event) {
-        String dni = txtDNIPaciente.getText().trim();
-        if (dni.isEmpty()) {
-            VentanaUtil.mostrarVentanaInformativa("Introduce el DNI.", TipoMensaje.ADVERTENCIA);
-            return;
-        }
-
-        Task<Paciente> task = new Task<>() {
-            @Override
-            protected Paciente call() {
-                return pacienteDAO.buscarPorDni(dni);
-            }
-        };
-
-        task.setOnSucceeded(e -> {
-            pacienteSeleccionado = task.getValue();
-            if (pacienteSeleccionado != null) {
-                String nombre = pacienteSeleccionado.getNombre() + " " + 
-                               pacienteSeleccionado.getApellido1();
-                if (pacienteSeleccionado.getApellido2() != null) {
-                    nombre += " " + pacienteSeleccionado.getApellido2();
-                }
-                lblNombrePaciente.setText(nombre);
-                lblNombrePaciente.setStyle("-fx-text-fill: #27AE60;");
-            } else {
-                lblNombrePaciente.setText("No encontrado");
-                lblNombrePaciente.setStyle("-fx-text-fill: #E74C3C;");
-            }
-        });
-
-        executor.submit(task);
-    }
-
-    @FXML
     void restablecerFormulario(ActionEvent event) {
-        txtDNIPaciente.clear();
-        lblNombrePaciente.setText("");
+        cmbPacientes.getSelectionModel().clearSelection();
+        cmbPacientes.getEditor().clear();
+        lblInfoPaciente.setText("Escribe para ver sugerencias");
+        lblInfoPaciente.setStyle("-fx-text-fill: #666666; -fx-font-size: 11px;");
         spnHora.getValueFactory().setValue(9);
         spnMinuto.getValueFactory().setValue(0);
         pacienteSeleccionado = null;
-        
+
         fechaSeleccionada = LocalDate.now();
         monthView.setDate(LocalDate.now());
         actualizarLabelFecha();
@@ -509,12 +623,14 @@ public class controladorVentanaCitas {
                 );
                 
                 // Limpiar formulario
-                txtDNIPaciente.clear();
-                lblNombrePaciente.setText("");
+                cmbPacientes.getSelectionModel().clearSelection();
+                cmbPacientes.getEditor().clear();
+                lblInfoPaciente.setText("Escribe para ver sugerencias");
+                lblInfoPaciente.setStyle("-fx-text-fill: #666666; -fx-font-size: 11px;");
                 pacienteSeleccionado = null;
                 spnHora.getValueFactory().setValue(9);
                 spnMinuto.getValueFactory().setValue(0);
-                
+
                 recargarDatos();
             } else {
                 VentanaUtil.mostrarVentanaInformativa("No se pudo crear.", TipoMensaje.ERROR);

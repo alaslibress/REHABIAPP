@@ -10,7 +10,6 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.shape.Circle?>
 
 <BorderPane fx:id="bdpPrincipal" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="750.0" prefWidth="850.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaPrincipal">
    <top>
@@ -96,9 +95,9 @@
                   <Label fx:id="lblCargoTemporal" text="&quot;El cargo&quot;" />
                </children>
             </VBox>
-            <Button fx:id="btnPestaniaSanitarios" mnemonicParsing="false" onAction="#abrirPestaniaSanitarios" prefHeight="60.0" prefWidth="225.0" text="Sanitarios" />
-            <Button fx:id="btnPestaniaPacientes" mnemonicParsing="false" onAction="#abrirPestaniaPacientes" prefHeight="60.0" prefWidth="225.0" text="Pacientes" />
             <Button fx:id="btnPestaniaCitas" mnemonicParsing="false" onAction="#abrirPestaniaCitas" prefHeight="60.0" prefWidth="225.0" text="Citas" />
+            <Button fx:id="btnPestaniaPacientes" mnemonicParsing="false" onAction="#abrirPestaniaPacientes" prefHeight="60.0" prefWidth="225.0" text="Pacientes" />
+            <Button fx:id="btnPestaniaSanitarios" mnemonicParsing="false" onAction="#abrirPestaniaSanitarios" prefHeight="60.0" prefWidth="225.0" text="Sanitarios" />
             <Button fx:id="btnPestaniaAyuda" mnemonicParsing="false" onAction="#abrirPestaniaAyuda" prefHeight="60.0" prefWidth="225.0" text="Ayuda">
                <VBox.margin>
                   <Insets />

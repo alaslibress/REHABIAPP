@@ -71,8 +71,8 @@
         <HBox alignment="CENTER_RIGHT" spacing="15.0">
             <children>
                 <Button mnemonicParsing="false" onAction="#restablecerFiltros" prefHeight="38.0" prefWidth="120.0" text="Restablecer" />
-                <Button mnemonicParsing="false" onAction="#cerrarVentana" prefHeight="38.0" prefWidth="100.0" styleClass="button-peligro" text="Cancelar" />
-                <Button mnemonicParsing="false" onAction="#aplicarFiltros" prefHeight="38.0" prefWidth="100.0" styleClass="button-primario" text="Aplicar" />
+                <Button mnemonicParsing="false" onAction="#cerrarVentana" prefHeight="38.0" prefWidth="120.0" styleClass="button-peligro" text="Cancelar" />
+                <Button mnemonicParsing="false" onAction="#aplicarFiltros" prefHeight="38.0" prefWidth="120.0" styleClass="button-primario" text="Aplicar" />
             </children>
         </HBox>
     </children>

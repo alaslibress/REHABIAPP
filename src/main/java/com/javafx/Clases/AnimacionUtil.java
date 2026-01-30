@@ -282,7 +282,7 @@ public class AnimacionUtil {
 
     /**
      * Aplica animacion de salida a una ventana modal
-     * 
+     *
      * @param stage Stage de la ventana modal
      * @param onFinished Accion a ejecutar cuando termine (ej: stage.close())
      */
@@ -309,5 +309,49 @@ public class AnimacionUtil {
             if (onFinished != null) onFinished.run();
         });
         parallel.play();
+    }
+
+    // ==================== ANIMACIONES PARA TRANSICIONES DE PESTAÑAS ====================
+
+    /**
+     * Anima la transición de una pestaña con efecto de desvanecimiento y deslizamiento
+     * Combina FadeTransition + TranslateTransition para un efecto suave
+     *
+     * @param nodo Nodo de la pestaña a animar (generalmente un VBox o BorderPane)
+     * @param duracionMs Duración en milisegundos (recomendado: 300-400)
+     */
+    public static void animarTransicionPestania(Node nodo, int duracionMs) {
+        if (nodo == null) return;
+
+        // Configuración inicial: invisible y ligeramente desplazado a la derecha
+        nodo.setOpacity(0);
+        nodo.setTranslateX(30);
+
+        // FadeTransition - aparecer gradualmente
+        FadeTransition fade = new FadeTransition(Duration.millis(duracionMs), nodo);
+        fade.setFromValue(0.0);
+        fade.setToValue(1.0);
+        fade.setInterpolator(Interpolator.EASE_OUT);
+
+        // Timeline para deslizar desde la derecha
+        Timeline slide = new Timeline(
+            new KeyFrame(Duration.ZERO,
+                new KeyValue(nodo.translateXProperty(), 30)),
+            new KeyFrame(Duration.millis(duracionMs),
+                new KeyValue(nodo.translateXProperty(), 0, Interpolator.EASE_OUT))
+        );
+
+        // Ejecutar ambas animaciones en paralelo
+        ParallelTransition transition = new ParallelTransition(fade, slide);
+        transition.play();
+    }
+
+    /**
+     * Versión predeterminada de animarTransicionPestania con duración de 350ms
+     *
+     * @param nodo Nodo de la pestaña a animar
+     */
+    public static void animarTransicionPestania(Node nodo) {
+        animarTransicionPestania(nodo, 350);
     }
 }

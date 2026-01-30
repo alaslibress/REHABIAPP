@@ -12,7 +12,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="480.0" prefWidth="420.0" spacing="18.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorFiltroPacientes">
+<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="550.0" prefWidth="450.0" spacing="18.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorFiltroPacientes">
     <padding>
         <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
     </padding>
@@ -81,9 +81,9 @@
 
         <HBox alignment="CENTER_RIGHT" spacing="12.0">
             <children>
-                <Button mnemonicParsing="false" onAction="#restablecerFiltros" prefHeight="35.0" prefWidth="110.0" text="Restablecer" />
-                <Button mnemonicParsing="false" onAction="#cerrarVentana" prefHeight="35.0" prefWidth="90.0" styleClass="button-peligro" text="Cancelar" />
-                <Button mnemonicParsing="false" onAction="#aplicarFiltros" prefHeight="35.0" prefWidth="90.0" styleClass="button-primario" text="Aplicar" />
+                <Button mnemonicParsing="false" onAction="#restablecerFiltros" prefHeight="35.0" prefWidth="120.0" text="Restablecer" />
+                <Button mnemonicParsing="false" onAction="#cerrarVentana" prefHeight="35.0" prefWidth="120.0" styleClass="button-peligro" text="Cancelar" />
+                <Button mnemonicParsing="false" onAction="#aplicarFiltros" prefHeight="35.0" prefWidth="120.0" styleClass="button-primario" text="Aplicar" />
             </children>
         </HBox>
     </children>

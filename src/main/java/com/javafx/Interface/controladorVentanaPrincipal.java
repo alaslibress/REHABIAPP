@@ -230,6 +230,9 @@ public class controladorVentanaPrincipal {
             bdpPrincipal.setCenter(contenido);
             pestaniaActual = nombrePestania;
 
+            // Aplicar animación de transición
+            AnimacionUtil.animarTransicionPestania(contenido);
+
             System.out.println("Pestaña cargada: " + nombrePestania);
 
         } catch (Exception e) {
@@ -268,6 +271,9 @@ public class controladorVentanaPrincipal {
             bdpPrincipal.setCenter(contenido);
             pestaniaActual = "Citas";
 
+            // Aplicar animación de transición
+            AnimacionUtil.animarTransicionPestania(contenido);
+
             System.out.println("Pestaña cargada: Citas");
 
         } catch (Exception e) {
@@ -304,6 +310,9 @@ public class controladorVentanaPrincipal {
             // Cargar contenido en el centro del BorderPane
             bdpPrincipal.setCenter(contenido);
             pestaniaActual = "Citas";
+
+            // Aplicar animación de transición
+            AnimacionUtil.animarTransicionPestania(contenido);
 
             // Marcar pestaña como seleccionada
             marcarPestaniaSeleccionada(btnPestaniaCitas);

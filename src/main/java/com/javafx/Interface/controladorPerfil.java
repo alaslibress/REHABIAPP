@@ -295,7 +295,7 @@ public class controladorPerfil {
                 hboxBotones
         );
 
-        Scene scene = new Scene(vbox, 300, 300);
+        Scene scene = new Scene(vbox, 350, 380);
 
         //Aplicar CSS al dialogo
         controladorVentanaOpciones.aplicarConfiguracionAScene(scene);

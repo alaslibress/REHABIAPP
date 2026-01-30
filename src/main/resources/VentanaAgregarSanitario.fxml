@@ -65,7 +65,7 @@
         <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
                 <Label prefWidth="110.0" text="Contrasena:" />
-                <PasswordField fx:id="pssContraseniaNuevoSanitario" prefWidth="280.0" />
+                <PasswordField fx:id="pssContraseniaNuevoSanitario" prefWidth="280.0" promptText="Introduce una contraseña" />
             </children>
         </HBox>
 

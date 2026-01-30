@@ -42,7 +42,7 @@
                         <Insets bottom="5.0" />
                     </VBox.margin>
                 </Label>
-                <TextField fx:id="txtInsertarDNI" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="35.0" prefWidth="300.0">
+                <TextField fx:id="txtInsertarDNI" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="35.0" prefWidth="300.0" promptText="Introduce tu DNI (12345678X)">
                     <VBox.margin>
                         <Insets bottom="30.0" />
                     </VBox.margin>
@@ -52,7 +52,7 @@
                         <Insets bottom="5.0" />
                     </VBox.margin>
                 </Label>
-                <PasswordField fx:id="pssInsertarContrasenia" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="35.0" prefWidth="300.0" />
+                <PasswordField fx:id="pssInsertarContrasenia" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="35.0" prefWidth="300.0" promptText="Introduce tu contraseña" />
                 <Label fx:id="lblMensajeError" textFill="#d10000" visible="false">
                     <VBox.margin>
                         <Insets top="8.0" />

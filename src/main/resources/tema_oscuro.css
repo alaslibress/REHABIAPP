@@ -8,7 +8,7 @@
     -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     -fx-font-size: 14px;
     -fx-base: #1E1E1E;
-    -fx-background: #0D1117;
+    -fx-background: #101520;
     -fx-focus-color: #5DADE2;
     -fx-accent: #6B8EC4;
 
@@ -22,7 +22,7 @@
 
 /* ====== CONTENEDORES PRINCIPALES ====== */
 .border-pane {
-    -fx-background-color: #0D1117;
+    -fx-background-color: #101520;
 }
 
 .top-bar {
@@ -293,11 +293,13 @@
     -fx-background-radius: 8px;
     -fx-padding: 10px;
     -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 4, 0, 0, 2);
 }
 
 #btnAjustes:hover, #btnSalir:hover, #btnPerfil:hover {
     -fx-background-color: #ECF0F1;
     -fx-text-fill: #1A1A1A;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 6, 0, 0, 3);
 }
 
 #btnBuscar, #btnBuscarSanitarios, #btnBuscarPacientes {
@@ -335,11 +337,13 @@
     -fx-max-width: 40px;
     -fx-min-height: 40px;
     -fx-max-height: 40px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 4, 0, 0, 2);
 }
 
 #btnAnadirSanitario:hover, #btnAnadirPaciente:hover, #btnFiltrarSanitarios:hover, #btnFiltrarPacientes:hover {
     -fx-background-color: #ECF0F1;
     -fx-text-fill: #1A1A1A;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 6, 0, 0, 3);
 }
 
 /* Botones estándar con iconos */

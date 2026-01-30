@@ -73,7 +73,7 @@
                         <HBox alignment="CENTER_LEFT" spacing="10.0">
                             <children>
                                 <Label prefWidth="140.0" text="Fecha:" />
-                                <DatePicker fx:id="dpFechaCita" prefWidth="200.0" />
+                                <DatePicker fx:id="dpFechaCita" prefWidth="200.0" promptText="Seleccione una fecha" />
                             </children>
                         </HBox>
 

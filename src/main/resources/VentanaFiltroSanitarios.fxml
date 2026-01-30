@@ -44,7 +44,7 @@
                 <Label style="-fx-font-weight: bold;" text="Ordenar por:" />
                 <HBox alignment="CENTER_LEFT" spacing="15.0">
                     <children>
-                        <ComboBox fx:id="cmbOrdenarPor" prefWidth="200.0" />
+                        <ComboBox fx:id="cmbOrdenarPor" prefWidth="200.0" promptText="Seleccione criterio de orden" />
                     </children>
                     <VBox.margin>
                         <Insets left="25.0" />

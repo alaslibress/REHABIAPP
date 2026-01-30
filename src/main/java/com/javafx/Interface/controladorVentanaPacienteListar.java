@@ -1,5 +1,6 @@
 package com.javafx.Interface;
 
+import com.javafx.Clases.InformeService;
 import com.javafx.Clases.Paciente;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
@@ -338,10 +339,19 @@ public class controladorVentanaPacienteListar {
     }
 
     /**
-     * Descarga el informe PDF del paciente
+     * Descarga el informe PDF del paciente a una ubicación seleccionada por el usuario
+     * No abre el PDF automáticamente, solo lo guarda en la ruta seleccionada
      */
     @FXML
     void descargarInformePDF(ActionEvent event) {
+        if (pacienteActual == null) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "No hay datos de paciente cargados.",
+                    TipoMensaje.ERROR
+            );
+            return;
+        }
+
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Guardar informe del paciente");
         fileChooser.setInitialFileName("Informe_" + pacienteActual.getDni() + ".pdf");
@@ -349,15 +359,55 @@ public class controladorVentanaPacienteListar {
                 new FileChooser.ExtensionFilter("Archivos PDF", "*.pdf")
         );
 
+        // Establecer directorio inicial en carpeta de usuario
+        File directorioInicial = new File(System.getProperty("user.home"));
+        if (directorioInicial.exists()) {
+            fileChooser.setInitialDirectory(directorioInicial);
+        }
+
         Stage stage = (Stage) btnDescargarInforme.getScene().getWindow();
         File archivoDestino = fileChooser.showSaveDialog(stage);
 
         if (archivoDestino != null) {
-            //TODO: Implementar generacion de PDF con los datos del paciente
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Funcionalidad de generacion de PDF pendiente de implementar.",
-                    TipoMensaje.INFORMACION
-            );
+            try {
+                String rutaCompleta = archivoDestino.getAbsolutePath();
+
+                // Asegurar que la ruta termina en .pdf
+                if (!rutaCompleta.toLowerCase().endsWith(".pdf")) {
+                    rutaCompleta += ".pdf";
+                }
+
+                System.out.println("Generando informe del paciente en: " + rutaCompleta);
+
+                // Generar el PDF en la ubicación seleccionada sin abrirlo
+                boolean exito = InformeService.generarInformePacienteEnRuta(
+                        pacienteActual.getDni(),
+                        rutaCompleta,
+                        false  // No abrir el PDF
+                );
+
+                if (exito) {
+                    VentanaUtil.mostrarVentanaInformativa(
+                            "El informe PDF se ha guardado correctamente en:\n" + rutaCompleta,
+                            TipoMensaje.EXITO
+                    );
+                } else {
+                    VentanaUtil.mostrarVentanaInformativa(
+                            "No se pudo generar el informe PDF.\n" +
+                            "Por favor, revise la consola para más detalles.",
+                            TipoMensaje.ERROR
+                    );
+                }
+
+            } catch (Exception e) {
+                System.err.println("Error al generar el informe: " + e.getMessage());
+                e.printStackTrace();
+                VentanaUtil.mostrarVentanaInformativa(
+                        "Error inesperado al generar el informe.\n" +
+                        "Detalles: " + e.getMessage(),
+                        TipoMensaje.ERROR
+                );
+            }
         }
     }
 

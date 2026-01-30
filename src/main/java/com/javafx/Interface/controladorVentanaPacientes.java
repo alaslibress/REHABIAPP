@@ -500,6 +500,8 @@ public class controladorVentanaPacientes {
 
     /**
      * Genera un informe PDF del paciente seleccionado
+     * El informe se guarda en la carpeta 'informes' y se abre automáticamente
+     * Además, se permite al usuario guardar una copia en una ubicación personalizada
      */
     @FXML
     void generarInformePaciente(ActionEvent event) {
@@ -521,16 +523,11 @@ public class controladorVentanaPacientes {
 
             System.out.println("Generando informe para paciente con DNI: " + dniPaciente);
 
-            // Generar el informe usando InformeService
-            boolean exito = InformeService.generarInformePaciente(dniPaciente);
+            // Generar el informe con copia personalizada usando InformeService
+            // Esto generará el PDF en 'informes', lo abrirá, y preguntará dónde guardar copia adicional
+            boolean exito = InformeService.generarInformePacienteConCopiaPersonalizada(dniPaciente);
 
-            if (exito) {
-                VentanaUtil.mostrarVentanaInformativa(
-                        "El informe PDF se ha generado correctamente.\n" +
-                        "Se ha guardado en la carpeta 'informes' y se abrirá automáticamente.",
-                        TipoMensaje.EXITO
-                );
-            } else {
+            if (!exito) {
                 VentanaUtil.mostrarVentanaInformativa(
                         "No se pudo generar el informe PDF.\n" +
                         "Por favor, revise la consola para más detalles.",

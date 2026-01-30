@@ -186,6 +186,116 @@ public class InformeService {
     }
 
     /**
+     * Genera un informe PDF de paciente en una ruta personalizada
+     *
+     * @param dniPaciente DNI del paciente
+     * @param rutaDestino Ruta completa donde guardar el PDF (con nombre de archivo)
+     * @param abrirPDF true para abrir el PDF automáticamente, false para no abrirlo
+     * @return true si se generó correctamente, false en caso contrario
+     */
+    public static boolean generarInformePacienteEnRuta(String dniPaciente, String rutaDestino, boolean abrirPDF) {
+        Connection conexion = null;
+
+        try {
+            // Obtener la conexión a la base de datos
+            conexion = ConexionBD.getConexion();
+
+            if (conexion == null) {
+                System.err.println("Error: No se pudo obtener la conexión a la base de datos");
+                return false;
+            }
+
+            // Compilar el informe
+            JasperReport jasperReport = compilarInforme("InformePacienteRehabiapp.jrxml");
+
+            if (jasperReport == null) {
+                System.err.println("Error: No se pudo compilar el informe");
+                return false;
+            }
+
+            // Crear mapa de parámetros
+            Map<String, Object> parametros = new java.util.HashMap<>();
+            parametros.put("dni_paciente_param", dniPaciente);
+
+            // Rellenar el informe con datos
+            JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parametros, conexion);
+
+            // Exportar a PDF en la ruta especificada
+            JasperExportManager.exportReportToPdfFile(jasperPrint, rutaDestino);
+
+            System.out.println("Informe PDF generado correctamente: " + rutaDestino);
+
+            // Abrir el PDF si se solicita
+            if (abrirPDF) {
+                abrirPDF(rutaDestino);
+            }
+
+            return true;
+
+        } catch (JRException e) {
+            System.err.println("Error de JasperReports al generar el informe: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } catch (Exception e) {
+            System.err.println("Error inesperado al generar el informe: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+        // NO cerramos la conexión porque es singleton y se reutiliza
+    }
+
+    /**
+     * Genera un informe de paciente en la carpeta informes (con HTML) y ADEMÁS permite
+     * al usuario guardar una copia en una ubicación personalizada
+     *
+     * @param dniPaciente DNI del paciente
+     * @return true si se generó correctamente, false en caso contrario
+     */
+    public static boolean generarInformePacienteConCopiaPersonalizada(String dniPaciente) {
+        // 1. Generar el informe normalmente (carpeta informes + abrir PDF + HTML)
+        boolean exitoPrincipal = generarInformePaciente(dniPaciente);
+
+        if (!exitoPrincipal) {
+            return false;
+        }
+
+        // 2. Preguntar al usuario dónde guardar copia adicional
+        javafx.stage.DirectoryChooser directoryChooser = new javafx.stage.DirectoryChooser();
+        directoryChooser.setTitle("Seleccione carpeta para guardar copia del informe");
+
+        // Intentar establecer directorio inicial en carpeta de usuario
+        File directorioInicial = new File(System.getProperty("user.home"));
+        if (directorioInicial.exists()) {
+            directoryChooser.setInitialDirectory(directorioInicial);
+        }
+
+        File directorioSeleccionado = directoryChooser.showDialog(null);
+
+        if (directorioSeleccionado != null) {
+            // 3. Generar copia en la carpeta seleccionada
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            String nombreArchivo = "Informe_Paciente_" + dniPaciente + "_" + timestamp + ".pdf";
+            String rutaCompleta = directorioSeleccionado.getAbsolutePath() + File.separator + nombreArchivo;
+
+            boolean exitoCopia = generarInformePacienteEnRuta(dniPaciente, rutaCompleta, false);
+
+            if (exitoCopia) {
+                VentanaUtil.mostrarVentanaInformativa(
+                    "Informe guardado correctamente en:\n" + rutaCompleta,
+                    VentanaUtil.TipoMensaje.EXITO
+                );
+            } else {
+                VentanaUtil.mostrarVentanaInformativa(
+                    "El informe principal se generó correctamente, pero hubo un error al guardar la copia personalizada.",
+                    VentanaUtil.TipoMensaje.ADVERTENCIA
+                );
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Genera un informe de listado de sanitarios
      *
      * @return true si se generó correctamente, false en caso contrario

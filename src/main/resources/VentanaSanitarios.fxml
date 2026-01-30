@@ -12,7 +12,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox fx:id="vboxContenedorPrincipal" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="700.0" prefWidth="900.0" spacing="15.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaSanitarios">
+<VBox fx:id="vboxContenedorPrincipal" maxHeight="Infinity" maxWidth="Infinity" spacing="15.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaSanitarios">
     <padding>
         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
@@ -20,14 +20,14 @@
         <HBox prefHeight="100.0" prefWidth="200.0">
             <children>
                 <Label fx:id="lblTituloPestania" prefHeight="18.0" prefWidth="200.0" styleClass="label-titulo" text="Sanitarios" />
-                <VBox prefHeight="100.0" prefWidth="802.0">
+                <VBox prefHeight="100.0" prefWidth="802.0" HBox.hgrow="ALWAYS">
                     <children>
                         <Button fx:id="btnSeleccionarTodo" mnemonicParsing="false" onAction="#seleccionarTodosSanitarios" text="Seleccionar todo">
                             <VBox.margin>
                                 <Insets bottom="20.0" left="150.0" />
                             </VBox.margin>
                         </Button>
-                        <HBox prefHeight="74.0" prefWidth="103.0">
+                        <HBox alignment="CENTER_LEFT" prefHeight="74.0" prefWidth="103.0">
                             <children>
                                 <Label fx:id="lblBuscarSanitarios" text="Buscar:">
                                     <HBox.margin>
@@ -45,19 +45,16 @@
                                     <tooltip>
                                         <Tooltip text="Buscar" />
                                     </tooltip>
-                                    <HBox.margin>
-                                        <Insets />
-                                    </HBox.margin>
                                 </Button>
                                 <TextField fx:id="txfBuscarSanitarios" onAction="#buscarSanitarios" prefHeight="30.0" prefWidth="250.0" promptText="Buscar:">
                                     <padding>
                                         <Insets left="5.0" right="10.0" />
                                     </padding>
                                     <HBox.margin>
-                                        <Insets right="100.0" />
+                                        <Insets right="50.0" />
                                     </HBox.margin>
                                 </TextField>
-                                <Button fx:id="btnAnadirSanitario" mnemonicParsing="false" onAction="#abrirFormularioNuevoSanitario" prefHeight="30.0" prefWidth="30.0" styleClass="button-primario">
+                                <Button fx:id="btnAnadirSanitario" mnemonicParsing="false" onAction="#abrirFormularioNuevoSanitario" prefHeight="40.0" prefWidth="40.0" styleClass="button-primario">
                                     <graphic>
                                         <ImageView fitHeight="18.0" fitWidth="74.0" pickOnBounds="true" preserveRatio="true">
                                             <image>
@@ -68,6 +65,21 @@
                                     <tooltip>
                                         <Tooltip text="Añadir nuevo sanitario" />
                                     </tooltip>
+                                    <HBox.margin>
+                                        <Insets right="20.0" />
+                                    </HBox.margin>
+                                </Button>
+                                <Button fx:id="btnFiltrarSanitarios" mnemonicParsing="false" onAction="#abrirFiltrosSanitarios" prefHeight="40.0" prefWidth="40.0" styleClass="button-icono">
+                                    <graphic>
+                                        <ImageView fitHeight="18.0" fitWidth="113.0" pickOnBounds="true" preserveRatio="true">
+                                            <image>
+                                                <Image url="@iconoFiltrar.png" />
+                                            </image>
+                                        </ImageView>
+                                    </graphic>
+                                    <tooltip>
+                                        <Tooltip text="Filtrar resultados" />
+                                    </tooltip>
                                 </Button>
                             </children>
                         </HBox>
@@ -75,30 +87,23 @@
                 </VBox>
             </children>
         </HBox>
-        <HBox alignment="TOP_CENTER" prefWidth="200.0" spacing="10.0" VBox.vgrow="ALWAYS">
+
+        <HBox alignment="TOP_CENTER" spacing="10.0" VBox.vgrow="ALWAYS">
             <children>
-                <TableView fx:id="tblSanitarios" prefHeight="479.0" prefWidth="753.0">
+                <TableView fx:id="tblSanitarios" maxHeight="Infinity" maxWidth="Infinity" HBox.hgrow="ALWAYS" prefHeight="479.0">
                     <columns>
                         <TableColumn fx:id="colNombre" prefWidth="200.0" text="Nombre" />
                         <TableColumn fx:id="colApellidos" prefWidth="250.0" text="Apellidos" />
                         <TableColumn fx:id="colDNI" prefWidth="120.0" text="DNI" />
                         <TableColumn fx:id="colCargo" prefWidth="180.0" text="Cargo" />
                     </columns>
+                    <columnResizePolicy>
+                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                    </columnResizePolicy>
                 </TableView>
-                <Button fx:id="btnFiltrarSanitarios" mnemonicParsing="false" onAction="#abrirFiltrosSanitarios" prefHeight="40.0" prefWidth="40.0" styleClass="button-icono">
-                    <graphic>
-                        <ImageView fitHeight="18.0" fitWidth="113.0" pickOnBounds="true" preserveRatio="true">
-                            <image>
-                                <Image url="@iconoFiltrar.png" />
-                            </image>
-                        </ImageView>
-                    </graphic>
-                    <tooltip>
-                        <Tooltip text="Filtrar resultados" />
-                    </tooltip>
-                </Button>
             </children>
         </HBox>
+
         <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
             <children>
                 <Button fx:id="btnGenerarPDFSanitarios" mnemonicParsing="false" onAction="#generarInformeSanitarios" prefHeight="26.0" prefWidth="180.0" styleClass="button-secundario" text="Generar Listado PDF">

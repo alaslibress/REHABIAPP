@@ -5,20 +5,37 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.DropShadow?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.shape.Circle?>
 
-<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="450.0" prefWidth="600.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorSesion">
+<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="494.0" prefWidth="600.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorSesion">
     <children>
-        <ImageView fx:id="imgLogo" fitHeight="157.0" fitWidth="243.0" pickOnBounds="true" preserveRatio="true" scaleX="2.0" scaleY="2.0" scaleZ="2.0">
-            <image>
-                <Image url="@RehabiAPPLogo%20-%20Editada.png" />
-            </image>
-        </ImageView>
-        <VBox prefHeight="200.0" prefWidth="100.0">
+
+        <StackPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="124.0" prefWidth="214.0" style="-fx-background-color: #ececec; -fx-background-radius: 20;">
+            <children>
+                <ImageView fx:id="imgLogo" fitHeight="177.0" fitWidth="176.0" pickOnBounds="true" preserveRatio="true">
+                    <image>
+                        <Image url="@RehabiAPPLogo%20-%20Editada.png" />
+                    </image>
+                </ImageView>
+            </children>
+            <VBox.margin>
+                <Insets bottom="15.0" top="20.0" />
+            </VBox.margin>
+            <padding>
+                <Insets bottom="4.0" left="4.0" right="4.0" top="4.0" />
+            </padding>
+            <effect>
+                <DropShadow color="#00000026" height="20.0" radius="9.5" width="20.0" />
+            </effect>
+        </StackPane>
+
+        <VBox prefHeight="156.0" prefWidth="600.0">
             <children>
                 <Label fx:id="lblInsertarDNI" mnemonicParsing="true" text="DNI del usuario:">
                     <VBox.margin>

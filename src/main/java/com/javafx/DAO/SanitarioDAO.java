@@ -67,22 +67,23 @@ public class SanitarioDAO {
                 "LOWER(s.apellido1_san) LIKE ? OR LOWER(s.apellido2_san) LIKE ? OR " +
                 "LOWER(s.email_san) LIKE ? ORDER BY s.nombre_san";
 
+        //Preparar patron de busqueda con comodines
+        String patron = "%" + texto.toLowerCase() + "%";
+
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
-            //Preparar patron de busqueda con comodines
-            String patron = "%" + texto.toLowerCase() + "%";
             stmt.setString(1, patron);
             stmt.setString(2, patron);
             stmt.setString(3, patron);
             stmt.setString(4, patron);
             stmt.setString(5, patron);
 
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                Sanitario sanitario = mapearSanitarioDesdeResultSet(rs);
-                sanitarios.add(sanitario);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Sanitario sanitario = mapearSanitarioDesdeResultSet(rs);
+                    sanitarios.add(sanitario);
+                }
             }
 
         } catch (SQLException e) {
@@ -108,10 +109,11 @@ public class SanitarioDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, dni);
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                return mapearSanitarioDesdeResultSet(rs);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapearSanitarioDesdeResultSet(rs);
+                }
             }
 
         } catch (SQLException e) {
@@ -150,10 +152,11 @@ public class SanitarioDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, dni);
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
 
         } catch (SQLException e) {
@@ -175,10 +178,11 @@ public class SanitarioDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, email);
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
 
         } catch (SQLException e) {
@@ -203,10 +207,11 @@ public class SanitarioDAO {
 
             stmt.setString(1, email);
             stmt.setString(2, dniExcluir);
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
 
         } catch (SQLException e) {
@@ -547,18 +552,19 @@ public class SanitarioDAO {
              PreparedStatement stmt = conn.prepareStatement(queryTel)) {
 
             stmt.setString(1, sanitario.getDni());
-            ResultSet rs = stmt.executeQuery();
 
-            int indice = 0;
-            while (rs.next() && indice < 2) {
-                String telefono = rs.getString("telefono");
+            try (ResultSet rs = stmt.executeQuery()) {
+                int indice = 0;
+                while (rs.next() && indice < 2) {
+                    String telefono = rs.getString("telefono");
 
-                if (indice == 0) {
-                    sanitario.setTelefono1(telefono);
-                } else {
-                    sanitario.setTelefono2(telefono);
+                    if (indice == 0) {
+                        sanitario.setTelefono1(telefono);
+                    } else {
+                        sanitario.setTelefono2(telefono);
+                    }
+                    indice++;
                 }
-                indice++;
             }
 
         } catch (SQLException e) {
@@ -587,12 +593,12 @@ public class SanitarioDAO {
             stmt.setString(1, dni.toUpperCase());
             stmt.setString(2, contrasena);
 
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                Sanitario sanitario = mapearSanitarioDesdeResultSet(rs);
-                System.out.println("Autenticacion exitosa para: " + sanitario.getDni());
-                return sanitario;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    Sanitario sanitario = mapearSanitarioDesdeResultSet(rs);
+                    System.out.println("Autenticacion exitosa para: " + sanitario.getDni());
+                    return sanitario;
+                }
             }
 
         } catch (SQLException e) {
@@ -728,10 +734,10 @@ public class SanitarioDAO {
             stmt.setString(1, dni);
             stmt.setString(2, contrasena);
 
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
 
         } catch (SQLException e) {
@@ -800,7 +806,7 @@ public class SanitarioDAO {
      * @return true si se eliminaron correctamente
      */
     public boolean eliminarTelefonos(String dni) {
-        String query = "DELETE FROM telefono_medico WHERE dni_san = ?";
+        String query = "DELETE FROM telefono_sanitario WHERE dni_san = ?";
 
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -822,7 +828,7 @@ public class SanitarioDAO {
      * @return true si se inserto correctamente
      */
     public boolean insertarTelefono(String dni, String telefono) {
-        String query = "INSERT INTO telefono_medico (dni_san, telefono) VALUES (?, ?)";
+        String query = "INSERT INTO telefono_sanitario (dni_san, telefono) VALUES (?, ?)";
 
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -844,20 +850,21 @@ public class SanitarioDAO {
      * @return String con los telefonos separados por coma
      */
     public String obtenerTelefonos(String dni) {
-        String query = "SELECT telefono FROM telefono_medico WHERE dni_san = ?";
+        String query = "SELECT telefono FROM telefono_sanitario WHERE dni_san = ?";
         StringBuilder telefonos = new StringBuilder();
 
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, dni);
-            ResultSet rs = stmt.executeQuery();
 
-            while (rs.next()) {
-                if (telefonos.length() > 0) {
-                    telefonos.append(", ");
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    if (telefonos.length() > 0) {
+                        telefonos.append(", ");
+                    }
+                    telefonos.append(rs.getString("telefono"));
                 }
-                telefonos.append(rs.getString("telefono"));
             }
 
         } catch (SQLException e) {

@@ -9,7 +9,7 @@ import javafx.beans.property.StringProperty;
  * Clase modelo que representa un Paciente en el sistema
  * Utiliza propiedades JavaFX para facilitar el binding con TableView
  */
-public class Paciente {
+public class Paciente implements Persona {
 
     //Propiedades principales del paciente
     private final StringProperty dni;
@@ -136,21 +136,8 @@ public class Paciente {
     }
 
     /**
-     * Obtiene los apellidos concatenados
-     * @return Primer y segundo apellido separados por espacio
-     */
-    public String getApellidos() {
-        String ap1 = apellido1.get() != null ? apellido1.get() : "";
-        String ap2 = apellido2.get() != null ? apellido2.get() : "";
-
-        if (ap2.isEmpty()) {
-            return ap1;
-        }
-        return ap1 + " " + ap2;
-    }
-
-    /**
      * Property para los apellidos concatenados (para TableView)
+     * Usa el metodo getApellidos() heredado de la interface Persona
      */
     public StringProperty apellidosProperty() {
         return new SimpleStringProperty(getApellidos());
@@ -402,14 +389,6 @@ public class Paciente {
     }
 
     // ==================== METODOS AUXILIARES ====================
-
-    /**
-     * Obtiene el nombre completo del paciente
-     * @return Nombre y apellidos concatenados
-     */
-    public String getNombreCompleto() {
-        return getNombre() + " " + getApellidos();
-    }
 
     @Override
     public String toString() {

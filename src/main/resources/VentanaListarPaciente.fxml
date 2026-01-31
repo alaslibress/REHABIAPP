@@ -76,12 +76,12 @@
                             </children>
                         </HBox>
 
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <VBox spacing="5.0">
                             <children>
-                                <Label prefWidth="180.0" text="Direccion:" />
-                                <Label fx:id="lblDireccionValor" prefWidth="250.0" wrapText="true" />
+                                <Label text="Direccion:" />
+                                <Label fx:id="lblDireccionValor" prefWidth="430.0" wrapText="true" />
                             </children>
-                        </HBox>
+                        </VBox>
 
                         <VBox spacing="5.0">
                             <children>

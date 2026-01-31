@@ -6,6 +6,7 @@ import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.PacienteDAO;
+import com.javafx.util.PaginacionUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -22,6 +23,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -97,6 +99,11 @@ public class controladorVentanaPacientes {
     //DNI del sanitario logueado
     private String dniSanitarioActual;
 
+    // OPTIMIZACION: Paginacion para mejorar rendimiento
+    private PaginacionUtil<Paciente> paginacion;
+    private static final int REGISTROS_POR_PAGINA = 50; // Mostrar 50 pacientes por pagina
+    private List<Paciente> todosPacientes; // Cache de todos los pacientes
+
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML
      */
@@ -105,8 +112,9 @@ public class controladorVentanaPacientes {
         //Inicializar DAO
         pacienteDAO = new PacienteDAO();
 
-        //Inicializar lista observable
-        listaPacientes = FXCollections.observableArrayList();
+        //OPTIMIZACION: Inicializar paginacion
+        paginacion = new PaginacionUtil<>(REGISTROS_POR_PAGINA);
+        listaPacientes = paginacion.getDatosPaginados();
 
         //Configurar la tabla
         configurarTabla();
@@ -116,6 +124,10 @@ public class controladorVentanaPacientes {
 
         //Configurar doble clic para abrir ficha del paciente
         tblPacientes.setOnMouseClicked(this::manejarDobleClicTabla);
+
+        //OPTIMIZACION: Agregar controles de paginacion
+        HBox controlesPaginacion = paginacion.crearControlesPaginacion();
+        vboxContenedorPrinPacientes.getChildren().add(controlesPaginacion);
 
         //Cargar pacientes automaticamente
         cargarPacientes();
@@ -224,12 +236,12 @@ public class controladorVentanaPacientes {
      * Carga todos los pacientes desde la base de datos
      */
     private void cargarPacientes() {
-        listaPacientes.clear();
+        // OPTIMIZACION: Cargar todos los pacientes y usar paginacion
+        todosPacientes = pacienteDAO.listarTodos();
+        paginacion.setDatos(todosPacientes);
 
-        List<Paciente> pacientes = pacienteDAO.listarTodos();
-        listaPacientes.addAll(pacientes);
-
-        System.out.println("Pacientes cargados: " + pacientes.size());
+        System.out.println("Pacientes cargados: " + todosPacientes.size() +
+                           " (mostrando " + listaPacientes.size() + " por pagina)");
     }
 
     /**

@@ -6,6 +6,7 @@ import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.SanitarioDAO;
+import com.javafx.util.PaginacionUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -21,6 +22,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -88,6 +90,11 @@ public class controladorVentanaSanitarios {
     //DAO para operaciones de base de datos
     private SanitarioDAO sanitarioDAO;
 
+    //Paginacion
+    private PaginacionUtil<Sanitario> paginacion;
+    private static final int REGISTROS_POR_PAGINA = 50;
+    private List<Sanitario> todosSanitarios;
+
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML
      */
@@ -96,11 +103,19 @@ public class controladorVentanaSanitarios {
         //Inicializar DAO
         sanitarioDAO = new SanitarioDAO();
 
+        //Inicializar paginacion
+        paginacion = new PaginacionUtil<>(REGISTROS_POR_PAGINA);
+        listaSanitarios = paginacion.getDatosPaginados();
+
         //Configurar columnas de la tabla
         configurarTabla();
 
         //Configurar doble clic para abrir ficha del sanitario
         tblSanitarios.setOnMouseClicked(this::manejarDobleClicTabla);
+
+        //Agregar controles de paginacion al contenedor principal
+        HBox controlesPaginacion = paginacion.crearControlesPaginacion();
+        vboxContenedorPrincipal.getChildren().add(controlesPaginacion);
 
         //Cargar datos de la base de datos
         cargarSanitarios();
@@ -148,6 +163,9 @@ public class controladorVentanaSanitarios {
         colDNI.setCellValueFactory(new PropertyValueFactory<>("dni"));
         colCargo.setCellValueFactory(new PropertyValueFactory<>("cargo"));
 
+        //IMPORTANTE: Vincular la tabla con la lista observable paginada
+        tblSanitarios.setItems(listaSanitarios);
+
         //Habilitar seleccion multiple
         tblSanitarios.getSelectionModel().setSelectionMode(javafx.scene.control.SelectionMode.MULTIPLE);
     }
@@ -170,11 +188,10 @@ public class controladorVentanaSanitarios {
      */
     private void cargarSanitarios() {
         //Obtener lista de sanitarios desde la base de datos
-        List<Sanitario> sanitarios = sanitarioDAO.listarTodos();
+        todosSanitarios = sanitarioDAO.listarTodos();
 
-        //Convertir a ObservableList y asignar a la tabla
-        listaSanitarios = FXCollections.observableArrayList(sanitarios);
-        tblSanitarios.setItems(listaSanitarios);
+        //Actualizar paginacion con los datos
+        paginacion.setDatos(todosSanitarios);
     }
 
     /**

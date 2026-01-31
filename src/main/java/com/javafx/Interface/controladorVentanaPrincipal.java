@@ -89,6 +89,10 @@ public class controladorVentanaPrincipal {
     // Botón de pestaña actualmente seleccionado
     private Button botonPestaniaActual = null;
 
+    // OPTIMIZACION: Cache de pestañas para evitar recargas innecesarias
+    private final java.util.Map<String, Parent> cachePestanias = new java.util.HashMap<>();
+    private final java.util.Map<String, Object> cacheControladores = new java.util.HashMap<>();
+
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML
      */
@@ -214,12 +218,29 @@ public class controladorVentanaPrincipal {
         }
 
         try {
-            String rutaFXML = "/Ventana" + nombrePestania + ".fxml";
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(rutaFXML));
-            Parent contenido = loader.load();
+            Parent contenido;
+            Object controlador;
+
+            // OPTIMIZACION: Verificar si la pestaña ya está en cache
+            if (cachePestanias.containsKey(nombrePestania)) {
+                // Usar contenido cacheado (mucho más rápido)
+                contenido = cachePestanias.get(nombrePestania);
+                controlador = cacheControladores.get(nombrePestania);
+                System.out.println("Pestaña recuperada de cache: " + nombrePestania);
+            } else {
+                // Primera vez: cargar desde FXML
+                String rutaFXML = "/Ventana" + nombrePestania + ".fxml";
+                FXMLLoader loader = new FXMLLoader(getClass().getResource(rutaFXML));
+                contenido = loader.load();
+                controlador = loader.getController();
+
+                // Guardar en cache para futuros usos
+                cachePestanias.put(nombrePestania, contenido);
+                cacheControladores.put(nombrePestania, controlador);
+                System.out.println("Pestaña cargada y cacheada: " + nombrePestania);
+            }
 
             // Configurar permisos segun el controlador
-            Object controlador = loader.getController();
             if (controlador instanceof controladorVentanaSanitarios) {
                 ((controladorVentanaSanitarios) controlador).configurarPermisos();
             } else if (controlador instanceof controladorVentanaPacientes) {
@@ -230,10 +251,10 @@ public class controladorVentanaPrincipal {
             bdpPrincipal.setCenter(contenido);
             pestaniaActual = nombrePestania;
 
-            // Aplicar animación de transición
-            AnimacionUtil.animarTransicionPestania(contenido);
-
-            System.out.println("Pestaña cargada: " + nombrePestania);
+            // Aplicar animación de transición solo si no está en cache
+            if (!cachePestanias.containsKey(nombrePestania)) {
+                AnimacionUtil.animarTransicionPestania(contenido);
+            }
 
         } catch (Exception e) {
             System.err.println("Error al cargar pestaña " + nombrePestania + ": " + e.getMessage());
@@ -255,11 +276,27 @@ public class controladorVentanaPrincipal {
         }
 
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaCitas.fxml"));
-            Parent contenido = loader.load();
+            Parent contenido;
 
-            // Obtener controlador y configurar el DNI del sanitario actual
-            controladorCitasActual = loader.getController();
+            // OPTIMIZACION: Verificar si la pestaña ya está en cache
+            if (cachePestanias.containsKey("Citas")) {
+                // Usar contenido cacheado
+                contenido = cachePestanias.get("Citas");
+                controladorCitasActual = (controladorVentanaCitas) cacheControladores.get("Citas");
+                System.out.println("Pestaña Citas recuperada de cache");
+            } else {
+                // Primera vez: cargar desde FXML
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaCitas.fxml"));
+                contenido = loader.load();
+                controladorCitasActual = loader.getController();
+
+                // Guardar en cache
+                cachePestanias.put("Citas", contenido);
+                cacheControladores.put("Citas", controladorCitasActual);
+                System.out.println("Pestaña Citas cargada y cacheada");
+            }
+
+            // Configurar el DNI del sanitario actual
             if (controladorCitasActual != null) {
                 SesionUsuario sesion = SesionUsuario.getInstancia();
                 if (sesion.haySesionActiva()) {
@@ -271,10 +308,10 @@ public class controladorVentanaPrincipal {
             bdpPrincipal.setCenter(contenido);
             pestaniaActual = "Citas";
 
-            // Aplicar animación de transición
-            AnimacionUtil.animarTransicionPestania(contenido);
-
-            System.out.println("Pestaña cargada: Citas");
+            // Aplicar animación de transición solo en primera carga
+            if (!cachePestanias.containsKey("Citas")) {
+                AnimacionUtil.animarTransicionPestania(contenido);
+            }
 
         } catch (Exception e) {
             System.err.println("Error al cargar pestaña Citas: " + e.getMessage());
@@ -505,6 +542,43 @@ public class controladorVentanaPrincipal {
             } catch (Exception e) {
                 System.err.println("Error al volver al login: " + e.getMessage());
                 e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Limpia el cache de una pestaña especifica para forzar su recarga
+     * Util cuando se modifican datos y se necesita refrescar la vista
+     * @param nombrePestania Nombre de la pestaña a limpiar ("Pacientes", "Sanitarios", "Citas")
+     */
+    public void limpiarCachePestania(String nombrePestania) {
+        cachePestanias.remove(nombrePestania);
+        cacheControladores.remove(nombrePestania);
+        System.out.println("Cache limpiado para pestaña: " + nombrePestania);
+    }
+
+    /**
+     * Limpia todo el cache de pestañas
+     * Util cuando se necesita refrescar todas las vistas
+     */
+    public void limpiarTodoElCache() {
+        cachePestanias.clear();
+        cacheControladores.clear();
+        System.out.println("Cache completo limpiado");
+    }
+
+    /**
+     * Recarga la pestaña actual forzando una nueva carga desde BD
+     */
+    public void recargarPestaniaActual() {
+        if (!pestaniaActual.isEmpty()) {
+            String pestaniaTemp = pestaniaActual;
+            limpiarCachePestania(pestaniaTemp);
+            pestaniaActual = ""; // Resetear para forzar recarga
+            if ("Citas".equals(pestaniaTemp)) {
+                cargarPestaniaCitas();
+            } else {
+                cargarPestania(pestaniaTemp);
             }
         }
     }

@@ -150,12 +150,6 @@
                                     </children>
                                 </VBox>
 
-                                <HBox alignment="CENTER_LEFT" spacing="10.0">
-                                    <children>
-                                        <Label prefWidth="140.0" text="Informe:" />
-                                        <Button fx:id="btnImportarInforme" onAction="#importarInformePDF" prefWidth="150.0" text="Importar PDF" />
-                                    </children>
-                                </HBox>
                             </children>
                         </VBox>
 

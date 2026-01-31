@@ -1,5 +1,6 @@
 package com.javafx.Interface;
 
+import com.javafx.Clases.InformeService;
 import com.javafx.Clases.Paciente;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
@@ -256,8 +257,8 @@ public class controladorCitaPaciente {
         if (actualizada) {
             VentanaUtil.mostrarVentanaInformativa(
                     "La cita ha sido actualizada correctamente.\n\n" +
-                            "Nueva fecha: " + nuevaFecha.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + "\n" +
-                            "Nueva hora: " + nuevoTiempo.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
+                            "Nueva fecha: " + nuevaFecha.format(com.javafx.util.ConstantesApp.FORMATO_FECHA) + "\n" +
+                            "Nueva hora: " + nuevoTiempo.format(com.javafx.util.ConstantesApp.FORMATO_HORA),
                     TipoMensaje.EXITO
             );
 
@@ -283,25 +284,62 @@ public class controladorCitaPaciente {
     }
 
     /**
-     * Descarga el informe del paciente en PDF
+     * Descarga el informe del paciente en formato PDF
+     * Permite al usuario elegir donde guardar el archivo PDF generado
      */
     @FXML
     void descargarInformePDF(ActionEvent event) {
+        // Verificar que hay un paciente cargado
+        if (dniPacienteActual == null || dniPacienteActual.isEmpty()) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "No hay un paciente cargado para generar el informe.",
+                    TipoMensaje.ERROR
+            );
+            return;
+        }
+
+        // Configurar el dialogo de guardar archivo
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Guardar informe del paciente");
-        fileChooser.setInitialFileName("Informe_" + dniPacienteActual + ".pdf");
+        fileChooser.setInitialFileName("Informe_Paciente_" + dniPacienteActual + ".pdf");
         fileChooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter("Archivos PDF", "*.pdf")
         );
 
+        // Establecer directorio inicial en la carpeta de usuario
+        File directorioInicial = new File(System.getProperty("user.home"));
+        if (directorioInicial.exists()) {
+            fileChooser.setInitialDirectory(directorioInicial);
+        }
+
+        // Mostrar dialogo y obtener archivo seleccionado
         Stage stage = (Stage) btnDescargarInforme.getScene().getWindow();
         File archivoDestino = fileChooser.showSaveDialog(stage);
 
-        if (archivoDestino != null) {
-            //TODO: Implementar generacion de PDF con iText o similar
+        // Si el usuario cancela, salir
+        if (archivoDestino == null) {
+            return;
+        }
+
+        // Generar el PDF en la ruta seleccionada
+        boolean exito = InformeService.generarInformePacienteEnRuta(
+                dniPacienteActual,
+                archivoDestino.getAbsolutePath(),
+                true  // Abrir el PDF automaticamente despues de generarlo
+        );
+
+        // Mostrar resultado
+        if (exito) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Funcionalidad de generacion de PDF pendiente de implementar.",
-                    TipoMensaje.INFORMACION
+                    "Informe del paciente generado correctamente.\n\n" +
+                    "Archivo guardado en:\n" + archivoDestino.getAbsolutePath(),
+                    TipoMensaje.EXITO
+            );
+        } else {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error al generar el informe del paciente.\n\n" +
+                    "Verifique que los datos del paciente esten completos en la base de datos.",
+                    TipoMensaje.ERROR
             );
         }
     }

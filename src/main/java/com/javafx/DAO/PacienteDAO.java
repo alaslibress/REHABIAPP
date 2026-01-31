@@ -76,11 +76,11 @@ public class PacienteDAO {
                 stmt.setString(i, patron);
             }
 
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                Paciente paciente = mapearPacienteDesdeResultSet(rs);
-                pacientes.add(paciente);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Paciente paciente = mapearPacienteDesdeResultSet(rs);
+                    pacientes.add(paciente);
+                }
             }
 
         } catch (SQLException e) {
@@ -106,10 +106,11 @@ public class PacienteDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, dni);
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                return mapearPacienteDesdeResultSet(rs);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapearPacienteDesdeResultSet(rs);
+                }
             }
 
         } catch (SQLException e) {
@@ -146,10 +147,11 @@ public class PacienteDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, dni);
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
 
         } catch (SQLException e) {
@@ -169,10 +171,11 @@ public class PacienteDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, email);
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
 
         } catch (SQLException e) {
@@ -193,10 +196,11 @@ public class PacienteDAO {
 
             stmt.setString(1, email);
             stmt.setString(2, dniExcluir);
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
 
         } catch (SQLException e) {
@@ -216,10 +220,11 @@ public class PacienteDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, numSS);
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
 
         } catch (SQLException e) {
@@ -240,10 +245,11 @@ public class PacienteDAO {
 
             stmt.setString(1, numSS);
             stmt.setString(2, dniExcluir);
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
 
         } catch (SQLException e) {
@@ -390,9 +396,10 @@ public class PacienteDAO {
             stmt.setString(3, piso != null ? piso : "");
             stmt.setString(4, codigoPostal);
 
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt("id_direccion");
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("id_direccion");
+                }
             }
         }
 
@@ -407,9 +414,11 @@ public class PacienteDAO {
         String queryVerificar = "SELECT COUNT(*) FROM localidad WHERE nombre_localidad = ?";
         try (PreparedStatement stmtVerificar = conn.prepareStatement(queryVerificar)) {
             stmtVerificar.setString(1, localidad);
-            ResultSet rs = stmtVerificar.executeQuery();
-            if (rs.next() && rs.getInt(1) > 0) {
-                return; //Ya existe
+
+            try (ResultSet rs = stmtVerificar.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    return; //Ya existe
+                }
             }
         }
 
@@ -430,9 +439,11 @@ public class PacienteDAO {
         String queryVerificar = "SELECT COUNT(*) FROM cp WHERE cp = ?";
         try (PreparedStatement stmtVerificar = conn.prepareStatement(queryVerificar)) {
             stmtVerificar.setString(1, codigoPostal);
-            ResultSet rs = stmtVerificar.executeQuery();
-            if (rs.next() && rs.getInt(1) > 0) {
-                return; //Ya existe
+
+            try (ResultSet rs = stmtVerificar.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    return; //Ya existe
+                }
             }
         }
 
@@ -736,17 +747,18 @@ public class PacienteDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, dniPaciente);
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                byte[] fotoBytes = rs.getBytes("foto");
-                if (fotoBytes != null && fotoBytes.length > 0) {
-                    try {
-                        return new Image(new ByteArrayInputStream(fotoBytes));
-                    } catch (IllegalArgumentException e) {
-                        System.err.println("Error: Los datos de la foto no tienen un formato de imagen válido para el paciente " + dniPaciente);
-                        System.err.println("Detalles: " + e.getMessage());
-                        return null;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    byte[] fotoBytes = rs.getBytes("foto");
+                    if (fotoBytes != null && fotoBytes.length > 0) {
+                        try {
+                            return new Image(new ByteArrayInputStream(fotoBytes));
+                        } catch (IllegalArgumentException e) {
+                            System.err.println("Error: Los datos de la foto no tienen un formato de imagen válido para el paciente " + dniPaciente);
+                            System.err.println("Detalles: " + e.getMessage());
+                            return null;
+                        }
                     }
                 }
             }
@@ -806,18 +818,19 @@ public class PacienteDAO {
              PreparedStatement stmt = conn.prepareStatement(queryTel)) {
 
             stmt.setString(1, paciente.getDni());
-            ResultSet rs = stmt.executeQuery();
 
-            int indice = 0;
-            while (rs.next() && indice < 2) {
-                String telefono = rs.getString("telefono");
+            try (ResultSet rs = stmt.executeQuery()) {
+                int indice = 0;
+                while (rs.next() && indice < 2) {
+                    String telefono = rs.getString("telefono");
 
-                if (indice == 0) {
-                    paciente.setTelefono1(telefono);
-                } else {
-                    paciente.setTelefono2(telefono);
+                    if (indice == 0) {
+                        paciente.setTelefono1(telefono);
+                    } else {
+                        paciente.setTelefono2(telefono);
+                    }
+                    indice++;
                 }
-                indice++;
             }
 
         } catch (SQLException e) {
@@ -842,19 +855,20 @@ public class PacienteDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, paciente.getDni());
-            ResultSet rs = stmt.executeQuery();
 
-            if (rs.next()) {
-                paciente.setCalle(rs.getString("calle"));
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    paciente.setCalle(rs.getString("calle"));
 
-                //Numero es INTEGER en la BD
-                int numero = rs.getInt("numero");
-                paciente.setNumero(numero > 0 ? String.valueOf(numero) : "");
+                    //Numero es INTEGER en la BD
+                    int numero = rs.getInt("numero");
+                    paciente.setNumero(numero > 0 ? String.valueOf(numero) : "");
 
-                paciente.setPiso(rs.getString("piso"));
-                paciente.setCodigoPostal(rs.getString("cp"));
-                paciente.setLocalidad(rs.getString("nombre_localidad"));
-                paciente.setProvincia(rs.getString("provincia"));
+                    paciente.setPiso(rs.getString("piso"));
+                    paciente.setCodigoPostal(rs.getString("cp"));
+                    paciente.setLocalidad(rs.getString("nombre_localidad"));
+                    paciente.setProvincia(rs.getString("provincia"));
+                }
             }
 
         } catch (SQLException e) {
@@ -870,9 +884,11 @@ public class PacienteDAO {
         String query = "SELECT dni_san FROM paciente WHERE dni_pac = ?";
         try (PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, dniPaciente);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getString("dni_san");
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("dni_san");
+                }
             }
         }
         return null;

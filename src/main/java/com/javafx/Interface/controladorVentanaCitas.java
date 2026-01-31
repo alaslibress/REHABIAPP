@@ -9,6 +9,7 @@ import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.CitaDAO;
 import com.javafx.DAO.PacienteDAO;
+import com.javafx.util.ConstantesApp;
 
 import com.calendarfx.model.Calendar;
 import com.calendarfx.model.CalendarSource;
@@ -109,8 +110,11 @@ public class controladorVentanaCitas {
     private ObservableList<Paciente> todosLosPacientes = FXCollections.observableArrayList();
     private ObservableList<Paciente> pacientesFiltrados = FXCollections.observableArrayList();
 
-    // ========== FORMATO ==========
-    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    // ========== LISTA DE CITAS ==========
+    private ObservableList<Cita> listaCitas = FXCollections.observableArrayList();
+
+    // ========== FORMATO (usando ConstantesApp) ==========
+    // REFACTORIZADO: Usar constante centralizada en lugar de duplicar el patrón
 
     @FXML
     public void initialize() {
@@ -277,8 +281,8 @@ public class controladorVentanaCitas {
         List<Cita> citasFiltradas = cacheCitas.stream()
             .filter(c -> c.getFecha().equals(fecha))
             .collect(Collectors.toList());
-        
-        tblCitas.getItems().setAll(citasFiltradas);
+
+        listaCitas.setAll(citasFiltradas);
     }
 
     /**
@@ -290,7 +294,7 @@ public class controladorVentanaCitas {
 
     private void actualizarLabelFecha() {
         if (fechaSeleccionada != null) {
-            lblFechaSeleccionada.setText(fechaSeleccionada.format(FORMATO_FECHA));
+            lblFechaSeleccionada.setText(fechaSeleccionada.format(ConstantesApp.FORMATO_FECHA));
         } else {
             lblFechaSeleccionada.setText("Seleccione en el calendario");
         }
@@ -316,6 +320,9 @@ public class controladorVentanaCitas {
         colPaciente.setCellValueFactory(new PropertyValueFactory<>("nombrePaciente"));
         colDNIPaciente.setCellValueFactory(new PropertyValueFactory<>("dniPaciente"));
         colSanitario.setCellValueFactory(new PropertyValueFactory<>("nombreSanitario"));
+
+        //IMPORTANTE: Vincular la tabla con la lista observable
+        tblCitas.setItems(listaCitas);
     }
 
     private void configurarSpinners() {
@@ -520,12 +527,12 @@ public class controladorVentanaCitas {
 
         // Intentar parsear como fecha
         try {
-            LocalDate fecha = LocalDate.parse(texto, FORMATO_FECHA);
+            LocalDate fecha = LocalDate.parse(texto, ConstantesApp.FORMATO_FECHA);
             fechaSeleccionada = fecha;
             monthView.setDate(fecha);
             actualizarLabelFecha();
             filtrarCitasPorFecha(fecha);
-            int numResultados = tblCitas.getItems().size();
+            int numResultados = listaCitas.size();
 
             if (numResultados == 0) {
                 VentanaUtil.mostrarVentanaInformativa(
@@ -553,7 +560,7 @@ public class controladorVentanaCitas {
             })
             .collect(Collectors.toList());
 
-        tblCitas.getItems().setAll(filtradas);
+        listaCitas.setAll(filtradas);
 
         // Actualizar label para mostrar que se está filtrando
         if (!filtradas.isEmpty()) {
@@ -582,7 +589,7 @@ public class controladorVentanaCitas {
 
     @FXML
     void verTodasLasCitas(ActionEvent event) {
-        tblCitas.getItems().setAll(cacheCitas);
+        listaCitas.setAll(cacheCitas);
         lblFechaSeleccionada.setText("Mostrando todas");
     }
 
@@ -708,7 +715,7 @@ public class controladorVentanaCitas {
                              fechaSeleccionada, hora, null, null);
 
         final String nombrePac = pacienteSeleccionado.getNombre();
-        final String fechaStr = fechaSeleccionada.format(FORMATO_FECHA);
+        final String fechaStr = fechaSeleccionada.format(ConstantesApp.FORMATO_FECHA);
 
         Task<Boolean> task = new Task<>() {
             @Override

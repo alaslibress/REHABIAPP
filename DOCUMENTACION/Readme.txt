@@ -31,3 +31,15 @@ Datos como enfermero para inicio de sesión: (en caso de no exportarse bien el u
 - DNI: 77380273V
 - contraseña: admin
 =====================================================
+TESTING:
+=====================================================
+- Se realizó un proceso de refactorización mediante IA de bajo riesgo (no hace cambios en el código, únicamente arregla problemas de sintaxis o me notifica de bugs y problemas para que yo haga solución de errores.
+- Se han realizado pruebas de testing funcionales ascendentes en todo momento y posterior a la implementación de algo nuevo al programa.
+- Posterior a estas pruebas se ha implementado un proceso de testing de sistema también manual (SIN IA).
+- Una vez realizado todos estos procesos de testing se realizó un proceso de testing automatizado con test de JUnit automatizados con IA (Claude)
+- Todo el proceso y resultado del testing se documentó en un documento .md que generó la misma IA dando el resultado final.
+- Posteriormente se realizó una prueba manual de funcionalidades, para comprobar que la IA no ha cambiado nada sin consentimiento.
+- Se hizo una lista de sugerencias a tener en cuenta para la mejora de la UX, se implementó un sistema de caché para mejor compatibilidad con AWS
+- Se implementó un sistema de paginas en las tablas para evitar saturar el programa en caso de tener muchos usuarios.
+- Se realizó testing manual y con IA a las nuevas funcionalidades.
+- Se realizó una prueba ALFA realizada por una persona ajena al programa

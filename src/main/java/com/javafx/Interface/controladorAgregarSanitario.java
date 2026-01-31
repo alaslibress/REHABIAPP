@@ -4,14 +4,16 @@ import com.javafx.Clases.Sanitario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.SanitarioDAO;
+import com.javafx.service.SanitarioService;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleGroup;
 import javafx.stage.Stage;
 import org.controlsfx.validation.ValidationResult;
 import org.controlsfx.validation.ValidationSupport;
@@ -32,7 +34,13 @@ public class controladorAgregarSanitario {
     private Button btnCrearSanitarioNuevo;
 
     @FXML
-    private CheckBox cbxEspecialista;
+    private RadioButton rbMedico;
+
+    @FXML
+    private RadioButton rbEnfermero;
+
+    @FXML
+    private ToggleGroup grupoCargoSanitario;
 
     @FXML
     private Label lblTituloVentana;
@@ -58,8 +66,9 @@ public class controladorAgregarSanitario {
     @FXML
     private TextField txfTelUnoSanitario;
 
-    //DAO para operaciones de base de datos
-    private SanitarioDAO sanitarioDAO;
+    // REFACTORIZADO: Usar capa de servicio
+    private SanitarioService sanitarioService;
+    private SanitarioDAO sanitarioDAO; // Temporal para validaciones
 
     //Soporte de validacion de ControlsFX
     private ValidationSupport validationSupport;
@@ -75,14 +84,18 @@ public class controladorAgregarSanitario {
      */
     @FXML
     public void initialize() {
-        //Inicializar DAO
-        sanitarioDAO = new SanitarioDAO();
+        // REFACTORIZADO: Inicializar servicio
+        sanitarioService = new SanitarioService();
+        sanitarioDAO = new SanitarioDAO(); // Temporal para validaciones
 
         //Inicializar soporte de validacion
         validationSupport = new ValidationSupport();
 
         //Configurar validaciones en un hilo separado para evitar problemas de carga
         Platform.runLater(this::configurarValidaciones);
+
+        //Seleccionar "Médico" por defecto
+        rbMedico.setSelected(true);
     }
 
     /**
@@ -162,8 +175,12 @@ public class controladorAgregarSanitario {
         txfTelUnoSanitario.setText(sanitario.getTelefono1() != null ? sanitario.getTelefono1() : "");
         txfTelDosSanitario.setText(sanitario.getTelefono2() != null ? sanitario.getTelefono2() : "");
 
-        //Marcar checkbox segun el cargo
-        cbxEspecialista.setSelected(sanitario.esEspecialista());
+        //Seleccionar radiobutton segun el cargo
+        if (sanitario.esEspecialista()) {
+            rbMedico.setSelected(true);
+        } else {
+            rbEnfermero.setSelected(true);
+        }
     }
 
     /**
@@ -186,8 +203,8 @@ public class controladorAgregarSanitario {
         String telefono1 = txfTelUnoSanitario.getText().trim();
         String telefono2 = txfTelDosSanitario.getText().trim();
 
-        //Determinar cargo segun checkbox
-        String cargo = cbxEspecialista.isSelected() ? "medico especialista" : "enfermero";
+        //Determinar cargo segun radiobutton seleccionado
+        String cargo = rbMedico.isSelected() ? "medico especialista" : "enfermero";
 
         //Separar apellidos en primer y segundo apellido
         String[] apellidosSeparados = separarApellidos(apellidos);
@@ -245,17 +262,14 @@ public class controladorAgregarSanitario {
             return false;
         }
 
-        //Insertar el sanitario en la base de datos
-        boolean insertado = sanitarioDAO.insertar(sanitario);
+        // REFACTORIZADO: Usar SanitarioService que maneja insercion + telefonos
+        boolean insertado = sanitarioService.insertar(
+                sanitario,
+                sanitario.getTelefono1(),
+                sanitario.getTelefono2()
+        );
 
         if (insertado) {
-            //Insertar telefonos del sanitario
-            sanitarioDAO.insertarTelefonos(
-                    sanitario.getDni(),
-                    sanitario.getTelefono1(),
-                    sanitario.getTelefono2()
-            );
-
             VentanaUtil.mostrarVentanaInformativa(
                     "El sanitario se ha registrado correctamente.",
                     TipoMensaje.EXITO
@@ -298,17 +312,15 @@ public class controladorAgregarSanitario {
             return false;
         }
 
-        //Actualizar el sanitario en la base de datos
-        boolean actualizado = sanitarioDAO.actualizar(sanitario, dniOriginal);
+        // REFACTORIZADO: Usar SanitarioService que maneja actualizacion + telefonos
+        boolean actualizado = sanitarioService.actualizar(
+                sanitario,
+                dniOriginal,
+                sanitario.getTelefono1(),
+                sanitario.getTelefono2()
+        );
 
         if (actualizado) {
-            //Actualizar telefonos del sanitario
-            sanitarioDAO.actualizarTelefonos(
-                    sanitario.getDni(),
-                    sanitario.getTelefono1(),
-                    sanitario.getTelefono2()
-            );
-
             VentanaUtil.mostrarVentanaInformativa(
                     "Los datos del sanitario se han actualizado correctamente.",
                     TipoMensaje.EXITO

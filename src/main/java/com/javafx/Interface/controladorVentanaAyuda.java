@@ -108,7 +108,7 @@ public class controladorVentanaAyuda {
                 o envie un email a: soporte@rehabiapp.com
                 
                 
-                VERSION: 1.0
+                VERSION: 2.0
                 DESARROLLADO POR: Alejandro Pozo Perez
                 """;
 

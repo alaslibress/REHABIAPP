@@ -6,7 +6,7 @@ import javafx.beans.property.*;
  * Clase modelo que representa un sanitario del sistema
  * Corresponde a las tablas: sanitario, sanitario_agrega_sanitario y telefono_sanitario
  */
-public class Sanitario {
+public class Sanitario implements Persona {
 
     //Propiedades observables para enlazar con TableView de JavaFX
     private final StringProperty dni;
@@ -76,20 +76,6 @@ public class Sanitario {
 
     public String getApellido2() {
         return apellido2.get();
-    }
-
-    /**
-     * Obtiene los apellidos concatenados para mostrar en la interfaz
-     * @return Apellidos completos separados por espacio
-     */
-    public String getApellidos() {
-        String ap1 = apellido1.get() != null ? apellido1.get() : "";
-        String ap2 = apellido2.get() != null ? apellido2.get() : "";
-
-        if (ap2.isEmpty()) {
-            return ap1;
-        }
-        return ap1 + " " + ap2;
     }
 
     public String getEmail() {
@@ -205,14 +191,6 @@ public class Sanitario {
      */
     public boolean esEspecialista() {
         return cargo.get() != null && cargo.get().equalsIgnoreCase("medico especialista");
-    }
-
-    /**
-     * Obtiene el nombre completo del sanitario
-     * @return Nombre y apellidos concatenados
-     */
-    public String getNombreCompleto() {
-        return getNombre() + " " + getApellidos();
     }
 
     @Override

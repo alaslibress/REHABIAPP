@@ -6,6 +6,7 @@ import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.PacienteDAO;
 import com.javafx.DAO.SanitarioDAO;
+import com.javafx.service.PacienteService;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -46,9 +47,6 @@ public class controladorAgregarPaciente {
 
     @FXML
     private Button btnGuardar;
-
-    @FXML
-    private Button btnImportarInforme;
 
     @FXML
     private ComboBox<Sanitario> cmbSanitario;
@@ -122,13 +120,14 @@ public class controladorAgregarPaciente {
 
     //Variables para la gestion de archivos
     private File archivoFoto;
-    private File archivoInforme;
 
     //DNI del sanitario que esta creando/editando el paciente
     private String dniSanitarioActual;
 
-    //DAO para operaciones de base de datos
-    private PacienteDAO pacienteDAO;
+    // REFACTORIZADO: Usar capa de servicio en lugar de DAO directamente
+    // (Se mantiene PacienteDAO solo para operaciones de foto que aún no están en el servicio)
+    private PacienteService pacienteService;
+    private PacienteDAO pacienteDAO; // TODO: Mover operaciones de foto al servicio
     private SanitarioDAO sanitarioDAO;
 
     //Soporte de validacion de ControlsFX
@@ -148,8 +147,9 @@ public class controladorAgregarPaciente {
      */
     @FXML
     public void initialize() {
-        //Inicializar DAOs
-        pacienteDAO = new PacienteDAO();
+        //REFACTORIZADO: Inicializar servicio
+        pacienteService = new PacienteService();
+        pacienteDAO = new PacienteDAO(); // Temporal para fotos
         sanitarioDAO = new SanitarioDAO();
 
         //Configurar el spinner de edad (0-120 años)
@@ -402,6 +402,7 @@ public class controladorAgregarPaciente {
      * Inserta un nuevo paciente en la base de datos
      */
     private boolean insertarNuevoPaciente(Paciente paciente) {
+        // REFACTORIZADO: Usar PacienteDAO directamente para validaciones (pendiente de mover al servicio)
         if (pacienteDAO.existeDni(paciente.getDni())) {
             VentanaUtil.mostrarVentanaInformativa(
                     "Ya existe un paciente registrado con ese DNI.",
@@ -429,15 +430,15 @@ public class controladorAgregarPaciente {
             return false;
         }
 
-        boolean insertado = pacienteDAO.insertar(paciente);
+        // REFACTORIZADO: Usar PacienteService que maneja insercion + telefonos en una sola llamada
+        boolean insertado = pacienteService.insertar(
+                paciente,
+                paciente.getTelefono1(),
+                paciente.getTelefono2()
+        );
 
         if (insertado) {
-            pacienteDAO.insertarTelefonos(
-                    paciente.getDni(),
-                    paciente.getTelefono1(),
-                    paciente.getTelefono2()
-            );
-
+            // Insertar foto si existe (pendiente de mover al servicio)
             if (archivoFoto != null) {
                 pacienteDAO.insertarFoto(paciente.getDni(), archivoFoto);
             }
@@ -489,15 +490,16 @@ public class controladorAgregarPaciente {
             return false;
         }
 
-        boolean actualizado = pacienteDAO.actualizar(paciente, dniOriginal);
+        // REFACTORIZADO: Usar PacienteService que maneja actualizacion + telefonos
+        boolean actualizado = pacienteService.actualizar(
+                paciente,
+                dniOriginal,
+                paciente.getTelefono1(),
+                paciente.getTelefono2()
+        );
 
         if (actualizado) {
-            pacienteDAO.actualizarTelefonos(
-                    paciente.getDni(),
-                    paciente.getTelefono1(),
-                    paciente.getTelefono2()
-            );
-
+            // Actualizar foto si existe (pendiente de mover al servicio)
             if (archivoFoto != null) {
                 pacienteDAO.actualizarFoto(paciente.getDni(), archivoFoto);
             }
@@ -688,28 +690,6 @@ public class controladorAgregarPaciente {
                 );
                 archivoFoto = null;
             }
-        }
-    }
-
-    /**
-     * Abre un dialogo para importar un informe PDF
-     */
-    @FXML
-    void importarInformePDF(ActionEvent event) {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Seleccionar informe PDF");
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Archivos PDF", "*.pdf")
-        );
-
-        Stage stage = (Stage) btnImportarInforme.getScene().getWindow();
-        archivoInforme = fileChooser.showOpenDialog(stage);
-
-        if (archivoInforme != null) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Informe seleccionado: " + archivoInforme.getName(),
-                    TipoMensaje.INFORMACION
-            );
         }
     }
 

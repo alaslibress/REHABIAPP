@@ -40,11 +40,11 @@ public class CitaDAO {
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                Cita cita = mapearCitaDesdeResultSet(rs);
-                citas.add(cita);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Cita cita = mapearCitaDesdeResultSet(rs);
+                    citas.add(cita);
+                }
             }
 
         } catch (SQLException e) {
@@ -76,11 +76,12 @@ public class CitaDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setDate(1, Date.valueOf(fecha));
-            ResultSet rs = stmt.executeQuery();
 
-            while (rs.next()) {
-                Cita cita = mapearCitaDesdeResultSet(rs);
-                citas.add(cita);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Cita cita = mapearCitaDesdeResultSet(rs);
+                    citas.add(cita);
+                }
             }
 
         } catch (SQLException e) {
@@ -112,11 +113,12 @@ public class CitaDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, dniSanitario);
-            ResultSet rs = stmt.executeQuery();
 
-            while (rs.next()) {
-                Cita cita = mapearCitaDesdeResultSet(rs);
-                citas.add(cita);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Cita cita = mapearCitaDesdeResultSet(rs);
+                    citas.add(cita);
+                }
             }
 
         } catch (SQLException e) {
@@ -148,11 +150,12 @@ public class CitaDAO {
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, dniPaciente);
-            ResultSet rs = stmt.executeQuery();
 
-            while (rs.next()) {
-                Cita cita = mapearCitaDesdeResultSet(rs);
-                citas.add(cita);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Cita cita = mapearCitaDesdeResultSet(rs);
+                    citas.add(cita);
+                }
             }
 
         } catch (SQLException e) {
@@ -186,11 +189,12 @@ public class CitaDAO {
 
             stmt.setString(1, dniSanitario);
             stmt.setDate(2, Date.valueOf(fecha));
-            ResultSet rs = stmt.executeQuery();
 
-            while (rs.next()) {
-                Cita cita = mapearCitaDesdeResultSet(rs);
-                citas.add(cita);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Cita cita = mapearCitaDesdeResultSet(rs);
+                    citas.add(cita);
+                }
             }
 
         } catch (SQLException e) {
@@ -218,10 +222,10 @@ public class CitaDAO {
             stmt.setDate(2, Date.valueOf(fecha));
             stmt.setTime(3, Time.valueOf(hora));
 
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
 
         } catch (SQLException e) {

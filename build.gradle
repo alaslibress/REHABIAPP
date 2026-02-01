@@ -10,10 +10,10 @@ repositories {
 }
 
 javafx {
-    version = "24"
+    version = "25"
     // Añadimos 'javafx.swing' que es OBLIGATORIO para que Jasper imprima/exporte
     // Añadimos 'javafx.web' para WebView (visualización de informes HTML)
-    modules = [ 'javafx.base', 'javafx.swing', 'javafx.graphics', 'javafx.controls', 'javafx.fxml', 'javafx.media', 'javafx.web']
+    modules = ['javafx.controls', 'javafx.graphics', 'javafx.fxml', 'javafx.web', 'javafx.base', 'javafx.swing', 'javafx.media']
 }
 
 dependencies {
@@ -60,12 +60,32 @@ application {
     mainClass = 'com.javafx.Clases.Main'
 }
 
+// Incluir todos los recursos
 sourceSets {
     main {
         resources {
             srcDirs = ["src/main/resources"]
-            includes = ["**/*.fxml","**/*.png","**/*.properties","**/*.css","**/*.jrxml","**/*.jasper","**/*.xml"]
+            includes = ["**/*.fxml", "**/*.png", "**/*.jpg", "**/*.gif",
+                        "**/*.properties", "**/*.jasper", "**/*.css", "**/*.jrxml", "**/*.xml"]
         }
+    }
+}
+
+// Tarea para copiar dependencias a build/libs/lib
+tasks.register('copyDependencies', Copy) {
+    from configurations.runtimeClasspath
+    into "$buildDir/libs/lib"
+}
+
+// Configuración del JAR
+tasks.jar {
+    dependsOn copyDependencies
+
+    manifest {
+        attributes(
+            'Main-Class': application.mainClass.get(),
+            'Class-Path': configurations.runtimeClasspath.files.collect { "lib/" + it.name }.join(' ')
+        )
     }
 }
 

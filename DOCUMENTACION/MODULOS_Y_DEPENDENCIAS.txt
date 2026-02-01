@@ -1,0 +1,219 @@
+================================================================================
+    REHABIAPP - MÓDULOS Y DEPENDENCIAS DEL PROYECTO
+================================================================================
+
+PROYECTO: RehabiAPP - Sistema de Gestión de Expedientes de Rehabilitación
+VERSIÓN: 2.0
+FECHA: 2026-01-31
+
+================================================================================
+1. INFORMACIÓN DE BUILD
+================================================================================
+
+Build System: Gradle 8.13
+Java Version: 24
+JavaFX Version: 25
+
+Comando de compilación: gradlew.bat clean build
+Comando de ejecución: gradlew.bat run
+
+Archivos JAR generados:
+- Ubicación: build/libs/
+- Nombre principal: REHABIAPP.jar (460 KB aproximadamente)
+- Dependencias: build/libs/lib/ (81 archivos JAR, ~79 MB total)
+- Total empaquetado: ~79.5 MB con todas las dependencias
+
+================================================================================
+2. MÓDULOS DE JAVAFX
+================================================================================
+
+javafx.controls     - Controles de interfaz gráfica (botones, tablas, etc.)
+javafx.graphics     - Sistema de renderizado gráfico
+javafx.fxml         - Carga y gestión de archivos FXML
+javafx.web          - WebView para visualización HTML (informes)
+javafx.base         - Clases base de JavaFX (Observable, Property)
+javafx.swing        - Integración con Swing (OBLIGATORIO para JasperReports)
+javafx.media        - Manejo de audio y video
+
+================================================================================
+3. LIBRERÍAS Y FRAMEWORKS
+================================================================================
+
+3.1 INTERFAZ GRÁFICA
+--------------------
+ControlsFX 11.2.2
+- Controles adicionales para JavaFX
+- Validación de formularios (ValidationSupport)
+- Diálogos personalizados
+
+CalendarFX 12.0.1
+- Componente de calendario visual
+- Gestión de eventos y citas
+- Vistas día/semana/mes
+
+3.2 BASE DE DATOS
+-----------------
+PostgreSQL JDBC Driver 42.7.2
+- Conector para base de datos PostgreSQL
+- Soporte para conexiones seguras
+- Actualizado para corregir vulnerabilidad CVE
+
+3.3 GENERACIÓN DE INFORMES
+--------------------------
+JasperReports 7.0.1 (Core)
+- Motor principal de generación de informes
+- Soporte para plantillas .jrxml y .jasper
+
+JasperReports Fonts 7.0.1
+- Fuentes tipográficas para informes
+- Soporte para caracteres especiales
+
+JasperReports Functions 7.0.1
+- Funciones adicionales para cálculos en informes
+
+JasperReports Chart Themes 7.0.1
+- Temas para gráficos en informes
+
+JasperReports PDF 7.0.1
+- Exportación de informes a formato PDF
+
+3.4 GENERACIÓN DE PDF
+---------------------
+OpenPDF 1.3.30
+- Motor de generación de PDF (reemplazo de iText)
+- Utilizado por JasperReports 7.x
+- Licencia LGPL/MPL
+
+3.5 LOGGING
+-----------
+SLF4J API 2.0.9
+- API de logging estándar
+- Abstracción para diferentes implementaciones
+
+SLF4J Simple 2.0.9
+- Implementación simple de logging
+- Previene errores de SLF4J al arrancar
+
+================================================================================
+4. CONFIGURACIÓN DE RECURSOS
+================================================================================
+
+Recursos incluidos en el JAR:
+- *.fxml       - Archivos de diseño de interfaz
+- *.png        - Imágenes PNG
+- *.jpg        - Imágenes JPEG
+- *.gif        - Imágenes GIF
+- *.properties - Archivos de configuración
+- *.jasper     - Plantillas compiladas de informes
+- *.css        - Hojas de estilo
+- *.jrxml      - Plantillas de informes (fuente)
+- *.xml        - Archivos XML de configuración
+
+================================================================================
+5. ESTRUCTURA DE PAQUETES
+================================================================================
+
+com.javafx.Clases
+- Main.java                 - Punto de entrada de la aplicación
+- ConexionBD.java          - Gestión de conexión a base de datos
+- Paciente.java            - Modelo de dominio para pacientes
+- Sanitario.java           - Modelo de dominio para sanitarios
+- Cita.java                - Modelo de dominio para citas
+- SesionUsuario.java       - Gestión de sesión y permisos
+- VentanaUtil.java         - Utilidades para ventanas y diálogos
+- InformeService.java      - Servicio de generación de informes
+
+com.javafx.Interface
+- Controladores de todas las ventanas FXML
+- Gestión de eventos de interfaz gráfica
+- Validación de formularios
+
+com.javafx.DAO
+- BaseDAO.java             - Clase base para operaciones de BD
+- PacienteDAO.java         - Operaciones de BD para pacientes
+- SanitarioDAO.java        - Operaciones de BD para sanitarios
+- CitaDAO.java             - Operaciones de BD para citas
+
+com.javafx.service
+- SanitarioService.java    - Lógica de negocio para sanitarios
+- Capa de servicios entre controladores y DAO
+
+com.javafx.util
+- VentanaHelper.java       - Utilidades auxiliares para ventanas
+
+================================================================================
+6. ARCHIVOS DE CONFIGURACIÓN
+================================================================================
+
+database.properties
+- Configuración de conexión a base de datos
+- Credenciales y URL de PostgreSQL
+- Configuraciones local y remota (AWS)
+
+ip.properties
+- Configuración de IP para exportación
+- IP elástica de AWS EC2: 44.213.141.127
+- Puerto: 5432
+- Base de datos: rehabiapp_db
+
+tema_claro.css / tema_oscuro.css
+- Hojas de estilo para temas visuales
+- Gestión dinámica según preferencias del usuario
+
+================================================================================
+7. REQUISITOS DEL SISTEMA
+================================================================================
+
+Java Runtime Environment (JRE): 24 o superior
+Sistema Operativo: Windows, macOS, Linux
+Memoria RAM: Mínimo 4 GB recomendado
+Conexión de red: Requerida para acceso a base de datos remota
+
+================================================================================
+8. NOTAS DE EXPORTACIÓN
+================================================================================
+
+Para exportar la aplicación como instalador:
+
+1. Compilar el proyecto:
+   gradlew.bat clean build
+
+2. El JAR ejecutable se generará en:
+   build/libs/REHABIAPP.jar
+
+3. Las dependencias se copiarán a:
+   build/libs/lib/
+
+4. El MANIFEST incluye:
+   - Main-Class: com.javafx.Clases.Main
+   - Class-Path: Todas las dependencias en lib/
+
+5. Para ejecutar el JAR:
+   java -jar REHABIAPP.jar
+
+6. Configuración de IP:
+   - Editar src/main/resources/config/ip.properties
+   - Cambiar entre aws.ip (remoto) o local.ip (desarrollo)
+
+================================================================================
+9. PERMISOS Y ARGUMENTOS JVM
+================================================================================
+
+Para Java 17/21/24, se requieren los siguientes argumentos JVM:
+
+--add-opens=java.base/java.lang=ALL-UNNAMED
+--add-opens=java.base/java.util=ALL-UNNAMED
+--add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+--add-opens=java.base/java.text=ALL-UNNAMED
+--add-opens=java.desktop/java.awt.font=ALL-UNNAMED
+--add-opens=java.desktop/java.awt.geom=ALL-UNNAMED
+--add-opens=java.base/java.io=ALL-UNNAMED
+--enable-native-access=javafx.graphics
+
+Estos permisos son necesarios para:
+- JasperReports (evita InaccessibleObjectException)
+- JavaFX (elimina warnings de métodos restringidos)
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================

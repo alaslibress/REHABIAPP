@@ -1,0 +1,127 @@
+================================================================================
+                    REHABIAPP - INSTRUCCIONES DE DISTRIBUCIÓN
+================================================================================
+
+VERSIÓN: 2.0
+FECHA: 2026-01-31
+
+================================================================================
+CONTENIDO DEL PAQUETE DE DISTRIBUCIÓN
+================================================================================
+
+Para distribuir REHABIAPP correctamente, debes copiar los siguientes archivos
+desde la carpeta build/libs/ después de compilar:
+
+RehabiAPP/
+├── REHABIAPP.jar        <-- Archivo ejecutable principal (460 KB)
+├── lanza.bat            <-- Lanzador para Windows (RECOMENDADO)
+└── lib/                 <-- Carpeta con todas las dependencias (79 MB)
+    └── [81 archivos JAR]
+
+================================================================================
+CÓMO GENERAR EL PAQUETE DE DISTRIBUCIÓN
+================================================================================
+
+1. Abrir terminal en la raíz del proyecto
+
+2. Ejecutar el comando de compilación:
+   gradlew.bat clean build
+
+3. Los archivos se generarán en build/libs/
+
+4. Copiar a una carpeta de distribución:
+   - build/libs/REHABIAPP.jar  → RehabiAPP/REHABIAPP.jar
+   - build/libs/lib/           → RehabiAPP/lib/
+   - lanza.bat                 → RehabiAPP/lanza.bat
+
+5. Comprimir la carpeta RehabiAPP/ en un ZIP para distribución
+
+================================================================================
+INSTRUCCIONES PARA EL USUARIO FINAL
+================================================================================
+
+REQUISITOS DEL SISTEMA:
+- Java 17 o superior instalado
+  Descargar desde: https://www.oracle.com/java/technologies/downloads/
+- Windows, macOS o Linux
+- 4 GB RAM recomendado
+- Conexión a Internet (para acceso a base de datos remota)
+
+INSTALACIÓN:
+1. Descomprimir el archivo RehabiAPP.zip
+2. No separar ni mover archivos de la carpeta lib/
+3. Mantener la estructura de carpetas intacta
+
+EJECUCIÓN EN WINDOWS:
+1. Hacer doble clic en lanza.bat
+2. La aplicación se iniciará automáticamente
+
+EJECUCIÓN MANUAL (Todas las plataformas):
+Abrir terminal en la carpeta RehabiAPP/ y ejecutar:
+
+java --add-opens=java.base/java.lang=ALL-UNNAMED ^
+     --add-opens=java.base/java.util=ALL-UNNAMED ^
+     --add-opens=java.base/java.lang.reflect=ALL-UNNAMED ^
+     --add-opens=java.base/java.text=ALL-UNNAMED ^
+     --add-opens=java.desktop/java.awt.font=ALL-UNNAMED ^
+     --add-opens=java.desktop/java.awt.geom=ALL-UNNAMED ^
+     --add-opens=java.base/java.io=ALL-UNNAMED ^
+     --enable-native-access=javafx.graphics ^
+     -jar REHABIAPP.jar
+
+================================================================================
+SOLUCIÓN DE PROBLEMAS
+================================================================================
+
+PROBLEMA: "java no se reconoce como comando"
+SOLUCIÓN: Instalar Java 17 o superior desde:
+          https://www.oracle.com/java/technologies/downloads/
+
+PROBLEMA: "UnsupportedClassVersionError: class file version 61.0"
+SOLUCIÓN: El JAR fue compilado con Java 17.
+          Instalar Java 17 o superior.
+
+PROBLEMA: "No se encuentra REHABIAPP.jar"
+SOLUCIÓN: Asegurarse de estar en la carpeta correcta donde está el JAR
+
+PROBLEMA: "No se encuentra la carpeta lib"
+SOLUCIÓN: Copiar toda la carpeta lib/ junto con REHABIAPP.jar
+          Ambos deben estar en el mismo directorio
+
+PROBLEMA: Error "InaccessibleObjectException"
+SOLUCIÓN: Usar lanza.bat que incluye los argumentos JVM necesarios
+          O ejecutar con los argumentos --add-opens completos
+
+PROBLEMA: No conecta con la base de datos
+SOLUCIÓN: Verificar conexión a Internet
+          La aplicación se conecta a AWS por defecto
+
+================================================================================
+CONFIGURACIÓN AVANZADA
+================================================================================
+
+Para cambiar la configuración de base de datos:
+
+1. Los archivos de configuración están dentro de REHABIAPP.jar
+2. Para modificarlos, desempaquetar el JAR:
+   jar xf REHABIAPP.jar config/ip.properties
+
+3. Editar config/ip.properties según necesidades
+
+4. Reempaquetar:
+   jar uf REHABIAPP.jar config/ip.properties
+
+NOTA: Para desarrollo, es mejor modificar los archivos en el código fuente
+      y recompilar con gradlew.bat clean build
+
+================================================================================
+SOPORTE Y CONTACTO
+================================================================================
+
+Para reportar problemas o solicitar ayuda:
+- Revisar la documentación completa en DOCUMENTACION/
+- Consultar MODULOS_Y_DEPENDENCIAS.txt para detalles técnicos
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================

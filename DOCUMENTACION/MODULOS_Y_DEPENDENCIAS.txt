@@ -11,8 +11,8 @@ FECHA: 2026-01-31
 ================================================================================
 
 Build System: Gradle 8.13
-Java Version: 24
-JavaFX Version: 25
+Java Version: 17 (compilación y ejecución)
+JavaFX Version: 17.0.6
 
 Comando de compilación: gradlew.bat clean build
 Comando de ejecución: gradlew.bat run
@@ -46,7 +46,7 @@ ControlsFX 11.2.2
 - Validación de formularios (ValidationSupport)
 - Diálogos personalizados
 
-CalendarFX 12.0.1
+CalendarFX 11.12.7 (compatible con Java 17)
 - Componente de calendario visual
 - Gestión de eventos y citas
 - Vistas día/semana/mes
@@ -164,10 +164,12 @@ tema_claro.css / tema_oscuro.css
 7. REQUISITOS DEL SISTEMA
 ================================================================================
 
-Java Runtime Environment (JRE): 24 o superior
+Java Runtime Environment (JRE): 17 o superior
 Sistema Operativo: Windows, macOS, Linux
 Memoria RAM: Mínimo 4 GB recomendado
 Conexión de red: Requerida para acceso a base de datos remota
+
+NOTA: El JAR está compilado con Java 17 para máxima compatibilidad.
 
 ================================================================================
 8. NOTAS DE EXPORTACIÓN
@@ -188,10 +190,23 @@ Para exportar la aplicación como instalador:
    - Main-Class: com.javafx.Clases.Main
    - Class-Path: Todas las dependencias en lib/
 
-5. Para ejecutar el JAR:
-   java -jar REHABIAPP.jar
+5. Para ejecutar el JAR manualmente:
+   java --add-opens=java.base/java.lang=ALL-UNNAMED ^
+        --add-opens=java.base/java.util=ALL-UNNAMED ^
+        --add-opens=java.base/java.lang.reflect=ALL-UNNAMED ^
+        --add-opens=java.base/java.text=ALL-UNNAMED ^
+        --add-opens=java.desktop/java.awt.font=ALL-UNNAMED ^
+        --add-opens=java.desktop/java.awt.geom=ALL-UNNAMED ^
+        --add-opens=java.base/java.io=ALL-UNNAMED ^
+        --enable-native-access=javafx.graphics ^
+        -jar REHABIAPP.jar
 
-6. Configuración de IP:
+6. Para ejecutar usando el lanzador (RECOMENDADO):
+   - Windows: Doble clic en lanza.bat
+   - El lanzador incluye automáticamente todos los argumentos JVM necesarios
+   - Verifica que existan REHABIAPP.jar y carpeta lib/
+
+7. Configuración de IP:
    - Editar src/main/resources/config/ip.properties
    - Cambiar entre aws.ip (remoto) o local.ip (desarrollo)
 
@@ -208,11 +223,43 @@ Para Java 17/21/24, se requieren los siguientes argumentos JVM:
 --add-opens=java.desktop/java.awt.font=ALL-UNNAMED
 --add-opens=java.desktop/java.awt.geom=ALL-UNNAMED
 --add-opens=java.base/java.io=ALL-UNNAMED
---enable-native-access=javafx.graphics
 
 Estos permisos son necesarios para:
 - JasperReports (evita InaccessibleObjectException)
-- JavaFX (elimina warnings de métodos restringidos)
+- JavaFX (permite acceso a APIs internas)
+
+IMPORTANTE: El archivo lanza.bat ya incluye todos estos argumentos automáticamente.
+
+NOTA: El argumento --enable-native-access=javafx.graphics se ha eliminado porque
+puede causar warnings en versiones de Java donde javafx.graphics no es un módulo
+reconocido en el module-path.
+
+================================================================================
+10. ARCHIVOS DE DISTRIBUCIÓN
+================================================================================
+
+Para distribuir la aplicación, incluir los siguientes archivos:
+
+REHABIAPP.jar           - JAR ejecutable principal (460 KB)
+lanza.bat               - Lanzador de Windows con argumentos JVM configurados
+lib/                    - Carpeta con 81 dependencias (79 MB)
+├── postgresql-42.7.2.jar
+├── jasperreports-7.0.1.jar
+├── controlsfx-11.2.2.jar
+├── calendarfx-view-12.0.1.jar
+└── ... (77 archivos más)
+
+Estructura recomendada:
+```
+RehabiAPP/
+├── REHABIAPP.jar
+├── lanza.bat
+└── lib/
+    └── [81 archivos JAR]
+```
+
+NOTA: Los archivos de configuración (ip.properties, database.properties) están
+empaquetados dentro de REHABIAPP.jar en config/
 
 ================================================================================
 FIN DEL DOCUMENTO

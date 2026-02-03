@@ -1,66 +1,76 @@
 plugins {
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.1.0'
+    id 'org.openjfx.javafxplugin' version '0.0.13'
 }
 
 repositories {
     mavenCentral()
-    // Repositorio oficial de Jaspersoft (necesario para algunas dependencias transitivas de la v7)
+    // Repositorio oficial de Jaspersoft para dependencias de JasperReports 7
     maven { url 'https://jaspersoft.jfrog.io/jaspersoft/third-party-ce-artifacts/' }
 }
 
 javafx {
-    version = "25"
-    // Añadimos 'javafx.swing' que es OBLIGATORIO para que Jasper imprima/exporte
-    // Añadimos 'javafx.web' para WebView (visualización de informes HTML)
+    // Actualizado a v23 (compatible con JDK 24) para mayor estabilidad
+    version = "23"
     modules = ['javafx.controls', 'javafx.graphics', 'javafx.fxml', 'javafx.web', 'javafx.base', 'javafx.swing', 'javafx.media']
 }
 
 dependencies {
-    // JavaFX Controls
+    // JavaFX Controls - v11.2.2 es estable, pero para Java 24 usamos la rama compatible
     implementation 'org.controlsfx:controlsfx:11.2.2'
 
-    // PostgreSQL Driver (Actualizado para corregir vulnerabilidad CVE)
+    // PostgreSQL Driver
     implementation 'org.postgresql:postgresql:42.7.2'
 
-    // CalendarFX
-    implementation 'com.calendarfx:view:12.0.1'
+    // CalendarFX - Mantenemos la exclusión para evitar conflictos de versiones de JFX
+    implementation('com.calendarfx:view:11.12.7') {
+        exclude group: 'org.openjfx'
+    }
 
-    // JasperReports 7.0.1 (Correcto para coincidir con tu Studio)
+    // JasperReports 7.0.1
     implementation 'net.sf.jasperreports:jasperreports:7.0.1'
     implementation 'net.sf.jasperreports:jasperreports-fonts:7.0.1'
     implementation 'net.sf.jasperreports:jasperreports-functions:7.0.1'
     implementation 'net.sf.jasperreports:jasperreports-chart-themes:7.0.1'
     implementation 'net.sf.jasperreports:jasperreports-pdf:7.0.1'
 
-    // Dependencias de PDF (OpenPDF es el motor por defecto en Jasper 7 en lugar de iText)
+    // Motor PDF OpenPDF para Jasper 7
     implementation 'com.github.librepdf:openpdf:1.3.30'
 
-    // Logging (Necesario para evitar errores de SLF4J al arrancar)
+    // Logging SLF4J
     implementation 'org.slf4j:slf4j-api:2.0.9'
     implementation 'org.slf4j:slf4j-simple:2.0.9'
 }
 
+// Forzar versiones para evitar el error de mezcla de versiones de JFX
+configurations.all {
+    resolutionStrategy {
+        force 'org.openjfx:javafx-base:23'
+        force 'org.openjfx:javafx-graphics:23'
+        force 'org.openjfx:javafx-controls:23'
+        force 'org.openjfx:javafx-fxml:23'
+        force 'org.openjfx:javafx-web:23'
+        force 'org.openjfx:javafx-swing:23'
+        force 'org.openjfx:javafx-media:23'
+    }
+}
+
 java {
     toolchain {
+        // CAMBIO CRÍTICO: Definimos Java 24 como la versión del proyecto
         languageVersion = JavaLanguageVersion.of(24)
     }
 }
 
-// Configuración de encoding UTF-8
+application {
+    mainClass = 'com.javafx.Clases.Launcher'
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
-tasks.withType(Javadoc).configureEach {
-    options.encoding = 'UTF-8'
-}
-
-application {
-    mainClass = 'com.javafx.Clases.Main'
-}
-
-// Incluir todos los recursos
+// Configuración de recursos para asegurar que FXML e imágenes se incluyan en el JAR [cite: 52]
 sourceSets {
     main {
         resources {
@@ -71,26 +81,22 @@ sourceSets {
     }
 }
 
-// Tarea para copiar dependencias a build/libs/lib
 tasks.register('copyDependencies', Copy) {
     from configurations.runtimeClasspath
     into "$buildDir/libs/lib"
 }
 
-// Configuración del JAR
 tasks.jar {
     dependsOn copyDependencies
-
     manifest {
         attributes(
-            'Main-Class': application.mainClass.get(),
-            'Class-Path': configurations.runtimeClasspath.files.collect { "lib/" + it.name }.join(' ')
+                'Main-Class': application.mainClass.get(),
+                'Class-Path': configurations.runtimeClasspath.files.collect { "lib/" + it.name }.join(' ')
         )
     }
 }
 
-// BLOQUE CRÍTICO PARA JAVA 17/21/24
-// Sin esto, JasperReports fallará con "InaccessibleObjectException"
+// BLOQUE DE ACCESO NATIVO - Crucial para que JasperReports funcione en Java 24
 tasks.withType(JavaExec).configureEach {
     jvmArgs += [
             "--add-opens=java.base/java.lang=ALL-UNNAMED",
@@ -99,8 +105,6 @@ tasks.withType(JavaExec).configureEach {
             "--add-opens=java.base/java.text=ALL-UNNAMED",
             "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
             "--add-opens=java.desktop/java.awt.geom=ALL-UNNAMED",
-            "--add-opens=java.base/java.io=ALL-UNNAMED",
-            // Habilitar acceso nativo para JavaFX (elimina warnings de restricted methods)
-            "--enable-native-access=javafx.graphics"
+            "--add-opens=java.base/java.io=ALL-UNNAMED"
     ]
 }

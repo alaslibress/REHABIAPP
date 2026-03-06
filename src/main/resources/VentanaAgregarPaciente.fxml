@@ -2,7 +2,9 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.ScrollPane?>
@@ -120,7 +122,41 @@
                                 </HBox>
 
                                 <Separator />
+                                <Label style="-fx-font-weight: bold;" text="Datos Clinicos:" />
 
+                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                    <children>
+                                        <Label prefWidth="140.0" text="Sexo:" />
+                                        <ComboBox fx:id="cmbSexo" prefWidth="150.0" promptText="Selecciona sexo" />
+                                        <Label prefWidth="110.0" text="Fecha Nac.:" />
+                                        <DatePicker fx:id="dpFechaNacimiento" prefWidth="150.0" promptText="dd/mm/aaaa" />
+                                    </children>
+                                </HBox>
+
+                                <VBox spacing="3.0">
+                                    <children>
+                                        <Label text="Alergias:" />
+                                        <TextArea fx:id="txtAreaAlergias" prefHeight="50.0" prefWidth="480.0" promptText="Alergias conocidas del paciente" wrapText="true" />
+                                    </children>
+                                </VBox>
+
+                                <VBox spacing="3.0">
+                                    <children>
+                                        <Label text="Antecedentes:" />
+                                        <TextArea fx:id="txtAreaAntecedentes" prefHeight="50.0" prefWidth="480.0" promptText="Patologias previas relevantes" wrapText="true" />
+                                    </children>
+                                </VBox>
+
+                                <VBox spacing="3.0">
+                                    <children>
+                                        <Label text="Medicacion actual:" />
+                                        <TextArea fx:id="txtAreaMedicacion" prefHeight="50.0" prefWidth="480.0" promptText="Tratamientos activos del paciente" wrapText="true" />
+                                    </children>
+                                </VBox>
+
+                                <CheckBox fx:id="chkConsentimientoRgpd" text="El paciente ha dado su consentimiento RGPD" />
+
+                                <Separator />
 
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>

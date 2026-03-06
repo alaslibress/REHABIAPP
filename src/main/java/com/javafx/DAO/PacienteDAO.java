@@ -2,6 +2,7 @@ package com.javafx.DAO;
 
 import com.javafx.Clases.Paciente;
 import com.javafx.Clases.ConexionBD;
+import com.javafx.service.CifradoService;
 import javafx.scene.image.Image;
 
 import java.io.ByteArrayInputStream;
@@ -11,6 +12,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,10 +34,13 @@ public class PacienteDAO {
     public List<Paciente> listarTodos() {
         List<Paciente> pacientes = new ArrayList<>();
 
+        //Solo mostrar pacientes activos con campos clinicos
         String query = "SELECT dni_pac, nombre_pac, apellido1_pac, apellido2_pac, " +
                 "edad_pac, email_pac, num_ss, discapacidad_pac, tratamiento_pac, " +
-                "estado_tratamiento, protesis, dni_san " +
-                "FROM paciente ORDER BY nombre_pac";
+                "estado_tratamiento, protesis, dni_san, " +
+                "sexo, fecha_nacimiento, alergias, antecedentes, medicacion_actual, " +
+                "consentimiento_rgpd, fecha_consentimiento, activo " +
+                "FROM paciente WHERE (activo IS NULL OR activo = TRUE) ORDER BY nombre_pac";
 
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query);
@@ -59,13 +67,16 @@ public class PacienteDAO {
     public List<Paciente> buscarPorTexto(String texto) {
         List<Paciente> pacientes = new ArrayList<>();
 
+        //Filtrar solo pacientes activos en la busqueda, incluir campos clinicos
         String query = "SELECT dni_pac, nombre_pac, apellido1_pac, apellido2_pac, " +
                 "edad_pac, email_pac, num_ss, discapacidad_pac, tratamiento_pac, " +
-                "estado_tratamiento, protesis, dni_san " +
-                "FROM paciente WHERE " +
+                "estado_tratamiento, protesis, dni_san, " +
+                "sexo, fecha_nacimiento, alergias, antecedentes, medicacion_actual, " +
+                "consentimiento_rgpd, fecha_consentimiento, activo " +
+                "FROM paciente WHERE (activo IS NULL OR activo = TRUE) AND (" +
                 "LOWER(dni_pac) LIKE ? OR LOWER(nombre_pac) LIKE ? OR " +
                 "LOWER(apellido1_pac) LIKE ? OR LOWER(apellido2_pac) LIKE ? OR " +
-                "LOWER(email_pac) LIKE ? OR LOWER(num_ss) LIKE ? " +
+                "LOWER(email_pac) LIKE ? OR LOWER(num_ss) LIKE ?) " +
                 "ORDER BY nombre_pac";
 
         try (Connection conn = ConexionBD.getConexion();
@@ -99,7 +110,9 @@ public class PacienteDAO {
     public Paciente buscarPorDni(String dni) {
         String query = "SELECT dni_pac, nombre_pac, apellido1_pac, apellido2_pac, " +
                 "edad_pac, email_pac, num_ss, discapacidad_pac, tratamiento_pac, " +
-                "estado_tratamiento, protesis, dni_san " +
+                "estado_tratamiento, protesis, dni_san, " +
+                "sexo, fecha_nacimiento, alergias, antecedentes, medicacion_actual, " +
+                "consentimiento_rgpd, fecha_consentimiento, activo " +
                 "FROM paciente WHERE dni_pac = ?";
 
         try (Connection conn = ConexionBD.getConexion();
@@ -277,11 +290,13 @@ public class PacienteDAO {
             //Primero insertar la direccion y obtener el id_direccion
             Integer idDireccion = insertarDireccionCompleta(conn, paciente);
 
-            //Insertar paciente con id_direccion
+            //Insertar paciente con id_direccion y campos clinicos
             String queryPaciente = "INSERT INTO paciente (dni_pac, dni_san, nombre_pac, apellido1_pac, " +
                     "apellido2_pac, email_pac, num_ss, id_direccion, discapacidad_pac, " +
-                    "tratamiento_pac, estado_tratamiento, protesis, edad_pac) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "tratamiento_pac, estado_tratamiento, protesis, edad_pac, " +
+                    "sexo, fecha_nacimiento, alergias, antecedentes, medicacion_actual, " +
+                    "consentimiento_rgpd, fecha_consentimiento, activo) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)";
 
             try (PreparedStatement stmt = conn.prepareStatement(queryPaciente)) {
                 stmt.setString(1, paciente.getDni());
@@ -307,6 +322,32 @@ public class PacienteDAO {
                 stmt.setString(11, paciente.getEstadoTratamiento() != null ? paciente.getEstadoTratamiento() : "");
                 stmt.setInt(12, paciente.getProtesis());
                 stmt.setInt(13, paciente.getEdad());
+
+                //Campos clinicos nuevos
+                stmt.setString(14, paciente.getSexo() != null ? paciente.getSexo() : "");
+
+                LocalDate fechaNac = paciente.getFechaNacimiento();
+                if (fechaNac != null) {
+                    stmt.setDate(15, Date.valueOf(fechaNac));
+                } else {
+                    stmt.setNull(15, java.sql.Types.DATE);
+                }
+
+                //Cifrar campos clinicos sensibles antes de almacenar (AES-256-GCM)
+                stmt.setString(16, CifradoService.cifrar(paciente.getAlergias() != null ? paciente.getAlergias() : ""));
+                stmt.setString(17, CifradoService.cifrar(paciente.getAntecedentes() != null ? paciente.getAntecedentes() : ""));
+                stmt.setString(18, CifradoService.cifrar(paciente.getMedicacionActual() != null ? paciente.getMedicacionActual() : ""));
+                stmt.setBoolean(19, paciente.isConsentimientoRgpd());
+
+                //Fecha de consentimiento: se registra automaticamente si hay consentimiento
+                if (paciente.isConsentimientoRgpd()) {
+                    LocalDateTime ahora = paciente.getFechaConsentimiento() != null
+                            ? paciente.getFechaConsentimiento()
+                            : LocalDateTime.now();
+                    stmt.setTimestamp(20, Timestamp.valueOf(ahora));
+                } else {
+                    stmt.setNull(20, java.sql.Types.TIMESTAMP);
+                }
 
                 int filasAfectadas = stmt.executeUpdate();
 
@@ -533,10 +574,12 @@ public class PacienteDAO {
             conn = ConexionBD.getConexion();
             conn.setAutoCommit(false);
 
-            //Actualizar paciente
+            //Actualizar paciente con campos clinicos
             String queryPaciente = "UPDATE paciente SET dni_pac = ?, nombre_pac = ?, apellido1_pac = ?, " +
                     "apellido2_pac = ?, email_pac = ?, num_ss = ?, discapacidad_pac = ?, " +
-                    "tratamiento_pac = ?, estado_tratamiento = ?, protesis = ?, edad_pac = ? " +
+                    "tratamiento_pac = ?, estado_tratamiento = ?, protesis = ?, edad_pac = ?, " +
+                    "sexo = ?, fecha_nacimiento = ?, alergias = ?, antecedentes = ?, " +
+                    "medicacion_actual = ?, consentimiento_rgpd = ?, fecha_consentimiento = ? " +
                     "WHERE dni_pac = ?";
 
             try (PreparedStatement stmt = conn.prepareStatement(queryPaciente)) {
@@ -551,7 +594,33 @@ public class PacienteDAO {
                 stmt.setString(9, paciente.getEstadoTratamiento() != null ? paciente.getEstadoTratamiento() : "");
                 stmt.setInt(10, paciente.getProtesis());
                 stmt.setInt(11, paciente.getEdad());
-                stmt.setString(12, dniOriginal);
+
+                //Campos clinicos nuevos
+                stmt.setString(12, paciente.getSexo() != null ? paciente.getSexo() : "");
+
+                LocalDate fechaNac = paciente.getFechaNacimiento();
+                if (fechaNac != null) {
+                    stmt.setDate(13, Date.valueOf(fechaNac));
+                } else {
+                    stmt.setNull(13, java.sql.Types.DATE);
+                }
+
+                //Cifrar campos clinicos sensibles antes de almacenar (AES-256-GCM)
+                stmt.setString(14, CifradoService.cifrar(paciente.getAlergias() != null ? paciente.getAlergias() : ""));
+                stmt.setString(15, CifradoService.cifrar(paciente.getAntecedentes() != null ? paciente.getAntecedentes() : ""));
+                stmt.setString(16, CifradoService.cifrar(paciente.getMedicacionActual() != null ? paciente.getMedicacionActual() : ""));
+                stmt.setBoolean(17, paciente.isConsentimientoRgpd());
+
+                if (paciente.isConsentimientoRgpd()) {
+                    LocalDateTime fechaConsent = paciente.getFechaConsentimiento() != null
+                            ? paciente.getFechaConsentimiento()
+                            : LocalDateTime.now();
+                    stmt.setTimestamp(18, Timestamp.valueOf(fechaConsent));
+                } else {
+                    stmt.setNull(18, java.sql.Types.TIMESTAMP);
+                }
+
+                stmt.setString(19, dniOriginal);
 
                 stmt.executeUpdate();
             }
@@ -664,6 +733,14 @@ public class PacienteDAO {
      * @param dni DNI del paciente a eliminar
      * @return true si la eliminacion fue exitosa
      */
+    /**
+     * Realiza una baja logica (soft delete) de un paciente.
+     * Cumplimiento legal: Ley 41/2002 exige conservar historiales minimo 5 anios.
+     * Los telefonos y citas se conservan para auditoria.
+     *
+     * @param dni DNI del paciente a dar de baja
+     * @return true si la baja fue exitosa
+     */
     public boolean eliminar(String dni) {
         Connection conn = null;
 
@@ -671,26 +748,12 @@ public class PacienteDAO {
             conn = ConexionBD.getConexion();
             conn.setAutoCommit(false);
 
-            //Obtener DNI del sanitario antes de eliminar para actualizar contador
+            //Obtener DNI del sanitario para actualizar contador
             String dniSanitario = obtenerDniSanitarioPorPaciente(conn, dni);
 
-            //Eliminar telefonos del paciente primero
-            String deleteTelefonos = "DELETE FROM telefono_paciente WHERE dni_pac = ?";
-            try (PreparedStatement stmtTel = conn.prepareStatement(deleteTelefonos)) {
-                stmtTel.setString(1, dni);
-                stmtTel.executeUpdate();
-            }
-
-            //Eliminar citas del paciente
-            String deleteCitas = "DELETE FROM cita WHERE dni_pac = ?";
-            try (PreparedStatement stmtCitas = conn.prepareStatement(deleteCitas)) {
-                stmtCitas.setString(1, dni);
-                stmtCitas.executeUpdate();
-            }
-
-            //Eliminar paciente
-            String deletePaciente = "DELETE FROM paciente WHERE dni_pac = ?";
-            try (PreparedStatement stmt = conn.prepareStatement(deletePaciente)) {
+            //Soft delete: marcar como inactivo en vez de borrar fisicamente
+            String softDelete = "UPDATE paciente SET activo = FALSE, fecha_baja = CURRENT_TIMESTAMP WHERE dni_pac = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(softDelete)) {
                 stmt.setString(1, dni);
                 int filasAfectadas = stmt.executeUpdate();
 
@@ -701,7 +764,7 @@ public class PacienteDAO {
                     }
 
                     conn.commit();
-                    System.out.println("Paciente eliminado correctamente: " + dni);
+                    System.out.println("Paciente dado de baja (soft delete): " + dni);
                     return true;
                 } else {
                     conn.rollback();
@@ -717,7 +780,7 @@ public class PacienteDAO {
                     System.err.println("Error al hacer rollback: " + ex.getMessage());
                 }
             }
-            System.err.println("Error al eliminar paciente: " + e.getMessage());
+            System.err.println("Error al dar de baja paciente: " + e.getMessage());
             e.printStackTrace();
             return false;
 
@@ -804,6 +867,46 @@ public class PacienteDAO {
                 protesis,
                 dniSanitario
         );
+
+        //Leer campos clinicos con try-catch defensivo (por si la migracion SQL no se ejecuto)
+        try {
+            String sexo = rs.getString("sexo");
+            paciente.setSexo(sexo != null ? sexo : "");
+
+            Date fechaNac = rs.getDate("fecha_nacimiento");
+            if (fechaNac != null) {
+                paciente.setFechaNacimiento(fechaNac.toLocalDate());
+            }
+
+            //Descifrar campos clinicos sensibles (AES-256-GCM)
+            String alergias = rs.getString("alergias");
+            paciente.setAlergias(alergias != null ? CifradoService.descifrar(alergias) : "");
+
+            String antecedentes = rs.getString("antecedentes");
+            paciente.setAntecedentes(antecedentes != null ? CifradoService.descifrar(antecedentes) : "");
+
+            String medicacion = rs.getString("medicacion_actual");
+            paciente.setMedicacionActual(medicacion != null ? CifradoService.descifrar(medicacion) : "");
+
+            boolean consentimiento = rs.getBoolean("consentimiento_rgpd");
+            paciente.setConsentimientoRgpd(consentimiento);
+
+            Timestamp fechaConsent = rs.getTimestamp("fecha_consentimiento");
+            if (fechaConsent != null) {
+                paciente.setFechaConsentimiento(fechaConsent.toLocalDateTime());
+            }
+
+            boolean activo = rs.getBoolean("activo");
+            //Si el valor era NULL en BD, getBoolean devuelve false; tratamos NULL como activo
+            if (rs.wasNull()) {
+                paciente.setActivo(true);
+            } else {
+                paciente.setActivo(activo);
+            }
+        } catch (SQLException e) {
+            //Columnas no existen aun (migracion SQL pendiente): usar valores por defecto
+            System.err.println("Campos clinicos no disponibles en BD (migracion pendiente): " + e.getMessage());
+        }
 
         return paciente;
     }

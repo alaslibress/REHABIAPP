@@ -6,6 +6,7 @@ import com.javafx.Clases.Sanitario;
 import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.DAO.SanitarioDAO;
+import com.javafx.service.AuditService;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -251,6 +252,9 @@ public class controladorSesion {
                         sanitario.getCargo()
                 );
 
+                //Registrar login en audit_log
+                AuditService.login();
+
                 // Abrir ventana principal
                 abrirVentanaPrincipal();
 
@@ -311,6 +315,7 @@ public class controladorSesion {
 
             // Manejar cierre de ventana para cerrar sesion
             stage.setOnCloseRequest(e -> {
+                AuditService.logout();
                 SesionUsuario.getInstancia().cerrarSesion();
             });
 

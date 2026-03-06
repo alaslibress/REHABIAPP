@@ -1,9 +1,9 @@
 package com.javafx.Clases;
 
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import javafx.beans.property.*;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Clase modelo que representa un Paciente en el sistema
@@ -37,6 +37,16 @@ public class Paciente implements Persona {
     private final StringProperty localidad;
     private final StringProperty provincia;
 
+    //Propiedades clinicas y legales (RGPD, Ley 41/2002)
+    private final StringProperty sexo;
+    private final ObjectProperty<LocalDate> fechaNacimiento;
+    private final StringProperty alergias;
+    private final StringProperty antecedentes;
+    private final StringProperty medicacionActual;
+    private final BooleanProperty consentimientoRgpd;
+    private final ObjectProperty<LocalDateTime> fechaConsentimiento;
+    private final BooleanProperty activo;
+
     /**
      * Constructor completo con todos los campos principales
      */
@@ -69,6 +79,16 @@ public class Paciente implements Persona {
         this.codigoPostal = new SimpleStringProperty("");
         this.localidad = new SimpleStringProperty("");
         this.provincia = new SimpleStringProperty("");
+
+        //Inicializar propiedades clinicas y legales con valores por defecto
+        this.sexo = new SimpleStringProperty("");
+        this.fechaNacimiento = new SimpleObjectProperty<>(null);
+        this.alergias = new SimpleStringProperty("");
+        this.antecedentes = new SimpleStringProperty("");
+        this.medicacionActual = new SimpleStringProperty("");
+        this.consentimientoRgpd = new SimpleBooleanProperty(false);
+        this.fechaConsentimiento = new SimpleObjectProperty<>(null);
+        this.activo = new SimpleBooleanProperty(true);
     }
 
     /**
@@ -386,6 +406,112 @@ public class Paciente implements Persona {
         }
 
         return sb.toString();
+    }
+
+    // ==================== CAMPOS CLINICOS Y LEGALES ====================
+
+    //Sexo
+    public String getSexo() {
+        return sexo.get();
+    }
+
+    public void setSexo(String sexo) {
+        this.sexo.set(sexo);
+    }
+
+    public StringProperty sexoProperty() {
+        return sexo;
+    }
+
+    //Fecha de nacimiento
+    public LocalDate getFechaNacimiento() {
+        return fechaNacimiento.get();
+    }
+
+    public void setFechaNacimiento(LocalDate fechaNacimiento) {
+        this.fechaNacimiento.set(fechaNacimiento);
+    }
+
+    public ObjectProperty<LocalDate> fechaNacimientoProperty() {
+        return fechaNacimiento;
+    }
+
+    //Alergias
+    public String getAlergias() {
+        return alergias.get();
+    }
+
+    public void setAlergias(String alergias) {
+        this.alergias.set(alergias);
+    }
+
+    public StringProperty alergiasProperty() {
+        return alergias;
+    }
+
+    //Antecedentes
+    public String getAntecedentes() {
+        return antecedentes.get();
+    }
+
+    public void setAntecedentes(String antecedentes) {
+        this.antecedentes.set(antecedentes);
+    }
+
+    public StringProperty antecedentesProperty() {
+        return antecedentes;
+    }
+
+    //Medicacion actual
+    public String getMedicacionActual() {
+        return medicacionActual.get();
+    }
+
+    public void setMedicacionActual(String medicacionActual) {
+        this.medicacionActual.set(medicacionActual);
+    }
+
+    public StringProperty medicacionActualProperty() {
+        return medicacionActual;
+    }
+
+    //Consentimiento RGPD
+    public boolean isConsentimientoRgpd() {
+        return consentimientoRgpd.get();
+    }
+
+    public void setConsentimientoRgpd(boolean consentimientoRgpd) {
+        this.consentimientoRgpd.set(consentimientoRgpd);
+    }
+
+    public BooleanProperty consentimientoRgpdProperty() {
+        return consentimientoRgpd;
+    }
+
+    //Fecha de consentimiento
+    public LocalDateTime getFechaConsentimiento() {
+        return fechaConsentimiento.get();
+    }
+
+    public void setFechaConsentimiento(LocalDateTime fechaConsentimiento) {
+        this.fechaConsentimiento.set(fechaConsentimiento);
+    }
+
+    public ObjectProperty<LocalDateTime> fechaConsentimientoProperty() {
+        return fechaConsentimiento;
+    }
+
+    //Activo (soft delete)
+    public boolean isActivo() {
+        return activo.get();
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo.set(activo);
+    }
+
+    public BooleanProperty activoProperty() {
+        return activo;
     }
 
     // ==================== METODOS AUXILIARES ====================

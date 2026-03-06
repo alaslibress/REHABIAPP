@@ -13,7 +13,9 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.RadioButton;
@@ -31,6 +33,7 @@ import org.controlsfx.validation.ValidationSupport;
 import org.controlsfx.validation.Validator;
 
 import java.io.File;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -49,7 +52,16 @@ public class controladorAgregarPaciente {
     private Button btnGuardar;
 
     @FXML
+    private CheckBox chkConsentimientoRgpd;
+
+    @FXML
     private ComboBox<Sanitario> cmbSanitario;
+
+    @FXML
+    private ComboBox<String> cmbSexo;
+
+    @FXML
+    private DatePicker dpFechaNacimiento;
 
     @FXML
     private ToggleGroup grupoProtesis;
@@ -73,7 +85,16 @@ public class controladorAgregarPaciente {
     private TextField txtApellidos;
 
     @FXML
+    private TextArea txtAreaAlergias;
+
+    @FXML
+    private TextArea txtAreaAntecedentes;
+
+    @FXML
     private TextArea txtAreaEstado;
+
+    @FXML
+    private TextArea txtAreaMedicacion;
 
     @FXML
     private TextArea txtAreaTratamiento;
@@ -156,6 +177,9 @@ public class controladorAgregarPaciente {
         SpinnerValueFactory<Integer> valueFactory =
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 120, 18);
         spinnerEdad.setValueFactory(valueFactory);
+
+        //Inicializar ComboBox de sexo
+        cmbSexo.setItems(FXCollections.observableArrayList("Masculino", "Femenino", "Otro"));
 
         //Seleccionar "No" por defecto en protesis
         radioProtesisNo.setSelected(true);
@@ -325,6 +349,21 @@ public class controladorAgregarPaciente {
             radioProtesisNo.setSelected(true);
         }
 
+        //Datos clinicos
+        String sexoBD = paciente.getSexo();
+        if (sexoBD != null) {
+            switch (sexoBD) {
+                case "M": cmbSexo.setValue("Masculino"); break;
+                case "F": cmbSexo.setValue("Femenino"); break;
+                case "O": cmbSexo.setValue("Otro"); break;
+            }
+        }
+        dpFechaNacimiento.setValue(paciente.getFechaNacimiento());
+        txtAreaAlergias.setText(paciente.getAlergias() != null ? paciente.getAlergias() : "");
+        txtAreaAntecedentes.setText(paciente.getAntecedentes() != null ? paciente.getAntecedentes() : "");
+        txtAreaMedicacion.setText(paciente.getMedicacionActual() != null ? paciente.getMedicacionActual() : "");
+        chkConsentimientoRgpd.setSelected(paciente.isConsentimientoRgpd());
+
         //Cargar foto
         cargarFotoDesdeBD(paciente.getDni());
     }
@@ -385,6 +424,24 @@ public class controladorAgregarPaciente {
         paciente.setCodigoPostal(txtCodigoPostal.getText().trim());
         paciente.setLocalidad(txtLocalidad.getText().trim());
         paciente.setProvincia(txtProvincia.getText().trim());
+
+        //Configurar datos clinicos
+        String sexoSeleccionado = cmbSexo.getValue();
+        if (sexoSeleccionado != null) {
+            switch (sexoSeleccionado) {
+                case "Masculino": paciente.setSexo("M"); break;
+                case "Femenino": paciente.setSexo("F"); break;
+                case "Otro": paciente.setSexo("O"); break;
+            }
+        }
+        paciente.setFechaNacimiento(dpFechaNacimiento.getValue());
+        paciente.setAlergias(txtAreaAlergias.getText().trim());
+        paciente.setAntecedentes(txtAreaAntecedentes.getText().trim());
+        paciente.setMedicacionActual(txtAreaMedicacion.getText().trim());
+        paciente.setConsentimientoRgpd(chkConsentimientoRgpd.isSelected());
+        if (chkConsentimientoRgpd.isSelected()) {
+            paciente.setFechaConsentimiento(LocalDateTime.now());
+        }
 
         boolean exito;
         if (modoEdicion) {

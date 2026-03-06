@@ -101,6 +101,16 @@ public class ConexionBD {
                 String password = props.getProperty("db.password");
                 String driver = props.getProperty("db.driver");
 
+                //Configuracion SSL/TLS (ENS Nivel Alto)
+                String ssl = props.getProperty("db.ssl", "false");
+                String sslmode = props.getProperty("db.sslmode", "prefer");
+
+                if ("true".equalsIgnoreCase(ssl)) {
+                    String separador = url.contains("?") ? "&" : "?";
+                    url = url + separador + "ssl=true&sslmode=" + sslmode;
+                    System.out.println("SSL habilitado para conexion a BD (modo: " + sslmode + ")");
+                }
+
                 //Cargar el driver de PostgreSQL
                 Class.forName(driver);
 

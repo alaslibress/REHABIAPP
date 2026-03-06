@@ -2,6 +2,7 @@ package com.javafx.service;
 
 import com.javafx.Clases.Paciente;
 import com.javafx.DAO.PacienteDAO;
+import com.javafx.service.AuditService;
 
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +52,7 @@ public class PacienteService {
 
         if (pacienteInsertado) {
             pacienteDAO.insertarTelefonos(paciente.getDni(), tel1, tel2);
+            AuditService.insertPaciente(paciente.getDni());
             return true;
         }
 
@@ -70,6 +72,7 @@ public class PacienteService {
 
         if (pacienteActualizado) {
             pacienteDAO.actualizarTelefonos(paciente.getDni(), tel1, tel2);
+            AuditService.updatePaciente(paciente.getDni());
             return true;
         }
 
@@ -82,6 +85,10 @@ public class PacienteService {
      * @return true si la eliminacion fue exitosa
      */
     public boolean eliminar(String dni) {
-        return pacienteDAO.eliminar(dni);
+        boolean eliminado = pacienteDAO.eliminar(dni);
+        if (eliminado) {
+            AuditService.deletePaciente(dni);
+        }
+        return eliminado;
     }
 }

@@ -5,6 +5,7 @@ import com.javafx.Clases.Paciente;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.PacienteDAO;
+import com.javafx.service.AuditService;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -22,6 +23,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Controlador para la ventana de ficha/informacion de un paciente
@@ -48,6 +50,9 @@ public class controladorVentanaPacienteListar {
     private Label lblApellidosValor;
 
     @FXML
+    private Label lblConsentimientoValor;
+
+    @FXML
     private Label lblDNIValor;
 
     @FXML
@@ -63,10 +68,16 @@ public class controladorVentanaPacienteListar {
     private Label lblEmailValor;
 
     @FXML
+    private Label lblFechaNacimientoValor;
+
+    @FXML
     private Label lblNSSValor;
 
     @FXML
     private Label lblNombreValor;
+
+    @FXML
+    private Label lblSexoValor;
 
     @FXML
     private Label lblTelefono1Valor;
@@ -84,7 +95,16 @@ public class controladorVentanaPacienteListar {
     private RadioButton radioProtesisSi;
 
     @FXML
+    private TextArea txtAreaAlergias;
+
+    @FXML
+    private TextArea txtAreaAntecedentes;
+
+    @FXML
     private TextArea txtAreaEstado;
+
+    @FXML
+    private TextArea txtAreaMedicacion;
 
     @FXML
     private TextArea txtAreaTratamiento;
@@ -144,6 +164,9 @@ public class controladorVentanaPacienteListar {
         if (pacienteActual != null) {
             mostrarDatosEnLabels();
             cargarFotoPaciente();
+
+            //Registrar acceso a datos clinicos sensibles (Ley 41/2002, ENS)
+            AuditService.consultaSensible(dni);
         } else {
             VentanaUtil.mostrarVentanaInformativa(
                     "No se encontro el paciente con DNI: " + dni,
@@ -186,6 +209,42 @@ public class controladorVentanaPacienteListar {
             radioProtesisSi.setSelected(true);
         } else {
             radioProtesisNo.setSelected(true);
+        }
+
+        //Datos clinicos
+        String sexoBD = pacienteActual.getSexo();
+        if (sexoBD != null) {
+            switch (sexoBD) {
+                case "M": lblSexoValor.setText("Masculino"); break;
+                case "F": lblSexoValor.setText("Femenino"); break;
+                case "O": lblSexoValor.setText("Otro"); break;
+                default: lblSexoValor.setText("-"); break;
+            }
+        } else {
+            lblSexoValor.setText("-");
+        }
+
+        if (pacienteActual.getFechaNacimiento() != null) {
+            DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            lblFechaNacimientoValor.setText(pacienteActual.getFechaNacimiento().format(formateador));
+        } else {
+            lblFechaNacimientoValor.setText("-");
+        }
+
+        txtAreaAlergias.setText(valorOGuion(pacienteActual.getAlergias()));
+        txtAreaAntecedentes.setText(valorOGuion(pacienteActual.getAntecedentes()));
+        txtAreaMedicacion.setText(valorOGuion(pacienteActual.getMedicacionActual()));
+
+        //Consentimiento RGPD
+        if (pacienteActual.isConsentimientoRgpd()) {
+            String textoConsentimiento = "Si";
+            if (pacienteActual.getFechaConsentimiento() != null) {
+                DateTimeFormatter formateadorFechaHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+                textoConsentimiento += " (" + pacienteActual.getFechaConsentimiento().format(formateadorFechaHora) + ")";
+            }
+            lblConsentimientoValor.setText(textoConsentimiento);
+        } else {
+            lblConsentimientoValor.setText("No");
         }
     }
 

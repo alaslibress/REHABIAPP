@@ -95,6 +95,7 @@
                         <TableColumn fx:id="colApellidos" prefWidth="200.0" text="Apellidos" />
                         <TableColumn fx:id="colDNI" prefWidth="120.0" text="DNI" />
                         <TableColumn fx:id="colEdad" prefWidth="60.0" text="Edad" />
+                        <TableColumn fx:id="colSexo" prefWidth="80.0" text="Sexo" />
                         <TableColumn fx:id="colDiscapacidad" prefWidth="200.0" text="Discapacidad" />
                         <TableColumn fx:id="colProtesis" prefWidth="100.0" text="Protesis" />
                     </columns>

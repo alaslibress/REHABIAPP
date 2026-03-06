@@ -2,6 +2,8 @@ package com.javafx.DAO;
 
 import com.javafx.Clases.Sanitario;
 import com.javafx.Clases.ConexionBD;
+import com.javafx.service.AuditService;
+import com.javafx.util.CifradoUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -26,11 +28,12 @@ public class SanitarioDAO {
     public List<Sanitario> listarTodos() {
         List<Sanitario> sanitarios = new ArrayList<>();
 
-        //Consulta con JOIN para obtener el cargo desde la tabla sanitario_agrega_sanitario
+        //Solo mostrar sanitarios activos (compatibilidad con datos pre-migracion donde activo puede ser NULL)
         String query = "SELECT s.dni_san, s.nombre_san, s.apellido1_san, s.apellido2_san, " +
                 "s.email_san, s.num_de_pacientes, s.contrasena_san, sas.cargo " +
                 "FROM sanitario s " +
                 "LEFT JOIN sanitario_agrega_sanitario sas ON s.dni_san = sas.dni_san " +
+                "WHERE (s.activo IS NULL OR s.activo = TRUE) " +
                 "ORDER BY s.nombre_san";
 
         try (Connection conn = ConexionBD.getConexion();
@@ -58,14 +61,15 @@ public class SanitarioDAO {
     public List<Sanitario> buscarPorTexto(String texto) {
         List<Sanitario> sanitarios = new ArrayList<>();
 
-        //Busqueda en multiples campos usando LIKE con patron
+        //Busqueda en multiples campos, filtrar solo sanitarios activos
         String query = "SELECT s.dni_san, s.nombre_san, s.apellido1_san, s.apellido2_san, " +
                 "s.email_san, s.num_de_pacientes, s.contrasena_san, sas.cargo " +
                 "FROM sanitario s " +
                 "LEFT JOIN sanitario_agrega_sanitario sas ON s.dni_san = sas.dni_san " +
-                "WHERE LOWER(s.dni_san) LIKE ? OR LOWER(s.nombre_san) LIKE ? OR " +
+                "WHERE (s.activo IS NULL OR s.activo = TRUE) AND (" +
+                "LOWER(s.dni_san) LIKE ? OR LOWER(s.nombre_san) LIKE ? OR " +
                 "LOWER(s.apellido1_san) LIKE ? OR LOWER(s.apellido2_san) LIKE ? OR " +
-                "LOWER(s.email_san) LIKE ? ORDER BY s.nombre_san";
+                "LOWER(s.email_san) LIKE ?) ORDER BY s.nombre_san";
 
         //Preparar patron de busqueda con comodines
         String patron = "%" + texto.toLowerCase() + "%";
@@ -247,7 +251,8 @@ public class SanitarioDAO {
                 stmt.setString(3, sanitario.getApellido1());
                 stmt.setString(4, sanitario.getApellido2());
                 stmt.setString(5, sanitario.getEmail());
-                stmt.setString(6, sanitario.getContrasena());
+                //Hashear contrasena con BCrypt antes de almacenar
+                stmt.setString(6, CifradoUtil.hashContrasena(sanitario.getContrasena()));
                 stmt.executeUpdate();
             }
 
@@ -461,48 +466,32 @@ public class SanitarioDAO {
      * @param dni DNI del sanitario a eliminar
      * @return true si la eliminacion fue exitosa
      */
+    /**
+     * Realiza una baja logica (soft delete) de un sanitario.
+     * Los datos se conservan para auditoria y trazabilidad.
+     * @param dni DNI del sanitario a dar de baja
+     * @return true si la baja fue exitosa
+     */
     public boolean eliminar(String dni) {
-        Connection conn = null;
+        //Soft delete: marcar como inactivo en vez de borrar fisicamente
+        String softDelete = "UPDATE sanitario SET activo = FALSE, fecha_baja = CURRENT_TIMESTAMP WHERE dni_san = ?";
 
-        try {
-            conn = ConexionBD.getConexion();
-            conn.setAutoCommit(false);
+        try (Connection conn = ConexionBD.getConexion();
+             PreparedStatement stmt = conn.prepareStatement(softDelete)) {
 
-            //Eliminar el sanitario (las FK con CASCADE eliminan telefonos y cargo)
-            String deleteSanitario = "DELETE FROM sanitario WHERE dni_san = ?";
-            try (PreparedStatement stmt = conn.prepareStatement(deleteSanitario)) {
-                stmt.setString(1, dni);
-                int filasAfectadas = stmt.executeUpdate();
+            stmt.setString(1, dni);
+            int filasAfectadas = stmt.executeUpdate();
 
-                if (filasAfectadas > 0) {
-                    conn.commit();
-                    return true;
-                } else {
-                    conn.rollback();
-                    return false;
-                }
+            if (filasAfectadas > 0) {
+                System.out.println("Sanitario dado de baja (soft delete): " + dni);
+                return true;
             }
 
         } catch (SQLException e) {
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (SQLException ex) {
-                    System.err.println("Error al hacer rollback: " + ex.getMessage());
-                }
-            }
-            System.err.println("Error al eliminar sanitario: " + e.getMessage());
-            return false;
-
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                } catch (SQLException e) {
-                    System.err.println("Error al restaurar autocommit: " + e.getMessage());
-                }
-            }
+            System.err.println("Error al dar de baja sanitario: " + e.getMessage());
         }
+
+        return false;
     }
 
     // ==================== METODOS AUXILIARES PRIVADOS ====================
@@ -581,23 +570,34 @@ public class SanitarioDAO {
      * @return Sanitario si las credenciales son correctas, null si no
      */
     public Sanitario autenticar(String dni, String contrasena) {
+        //Buscar solo por DNI; la verificacion de contrasena se hace en Java con BCrypt
         String query = "SELECT s.dni_san, s.nombre_san, s.apellido1_san, s.apellido2_san, " +
                 "s.email_san, s.num_de_pacientes, s.contrasena_san, sas.cargo " +
                 "FROM sanitario s " +
                 "LEFT JOIN sanitario_agrega_sanitario sas ON s.dni_san = sas.dni_san " +
-                "WHERE s.dni_san = ? AND s.contrasena_san = ?";
+                "WHERE s.dni_san = ?";
 
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, dni.toUpperCase());
-            stmt.setString(2, contrasena);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    Sanitario sanitario = mapearSanitarioDesdeResultSet(rs);
-                    System.out.println("Autenticacion exitosa para: " + sanitario.getDni());
-                    return sanitario;
+                    String hashAlmacenado = rs.getString("contrasena_san");
+
+                    //Verificar contrasena (compatible con texto plano y BCrypt)
+                    if (CifradoUtil.verificarContrasena(contrasena, hashAlmacenado)) {
+                        Sanitario sanitario = mapearSanitarioDesdeResultSet(rs);
+
+                        //Migracion perezosa: si la contrasena estaba en texto plano, rehashear
+                        if (!CifradoUtil.esBCrypt(hashAlmacenado)) {
+                            migrarContrasenaBCrypt(dni.toUpperCase(), contrasena);
+                        }
+
+                        System.out.println("Autenticacion exitosa para: " + sanitario.getDni());
+                        return sanitario;
+                    }
                 }
             }
 
@@ -608,6 +608,29 @@ public class SanitarioDAO {
 
         System.out.println("Autenticacion fallida para DNI: " + dni);
         return null;
+    }
+
+    /**
+     * Migra una contrasena de texto plano a BCrypt tras login exitoso.
+     * Operacion transparente para el usuario (migracion perezosa).
+     * @param dni DNI del sanitario
+     * @param contrasenaPlana Contrasena en texto plano que acaba de verificarse
+     */
+    private void migrarContrasenaBCrypt(String dni, String contrasenaPlana) {
+        String query = "UPDATE sanitario SET contrasena_san = ? WHERE dni_san = ?";
+
+        try (Connection conn = ConexionBD.getConexion();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, CifradoUtil.hashContrasena(contrasenaPlana));
+            stmt.setString(2, dni);
+            stmt.executeUpdate();
+            System.out.println("Contrasena migrada a BCrypt para: " + dni);
+
+        } catch (SQLException e) {
+            //No bloquear el login si falla la migracion; se reintentara en el proximo login
+            System.err.println("Error al migrar contrasena a BCrypt: " + e.getMessage());
+        }
     }
 
     /**
@@ -648,12 +671,13 @@ public class SanitarioDAO {
             conn = ConexionBD.getConexion();
             conn.setAutoCommit(false);
 
-            //1. Insertar sanitario admin
+            //1. Insertar sanitario admin con contrasena hasheada con BCrypt
             String queryInsertSanitario = "INSERT INTO sanitario (dni_san, nombre_san, apellido1_san, " +
                     "apellido2_san, email_san, num_de_pacientes, contrasena_san) " +
-                    "VALUES ('ADMIN0000', 'Administrador', 'Sistema', '', 'admin@rehabiapp.com', 0, 'admin')";
+                    "VALUES ('ADMIN0000', 'Administrador', 'Sistema', '', 'admin@rehabiapp.com', 0, ?)";
 
             try (PreparedStatement stmt = conn.prepareStatement(queryInsertSanitario)) {
+                stmt.setString(1, CifradoUtil.hashContrasena("admin"));
                 stmt.executeUpdate();
             }
 
@@ -705,11 +729,17 @@ public class SanitarioDAO {
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
-            stmt.setString(1, nuevaContrasena);
+            //Hashear la nueva contrasena con BCrypt antes de almacenar
+            stmt.setString(1, CifradoUtil.hashContrasena(nuevaContrasena));
             stmt.setString(2, dni);
 
             int filasAfectadas = stmt.executeUpdate();
-            return filasAfectadas > 0;
+
+            if (filasAfectadas > 0) {
+                //Registrar cambio de contrasena en audit_log
+                AuditService.cambioContrasena(dni);
+                return true;
+            }
 
         } catch (SQLException e) {
             System.err.println("Error al cambiar contraseña: " + e.getMessage());
@@ -726,17 +756,18 @@ public class SanitarioDAO {
      * @return true si la contraseña es correcta
      */
     public boolean verificarContrasena(String dni, String contrasena) {
-        String query = "SELECT COUNT(*) FROM sanitario WHERE dni_san = ? AND contrasena_san = ?";
+        //Buscar solo por DNI; la verificacion se hace en Java con CifradoUtil
+        String query = "SELECT contrasena_san FROM sanitario WHERE dni_san = ?";
 
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, dni);
-            stmt.setString(2, contrasena);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getInt(1) > 0;
+                    String hashAlmacenado = rs.getString("contrasena_san");
+                    return CifradoUtil.verificarContrasena(contrasena, hashAlmacenado);
                 }
             }
 

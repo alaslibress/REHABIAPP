@@ -2,6 +2,7 @@ package com.javafx.service;
 
 import com.javafx.Clases.Sanitario;
 import com.javafx.DAO.SanitarioDAO;
+import com.javafx.service.AuditService;
 
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +52,7 @@ public class SanitarioService {
 
         if (sanitarioInsertado) {
             sanitarioDAO.insertarTelefonos(sanitario.getDni(), tel1, tel2);
+            AuditService.insertSanitario(sanitario.getDni());
             return true;
         }
 
@@ -70,6 +72,7 @@ public class SanitarioService {
 
         if (sanitarioActualizado) {
             sanitarioDAO.actualizarTelefonos(sanitario.getDni(), tel1, tel2);
+            AuditService.updateSanitario(sanitario.getDni());
             return true;
         }
 
@@ -82,6 +85,10 @@ public class SanitarioService {
      * @return true si la eliminacion fue exitosa
      */
     public boolean eliminar(String dni) {
-        return sanitarioDAO.eliminar(dni);
+        boolean eliminado = sanitarioDAO.eliminar(dni);
+        if (eliminado) {
+            AuditService.deleteSanitario(dni);
+        }
+        return eliminado;
     }
 }

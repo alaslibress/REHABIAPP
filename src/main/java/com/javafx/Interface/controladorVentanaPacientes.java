@@ -76,6 +76,9 @@ public class controladorVentanaPacientes {
     private TableColumn<Paciente, Integer> colProtesis;
 
     @FXML
+    private TableColumn<Paciente, String> colSexo;
+
+    @FXML
     private Label lblBuscarPacientes;
 
     @FXML
@@ -216,6 +219,7 @@ public class controladorVentanaPacientes {
         colApellidos.setCellValueFactory(new PropertyValueFactory<>("apellidos"));
         colDNI.setCellValueFactory(new PropertyValueFactory<>("dni"));
         colEdad.setCellValueFactory(new PropertyValueFactory<>("edad"));
+        colSexo.setCellValueFactory(new PropertyValueFactory<>("sexo"));
         colDiscapacidad.setCellValueFactory(new PropertyValueFactory<>("discapacidad"));
         colProtesis.setCellValueFactory(new PropertyValueFactory<>("protesis"));
 

@@ -54,10 +54,11 @@ public class CitaService {
     /**
      * Inserta una nueva cita
      * @param cita Cita a insertar
-     * @return true si la insercion fue exitosa
+     * @throws com.javafx.excepcion.DuplicadoException si ya existe una cita en ese horario
+     * @throws com.javafx.excepcion.ConexionException si hay error de BD
      */
-    public boolean insertar(Cita cita) {
-        return citaDAO.insertar(cita);
+    public void insertar(Cita cita) {
+        citaDAO.insertar(cita);
     }
 
     /**
@@ -66,9 +67,9 @@ public class CitaService {
      * @param dniSan DNI del sanitario
      * @param fecha Fecha de la cita
      * @param hora Hora de la cita
-     * @return true si la eliminacion fue exitosa
+     * @throws com.javafx.excepcion.ConexionException si hay error de BD
      */
-    public boolean eliminar(String dniPac, String dniSan, LocalDate fecha, LocalTime hora) {
-        return citaDAO.eliminar(dniPac, dniSan, fecha, hora);
+    public void eliminar(String dniPac, String dniSan, LocalDate fecha, LocalTime hora) {
+        citaDAO.eliminar(dniPac, dniSan, fecha, hora);
     }
 }

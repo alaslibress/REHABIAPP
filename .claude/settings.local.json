@@ -9,7 +9,13 @@
       "Bash(./gradlew.bat clean build)",
       "Bash(dir:*)",
       "Bash(./gradlew.bat clean build:*)",
-      "Bash(./gradlew.bat:*)"
+      "Bash(./gradlew.bat:*)",
+      "Bash(where.exe:*)",
+      "Bash(powershell.exe -Command \"Get-Command psql -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem ''C:\\\\Program Files\\\\PostgreSQL\\\\*\\\\bin\\\\psql.exe'' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName\")",
+      "Bash(PGPASSWORD=admin \"/c/Program Files/PostgreSQL/18/bin/psql.exe\":*)",
+      "Bash(./gradlew compileJava:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

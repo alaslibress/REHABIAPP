@@ -6,6 +6,9 @@ import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.CitaDAO;
 import com.javafx.DAO.PacienteDAO;
+import com.javafx.excepcion.ConexionException;
+import com.javafx.excepcion.DuplicadoException;
+import com.javafx.excepcion.RehabiAppException;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -187,18 +190,22 @@ public class controladorCitaPaciente {
         );
 
         if (confirmado) {
-            boolean eliminada = citaDAO.eliminar(dniPacienteActual, dniSanitarioActual, fechaOriginal, horaOriginal);
-
-            if (eliminada) {
+            try {
+                citaDAO.eliminar(dniPacienteActual, dniSanitarioActual, fechaOriginal, horaOriginal);
                 VentanaUtil.mostrarVentanaInformativa(
                         "La cita ha sido eliminada correctamente.",
                         TipoMensaje.EXITO
                 );
                 cambiosRealizados = true;
                 cerrarVentana(event);
-            } else {
+            } catch (ConexionException e) {
                 VentanaUtil.mostrarVentanaInformativa(
-                        "No se pudo eliminar la cita.",
+                        "Error de conexion con la base de datos.",
+                        TipoMensaje.ERROR
+                );
+            } catch (RehabiAppException e) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "Error: " + e.getMessage(),
                         TipoMensaje.ERROR
                 );
             }
@@ -245,16 +252,16 @@ public class controladorCitaPaciente {
         }
 
         //Actualizar la cita
-        boolean actualizada = citaDAO.actualizar(
-                dniPacienteActual,
-                dniSanitarioActual,
-                fechaOriginal,
-                horaOriginal,
-                nuevaFecha,
-                nuevoTiempo
-        );
+        try {
+            citaDAO.actualizar(
+                    dniPacienteActual,
+                    dniSanitarioActual,
+                    fechaOriginal,
+                    horaOriginal,
+                    nuevaFecha,
+                    nuevoTiempo
+            );
 
-        if (actualizada) {
             VentanaUtil.mostrarVentanaInformativa(
                     "La cita ha sido actualizada correctamente.\n\n" +
                             "Nueva fecha: " + nuevaFecha.format(com.javafx.util.ConstantesApp.FORMATO_FECHA) + "\n" +
@@ -266,9 +273,20 @@ public class controladorCitaPaciente {
             fechaOriginal = nuevaFecha;
             horaOriginal = nuevoTiempo;
             cambiosRealizados = true;
-        } else {
+
+        } catch (DuplicadoException e) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "No se pudo actualizar la cita.",
+                    "Ya existe una cita en ese horario.",
+                    TipoMensaje.ERROR
+            );
+        } catch (ConexionException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error de conexion con la base de datos.",
+                    TipoMensaje.ERROR
+            );
+        } catch (RehabiAppException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error: " + e.getMessage(),
                     TipoMensaje.ERROR
             );
         }

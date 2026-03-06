@@ -5,6 +5,9 @@ import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.SanitarioDAO;
+import com.javafx.excepcion.ConexionException;
+import com.javafx.excepcion.RehabiAppException;
+import com.javafx.service.AuditService;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -273,16 +276,19 @@ public class controladorPerfil {
             }
 
             //Cambiar contraseña
-            boolean cambiada = sanitarioDAO.cambiarContrasena(sesion.getDniUsuario(), nueva);
-
-            if (cambiada) {
+            try {
+                sanitarioDAO.cambiarContrasena(sesion.getDniUsuario(), nueva);
+                AuditService.cambioContrasena(sesion.getDniUsuario());
                 dialog.close();
                 VentanaUtil.mostrarVentanaInformativa(
                         "Contraseña cambiada correctamente.",
                         TipoMensaje.EXITO
                 );
-            } else {
-                lblError.setText("Error al cambiar la contraseña");
+            } catch (ConexionException ex) {
+                lblError.setText("Error de conexion con la base de datos");
+                lblError.setVisible(true);
+            } catch (RehabiAppException ex) {
+                lblError.setText("Error: " + ex.getMessage());
                 lblError.setVisible(true);
             }
         });

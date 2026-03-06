@@ -9,6 +9,9 @@ import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.CitaDAO;
 import com.javafx.DAO.PacienteDAO;
+import com.javafx.excepcion.ConexionException;
+import com.javafx.excepcion.DuplicadoException;
+import com.javafx.excepcion.RehabiAppException;
 import com.javafx.util.ConstantesApp;
 
 import com.calendarfx.model.Calendar;
@@ -608,20 +611,28 @@ public class controladorVentanaCitas {
         );
 
         if (confirmado) {
-            Task<Boolean> task = new Task<>() {
+            Task<Void> task = new Task<>() {
                 @Override
-                protected Boolean call() {
-                    return citaDAO.eliminar(cita.getDniPaciente(), dniSanitarioActual, 
-                                           cita.getFecha(), cita.getHora());
+                protected Void call() {
+                    citaDAO.eliminar(cita.getDniPaciente(), dniSanitarioActual,
+                                    cita.getFecha(), cita.getHora());
+                    return null;
                 }
             };
 
             task.setOnSucceeded(e -> {
-                if (task.getValue()) {
-                    VentanaUtil.mostrarVentanaInformativa("Cita eliminada.", TipoMensaje.EXITO);
-                    recargarDatos();
+                VentanaUtil.mostrarVentanaInformativa("Cita eliminada.", TipoMensaje.EXITO);
+                recargarDatos();
+            });
+
+            task.setOnFailed(e -> {
+                Throwable ex = task.getException();
+                if (ex instanceof ConexionException) {
+                    VentanaUtil.mostrarVentanaInformativa(
+                            "Error de conexion con la base de datos.", TipoMensaje.ERROR);
                 } else {
-                    VentanaUtil.mostrarVentanaInformativa("Error al eliminar.", TipoMensaje.ERROR);
+                    VentanaUtil.mostrarVentanaInformativa(
+                            "Error: " + ex.getMessage(), TipoMensaje.ERROR);
                 }
             });
 
@@ -717,36 +728,47 @@ public class controladorVentanaCitas {
         final String nombrePac = pacienteSeleccionado.getNombre();
         final String fechaStr = fechaSeleccionada.format(ConstantesApp.FORMATO_FECHA);
 
-        Task<Boolean> task = new Task<>() {
+        Task<Void> task = new Task<>() {
             @Override
-            protected Boolean call() {
+            protected Void call() {
                 if (citaDAO.existeCitaEnHorario(dniSanitarioActual, fechaSeleccionada, hora)) {
-                    return false;
+                    throw new DuplicadoException("Ya existe una cita en ese horario", "horario");
                 }
-                return citaDAO.insertar(nueva);
+                citaDAO.insertar(nueva);
+                return null;
             }
         };
 
         task.setOnSucceeded(e -> {
-            if (task.getValue()) {
-                VentanaUtil.mostrarVentanaInformativa(
-                    "Cita creada.\n\nPaciente: " + nombrePac + 
-                    "\nFecha: " + fechaStr + "\nHora: " + hora,
-                    TipoMensaje.EXITO
-                );
-                
-                // Limpiar formulario
-                cmbPacientes.getSelectionModel().clearSelection();
-                cmbPacientes.getEditor().clear();
-                lblInfoPaciente.setText("Escribe para ver sugerencias");
-                lblInfoPaciente.setStyle("-fx-text-fill: #666666; -fx-font-size: 11px;");
-                pacienteSeleccionado = null;
-                spnHora.getValueFactory().setValue(9);
-                spnMinuto.getValueFactory().setValue(0);
+            VentanaUtil.mostrarVentanaInformativa(
+                "Cita creada.\n\nPaciente: " + nombrePac +
+                "\nFecha: " + fechaStr + "\nHora: " + hora,
+                TipoMensaje.EXITO
+            );
 
-                recargarDatos();
+            // Limpiar formulario
+            cmbPacientes.getSelectionModel().clearSelection();
+            cmbPacientes.getEditor().clear();
+            lblInfoPaciente.setText("Escribe para ver sugerencias");
+            lblInfoPaciente.setStyle("-fx-text-fill: #666666; -fx-font-size: 11px;");
+            pacienteSeleccionado = null;
+            spnHora.getValueFactory().setValue(9);
+            spnMinuto.getValueFactory().setValue(0);
+
+            recargarDatos();
+        });
+
+        task.setOnFailed(e -> {
+            Throwable ex = task.getException();
+            if (ex instanceof DuplicadoException) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "Ya existe una cita en ese horario.", TipoMensaje.ADVERTENCIA);
+            } else if (ex instanceof ConexionException) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "Error de conexion con la base de datos.", TipoMensaje.ERROR);
             } else {
-                VentanaUtil.mostrarVentanaInformativa("No se pudo crear.", TipoMensaje.ERROR);
+                VentanaUtil.mostrarVentanaInformativa(
+                        "Error: " + ex.getMessage(), TipoMensaje.ERROR);
             }
         });
 

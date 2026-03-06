@@ -2,6 +2,9 @@ package com.javafx.DAO;
 
 import com.javafx.Clases.Cita;
 import com.javafx.Clases.ConexionBD;
+import com.javafx.excepcion.ConexionException;
+import com.javafx.excepcion.DuplicadoException;
+import com.javafx.excepcion.ValidacionException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -15,8 +18,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Clase DAO para gestionar las operaciones de base de datos de Citas
- * La tabla CITA es una relacion N:M entre paciente y sanitario
+ * Clase DAO para gestionar las operaciones de base de datos de Citas.
+ * La tabla CITA es una relacion N:M entre paciente y sanitario.
+ *
+ * Los metodos de escritura lanzan excepciones personalizadas
+ * en vez de devolver boolean.
  */
 public class CitaDAO {
 
@@ -25,6 +31,7 @@ public class CitaDAO {
     /**
      * Lista todas las citas ordenadas por fecha y hora
      * @return Lista de todas las citas
+     * @throws ConexionException si hay error de conexion con la BD
      */
     public List<Cita> listarTodas() {
         List<Cita> citas = new ArrayList<>();
@@ -48,8 +55,7 @@ public class CitaDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al listar citas: " + e.getMessage());
-            e.printStackTrace();
+            throw new ConexionException("Error al listar citas", e);
         }
 
         return citas;
@@ -59,6 +65,7 @@ public class CitaDAO {
      * Lista las citas de una fecha especifica
      * @param fecha Fecha a buscar
      * @return Lista de citas de esa fecha
+     * @throws ConexionException si hay error de conexion con la BD
      */
     public List<Cita> listarPorFecha(LocalDate fecha) {
         List<Cita> citas = new ArrayList<>();
@@ -85,8 +92,7 @@ public class CitaDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al listar citas por fecha: " + e.getMessage());
-            e.printStackTrace();
+            throw new ConexionException("Error al listar citas por fecha", e);
         }
 
         return citas;
@@ -96,6 +102,7 @@ public class CitaDAO {
      * Lista las citas de un sanitario especifico
      * @param dniSanitario DNI del sanitario
      * @return Lista de citas del sanitario
+     * @throws ConexionException si hay error de conexion con la BD
      */
     public List<Cita> listarPorSanitario(String dniSanitario) {
         List<Cita> citas = new ArrayList<>();
@@ -122,8 +129,7 @@ public class CitaDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al listar citas por sanitario: " + e.getMessage());
-            e.printStackTrace();
+            throw new ConexionException("Error al listar citas por sanitario", e);
         }
 
         return citas;
@@ -133,6 +139,7 @@ public class CitaDAO {
      * Lista las citas de un paciente especifico
      * @param dniPaciente DNI del paciente
      * @return Lista de citas del paciente
+     * @throws ConexionException si hay error de conexion con la BD
      */
     public List<Cita> listarPorPaciente(String dniPaciente) {
         List<Cita> citas = new ArrayList<>();
@@ -159,8 +166,7 @@ public class CitaDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al listar citas por paciente: " + e.getMessage());
-            e.printStackTrace();
+            throw new ConexionException("Error al listar citas por paciente", e);
         }
 
         return citas;
@@ -168,9 +174,7 @@ public class CitaDAO {
 
     /**
      * Lista las citas de un sanitario en una fecha especifica
-     * @param dniSanitario DNI del sanitario
-     * @param fecha Fecha a buscar
-     * @return Lista de citas del sanitario en esa fecha
+     * @throws ConexionException si hay error de conexion con la BD
      */
     public List<Cita> obtenerCitasPorSanitarioYFecha(String dniSanitario, LocalDate fecha) {
         List<Cita> citas = new ArrayList<>();
@@ -198,8 +202,7 @@ public class CitaDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al listar citas por sanitario y fecha: " + e.getMessage());
-            e.printStackTrace();
+            throw new ConexionException("Error al listar citas por sanitario y fecha", e);
         }
 
         return citas;
@@ -207,10 +210,7 @@ public class CitaDAO {
 
     /**
      * Verifica si existe una cita en una fecha y hora especifica para un sanitario
-     * @param dniSanitario DNI del sanitario
-     * @param fecha Fecha de la cita
-     * @param hora Hora de la cita
-     * @return true si ya existe una cita en ese horario
+     * @throws ConexionException si hay error de conexion con la BD
      */
     public boolean existeCitaEnHorario(String dniSanitario, LocalDate fecha, LocalTime hora) {
         String query = "SELECT COUNT(*) FROM cita WHERE dni_san = ? AND fecha_cita = ? AND hora_cita = ?";
@@ -229,8 +229,7 @@ public class CitaDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al verificar cita en horario: " + e.getMessage());
-            e.printStackTrace();
+            throw new ConexionException("Error al verificar cita en horario", e);
         }
 
         return false;
@@ -241,9 +240,10 @@ public class CitaDAO {
     /**
      * Inserta una nueva cita en la base de datos
      * @param cita Cita a insertar
-     * @return true si la insercion fue exitosa
+     * @throws DuplicadoException si ya existe una cita en ese horario
+     * @throws ConexionException si hay error de conexion con la BD
      */
-    public boolean insertar(Cita cita) {
+    public void insertar(Cita cita) {
         String query = "INSERT INTO cita (dni_pac, dni_san, fecha_cita, hora_cita) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = ConexionBD.getConexion();
@@ -254,36 +254,33 @@ public class CitaDAO {
             stmt.setDate(3, Date.valueOf(cita.getFecha()));
             stmt.setTime(4, Time.valueOf(cita.getHora()));
 
-            int filasAfectadas = stmt.executeUpdate();
-
-            if (filasAfectadas > 0) {
-                System.out.println("Cita insertada correctamente: " + cita);
-                return true;
-            }
+            stmt.executeUpdate();
+            System.out.println("Cita insertada correctamente: " + cita);
 
         } catch (SQLException e) {
-            System.err.println("Error al insertar cita: " + e.getMessage());
-            e.printStackTrace();
-        }
+            String sqlState = e.getSQLState();
 
-        return false;
+            if (sqlState != null && "23505".equals(sqlState)) {
+                throw new DuplicadoException("Ya existe una cita en ese horario", "horario", e);
+            }
+            if (sqlState != null && "23503".equals(sqlState)) {
+                throw new ValidacionException("Paciente o sanitario no encontrado", "referencia", e);
+            }
+
+            throw new ConexionException("Error al insertar cita", e);
+        }
     }
 
     // ==================== METODOS DE ACTUALIZACION ====================
 
     /**
      * Actualiza la fecha y hora de una cita existente
-     * @param dniPaciente DNI del paciente
-     * @param dniSanitario DNI del sanitario
-     * @param fechaOriginal Fecha original de la cita
-     * @param horaOriginal Hora original de la cita
-     * @param nuevaFecha Nueva fecha
-     * @param nuevaHora Nueva hora
-     * @return true si la actualizacion fue exitosa
+     * @throws DuplicadoException si ya existe una cita en el nuevo horario
+     * @throws ConexionException si hay error de conexion con la BD
      */
-    public boolean actualizar(String dniPaciente, String dniSanitario,
-                              LocalDate fechaOriginal, LocalTime horaOriginal,
-                              LocalDate nuevaFecha, LocalTime nuevaHora) {
+    public void actualizar(String dniPaciente, String dniSanitario,
+                           LocalDate fechaOriginal, LocalTime horaOriginal,
+                           LocalDate nuevaFecha, LocalTime nuevaHora) {
 
         String query = "UPDATE cita SET fecha_cita = ?, hora_cita = ? " +
                 "WHERE dni_pac = ? AND dni_san = ? AND fecha_cita = ? AND hora_cita = ?";
@@ -300,30 +297,31 @@ public class CitaDAO {
 
             int filasAfectadas = stmt.executeUpdate();
 
-            if (filasAfectadas > 0) {
-                System.out.println("Cita actualizada correctamente");
-                return true;
+            if (filasAfectadas == 0) {
+                throw new ValidacionException("No se encontro la cita para actualizar", "cita");
             }
 
-        } catch (SQLException e) {
-            System.err.println("Error al actualizar cita: " + e.getMessage());
-            e.printStackTrace();
-        }
+            System.out.println("Cita actualizada correctamente");
 
-        return false;
+        } catch (SQLException e) {
+            String sqlState = e.getSQLState();
+
+            if (sqlState != null && "23505".equals(sqlState)) {
+                throw new DuplicadoException("Ya existe una cita en el nuevo horario", "horario", e);
+            }
+
+            throw new ConexionException("Error al actualizar cita", e);
+        }
     }
 
     // ==================== METODOS DE ELIMINACION ====================
 
     /**
      * Elimina una cita de la base de datos
-     * @param dniPaciente DNI del paciente
-     * @param dniSanitario DNI del sanitario
-     * @param fecha Fecha de la cita
-     * @param hora Hora de la cita
-     * @return true si la eliminacion fue exitosa
+     * @throws ConexionException si hay error de conexion con la BD
+     * @throws ValidacionException si la cita no existe
      */
-    public boolean eliminar(String dniPaciente, String dniSanitario, LocalDate fecha, LocalTime hora) {
+    public void eliminar(String dniPaciente, String dniSanitario, LocalDate fecha, LocalTime hora) {
         String query = "DELETE FROM cita WHERE dni_pac = ? AND dni_san = ? AND fecha_cita = ? AND hora_cita = ?";
 
         try (Connection conn = ConexionBD.getConexion();
@@ -336,46 +334,36 @@ public class CitaDAO {
 
             int filasAfectadas = stmt.executeUpdate();
 
-            if (filasAfectadas > 0) {
-                System.out.println("Cita eliminada correctamente");
-                return true;
+            if (filasAfectadas == 0) {
+                throw new ValidacionException("No se encontro la cita para eliminar", "cita");
             }
 
-        } catch (SQLException e) {
-            System.err.println("Error al eliminar cita: " + e.getMessage());
-            e.printStackTrace();
-        }
+            System.out.println("Cita eliminada correctamente");
 
-        return false;
+        } catch (SQLException e) {
+            throw new ConexionException("Error al eliminar cita", e);
+        }
     }
 
     /**
      * Elimina una cita usando el objeto Cita
-     * @param cita Cita a eliminar
-     * @return true si la eliminacion fue exitosa
      */
-    public boolean eliminar(Cita cita) {
-        return eliminar(cita.getDniPaciente(), cita.getDniSanitario(), cita.getFecha(), cita.getHora());
+    public void eliminar(Cita cita) {
+        eliminar(cita.getDniPaciente(), cita.getDniSanitario(), cita.getFecha(), cita.getHora());
     }
 
     // ==================== METODOS AUXILIARES ====================
 
-    /**
-     * Mapea un ResultSet a un objeto Cita
-     */
     private Cita mapearCitaDesdeResultSet(ResultSet rs) throws SQLException {
         String dniPaciente = rs.getString("dni_pac");
         String dniSanitario = rs.getString("dni_san");
 
-        //Obtener fecha
         Date fechaSql = rs.getDate("fecha_cita");
         LocalDate fecha = fechaSql != null ? fechaSql.toLocalDate() : null;
 
-        //Obtener hora
         Time horaSql = rs.getTime("hora_cita");
         LocalTime hora = horaSql != null ? horaSql.toLocalTime() : null;
 
-        //Nombres para mostrar en tabla
         String nombrePaciente = rs.getString("nombre_paciente");
         String nombreSanitario = rs.getString("nombre_sanitario");
 

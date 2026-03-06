@@ -5,6 +5,10 @@ import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.SanitarioDAO;
+import com.javafx.excepcion.ConexionException;
+import com.javafx.excepcion.DuplicadoException;
+import com.javafx.excepcion.RehabiAppException;
+import com.javafx.service.AuditService;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -202,19 +206,19 @@ public class controladorPerfilEditar {
         String dniOriginal = sanitarioActual.getDni();
 
         //Intentar actualizar en la base de datos
-        boolean exito = sanitarioDAO.actualizar(sanitarioActual, dniOriginal);
-
-        if (exito) {
-            //Actualizar telefonos
+        try {
+            sanitarioDAO.actualizar(sanitarioActual, dniOriginal);
             sanitarioDAO.actualizarTelefonos(dniOriginal, telefono1, telefono2);
 
             //Actualizar contraseña si se proporciono una nueva
             if (contrasena != null && !contrasena.isEmpty()) {
                 sanitarioDAO.cambiarContrasena(sanitarioActual.getDni(), contrasena);
+                AuditService.cambioContrasena(sanitarioActual.getDni());
             }
 
             //Actualizar cargo en la tabla sanitario_agrega_sanitario
             sanitarioDAO.actualizarCargo(sanitarioActual.getDni(), cargo);
+            AuditService.updateSanitario(sanitarioActual.getDni());
 
             //Actualizar datos de sesion
             SesionUsuario sesion = SesionUsuario.getInstancia();
@@ -233,12 +237,21 @@ public class controladorPerfilEditar {
                     TipoMensaje.EXITO
             );
 
-            //Cerrar ventana
             cerrarVentana(null);
 
-        } else {
+        } catch (DuplicadoException e) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Error al actualizar el perfil.",
+                    "Ya existe un registro con " + e.getCampo() + " duplicado.",
+                    TipoMensaje.ERROR
+            );
+        } catch (ConexionException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error de conexion con la base de datos.",
+                    TipoMensaje.ERROR
+            );
+        } catch (RehabiAppException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error: " + e.getMessage(),
                     TipoMensaje.ERROR
             );
         }

@@ -40,6 +40,12 @@ dependencies {
     // Logging SLF4J
     implementation 'org.slf4j:slf4j-api:2.0.9'
     implementation 'org.slf4j:slf4j-simple:2.0.9'
+
+    // BCrypt para hash seguro de contrasenas (RGPD, ENS)
+    implementation 'org.mindrot:jbcrypt:0.4'
+
+    // HikariCP para pool de conexiones thread-safe
+    implementation 'com.zaxxer:HikariCP:5.1.0'
 }
 
 // Forzar versiones para evitar el error de mezcla de versiones de JFX

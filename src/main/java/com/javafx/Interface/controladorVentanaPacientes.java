@@ -6,6 +6,9 @@ import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.PacienteDAO;
+import com.javafx.excepcion.ConexionException;
+import com.javafx.excepcion.RehabiAppException;
+import com.javafx.service.PacienteService;
 import com.javafx.util.PaginacionUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -76,6 +79,9 @@ public class controladorVentanaPacientes {
     private TableColumn<Paciente, Integer> colProtesis;
 
     @FXML
+    private TableColumn<Paciente, String> colSexo;
+
+    @FXML
     private Label lblBuscarPacientes;
 
     @FXML
@@ -96,6 +102,9 @@ public class controladorVentanaPacientes {
     //DAO para operaciones de base de datos
     private PacienteDAO pacienteDAO;
 
+    //Servicio para operaciones con auditoria y excepciones
+    private PacienteService pacienteService;
+
     //DNI del sanitario logueado
     private String dniSanitarioActual;
 
@@ -109,8 +118,9 @@ public class controladorVentanaPacientes {
      */
     @FXML
     public void initialize() {
-        //Inicializar DAO
+        //Inicializar DAO y Service
         pacienteDAO = new PacienteDAO();
+        pacienteService = new PacienteService();
 
         //OPTIMIZACION: Inicializar paginacion
         paginacion = new PaginacionUtil<>(REGISTROS_POR_PAGINA);
@@ -216,6 +226,7 @@ public class controladorVentanaPacientes {
         colApellidos.setCellValueFactory(new PropertyValueFactory<>("apellidos"));
         colDNI.setCellValueFactory(new PropertyValueFactory<>("dni"));
         colEdad.setCellValueFactory(new PropertyValueFactory<>("edad"));
+        colSexo.setCellValueFactory(new PropertyValueFactory<>("sexo"));
         colDiscapacidad.setCellValueFactory(new PropertyValueFactory<>("discapacidad"));
         colProtesis.setCellValueFactory(new PropertyValueFactory<>("protesis"));
 
@@ -485,17 +496,22 @@ public class controladorVentanaPacientes {
         boolean confirmado = VentanaUtil.mostrarVentanaPregunta(mensaje);
 
         if (confirmado) {
-            boolean eliminado = pacienteDAO.eliminar(pacienteSeleccionado.getDni());
-
-            if (eliminado) {
+            try {
+                pacienteService.eliminar(pacienteSeleccionado.getDni());
                 VentanaUtil.mostrarVentanaInformativa(
                         "El paciente ha sido eliminado correctamente.",
                         TipoMensaje.EXITO
                 );
                 cargarPacientes();
-            } else {
+
+            } catch (ConexionException e) {
                 VentanaUtil.mostrarVentanaInformativa(
-                        "No se pudo eliminar el paciente.",
+                        "Error de conexion con la base de datos.",
+                        TipoMensaje.ERROR
+                );
+            } catch (RehabiAppException e) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "Error: " + e.getMessage(),
                         TipoMensaje.ERROR
                 );
             }

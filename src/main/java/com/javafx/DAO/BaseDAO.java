@@ -61,6 +61,11 @@ public abstract class BaseDAO {
                 } catch (SQLException e) {
                     System.err.println("Error al restaurar autocommit: " + e.getMessage());
                 }
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("Error al cerrar conexion: " + e.getMessage());
+                }
             }
         }
     }

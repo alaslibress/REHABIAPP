@@ -6,6 +6,9 @@ import com.javafx.Clases.SesionUsuario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.SanitarioDAO;
+import com.javafx.excepcion.ConexionException;
+import com.javafx.excepcion.RehabiAppException;
+import com.javafx.service.SanitarioService;
 import com.javafx.util.PaginacionUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -90,6 +93,9 @@ public class controladorVentanaSanitarios {
     //DAO para operaciones de base de datos
     private SanitarioDAO sanitarioDAO;
 
+    //Servicio para operaciones con auditoria y excepciones
+    private SanitarioService sanitarioService;
+
     //Paginacion
     private PaginacionUtil<Sanitario> paginacion;
     private static final int REGISTROS_POR_PAGINA = 50;
@@ -100,8 +106,9 @@ public class controladorVentanaSanitarios {
      */
     @FXML
     public void initialize() {
-        //Inicializar DAO
+        //Inicializar DAO y Service
         sanitarioDAO = new SanitarioDAO();
+        sanitarioService = new SanitarioService();
 
         //Inicializar paginacion
         paginacion = new PaginacionUtil<>(REGISTROS_POR_PAGINA);
@@ -423,21 +430,22 @@ public class controladorVentanaSanitarios {
         boolean confirmado = VentanaUtil.mostrarVentanaPregunta(mensajeConfirmacion);
 
         if (confirmado) {
-            //Proceder con la eliminacion
-            boolean eliminado = sanitarioDAO.eliminar(sanitarioSeleccionado.getDni());
-
-            if (eliminado) {
+            try {
+                sanitarioService.eliminar(sanitarioSeleccionado.getDni());
                 VentanaUtil.mostrarVentanaInformativa(
                         "El sanitario se ha eliminado correctamente.",
                         TipoMensaje.EXITO
                 );
-
-                //Refrescar la tabla
                 cargarSanitarios();
 
-            } else {
+            } catch (ConexionException e) {
                 VentanaUtil.mostrarVentanaInformativa(
-                        "No se pudo eliminar el sanitario. Intentalo de nuevo.",
+                        "Error de conexion con la base de datos.",
+                        TipoMensaje.ERROR
+                );
+            } catch (RehabiAppException e) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "Error: " + e.getMessage(),
                         TipoMensaje.ERROR
                 );
             }

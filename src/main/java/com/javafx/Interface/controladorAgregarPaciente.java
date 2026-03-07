@@ -6,10 +6,6 @@ import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.PacienteDAO;
 import com.javafx.DAO.SanitarioDAO;
-import com.javafx.excepcion.ConexionException;
-import com.javafx.excepcion.DuplicadoException;
-import com.javafx.excepcion.RehabiAppException;
-import com.javafx.excepcion.ValidacionException;
 import com.javafx.service.PacienteService;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -17,9 +13,7 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.RadioButton;
@@ -37,7 +31,6 @@ import org.controlsfx.validation.ValidationSupport;
 import org.controlsfx.validation.Validator;
 
 import java.io.File;
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -56,16 +49,7 @@ public class controladorAgregarPaciente {
     private Button btnGuardar;
 
     @FXML
-    private CheckBox chkConsentimientoRgpd;
-
-    @FXML
     private ComboBox<Sanitario> cmbSanitario;
-
-    @FXML
-    private ComboBox<String> cmbSexo;
-
-    @FXML
-    private DatePicker dpFechaNacimiento;
 
     @FXML
     private ToggleGroup grupoProtesis;
@@ -89,16 +73,7 @@ public class controladorAgregarPaciente {
     private TextField txtApellidos;
 
     @FXML
-    private TextArea txtAreaAlergias;
-
-    @FXML
-    private TextArea txtAreaAntecedentes;
-
-    @FXML
     private TextArea txtAreaEstado;
-
-    @FXML
-    private TextArea txtAreaMedicacion;
 
     @FXML
     private TextArea txtAreaTratamiento;
@@ -149,8 +124,10 @@ public class controladorAgregarPaciente {
     //DNI del sanitario que esta creando/editando el paciente
     private String dniSanitarioActual;
 
+    // REFACTORIZADO: Usar capa de servicio en lugar de DAO directamente
+    // (Se mantiene PacienteDAO solo para operaciones de foto que aún no están en el servicio)
     private PacienteService pacienteService;
-    private PacienteDAO pacienteDAO;
+    private PacienteDAO pacienteDAO; // TODO: Mover operaciones de foto al servicio
     private SanitarioDAO sanitarioDAO;
 
     //Soporte de validacion de ControlsFX
@@ -165,27 +142,37 @@ public class controladorAgregarPaciente {
     //Lista de sanitarios para el ComboBox
     private ObservableList<Sanitario> listaSanitarios;
 
+    /**
+     * Metodo initialize se ejecuta automaticamente al cargar el FXML
+     */
     @FXML
     public void initialize() {
+        //REFACTORIZADO: Inicializar servicio
         pacienteService = new PacienteService();
-        pacienteDAO = new PacienteDAO();
+        pacienteDAO = new PacienteDAO(); // Temporal para fotos
         sanitarioDAO = new SanitarioDAO();
 
+        //Configurar el spinner de edad (0-120 años)
         SpinnerValueFactory<Integer> valueFactory =
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 120, 18);
         spinnerEdad.setValueFactory(valueFactory);
 
-        cmbSexo.setItems(FXCollections.observableArrayList("Masculino", "Femenino", "Otro"));
-
+        //Seleccionar "No" por defecto en protesis
         radioProtesisNo.setSelected(true);
 
+        //Inicializar soporte de validacion
         validationSupport = new ValidationSupport();
 
+        //Cargar lista de sanitarios en el ComboBox
         cargarSanitarios();
 
+        //Configurar validaciones en un hilo separado
         Platform.runLater(this::configurarValidaciones);
     }
 
+    /**
+     * Carga la lista de sanitarios en el ComboBox
+     */
     private void cargarSanitarios() {
         listaSanitarios = FXCollections.observableArrayList();
 
@@ -194,6 +181,7 @@ public class controladorAgregarPaciente {
 
         cmbSanitario.setItems(listaSanitarios);
 
+        //Configurar como se muestra cada sanitario
         cmbSanitario.setCellFactory(param -> new ListCell<Sanitario>() {
             @Override
             protected void updateItem(Sanitario sanitario, boolean empty) {
@@ -222,6 +210,9 @@ public class controladorAgregarPaciente {
         });
     }
 
+    /**
+     * Configura las validaciones de los campos del formulario
+     */
     private void configurarValidaciones() {
         validationSupport.registerValidator(txtNombre,
                 Validator.createEmptyValidator("El nombre es obligatorio"));
@@ -253,14 +244,9 @@ public class controladorAgregarPaciente {
                         "^[0-9]{9}$",
                         org.controlsfx.validation.Severity.ERROR));
 
+        //Validacion de campos de direccion obligatorios
         validationSupport.registerValidator(txtCalle,
                 Validator.createEmptyValidator("La calle es obligatoria"));
-
-        validationSupport.registerValidator(txtNumero,
-                Validator.createRegexValidator(
-                        "El numero es obligatorio y debe ser numerico",
-                        "^[0-9]+$",
-                        org.controlsfx.validation.Severity.ERROR));
 
         validationSupport.registerValidator(txtCodigoPostal,
                 Validator.createRegexValidator(
@@ -270,9 +256,6 @@ public class controladorAgregarPaciente {
 
         validationSupport.registerValidator(txtLocalidad,
                 Validator.createEmptyValidator("La localidad es obligatoria"));
-
-        validationSupport.registerValidator(txtProvincia,
-                Validator.createEmptyValidator("La provincia es obligatoria"));
     }
 
     /**
@@ -302,6 +285,7 @@ public class controladorAgregarPaciente {
         lblTituloVentana.setText("Modificar Paciente");
         btnGuardar.setText("Guardar");
 
+        //Seleccionar sanitario
         if (paciente.getDniSanitario() != null) {
             for (Sanitario sanitario : listaSanitarios) {
                 if (sanitario.getDni().equals(paciente.getDniSanitario())) {
@@ -311,6 +295,7 @@ public class controladorAgregarPaciente {
             }
         }
 
+        //Datos personales
         txtNombre.setText(paciente.getNombre());
         txtApellidos.setText(paciente.getApellidos());
         txtDNI.setText(paciente.getDni());
@@ -321,9 +306,11 @@ public class controladorAgregarPaciente {
         txtAreaTratamiento.setText(paciente.getTratamiento() != null ? paciente.getTratamiento() : "");
         txtAreaEstado.setText(paciente.getEstadoTratamiento() != null ? paciente.getEstadoTratamiento() : "");
 
+        //Telefonos
         txtTelefono1.setText(paciente.getTelefono1() != null ? paciente.getTelefono1() : "");
         txtTelefono2.setText(paciente.getTelefono2() != null ? paciente.getTelefono2() : "");
 
+        //Direccion
         txtCalle.setText(paciente.getCalle() != null ? paciente.getCalle() : "");
         txtNumero.setText(paciente.getNumero() != null ? paciente.getNumero() : "");
         txtPiso.setText(paciente.getPiso() != null ? paciente.getPiso() : "");
@@ -331,29 +318,20 @@ public class controladorAgregarPaciente {
         txtLocalidad.setText(paciente.getLocalidad() != null ? paciente.getLocalidad() : "");
         txtProvincia.setText(paciente.getProvincia() != null ? paciente.getProvincia() : "");
 
+        //Protesis
         if (paciente.tieneProtesis()) {
             radioProtesisSi.setSelected(true);
         } else {
             radioProtesisNo.setSelected(true);
         }
 
-        String sexoBD = paciente.getSexo();
-        if (sexoBD != null) {
-            switch (sexoBD) {
-                case "M": cmbSexo.setValue("Masculino"); break;
-                case "F": cmbSexo.setValue("Femenino"); break;
-                case "O": cmbSexo.setValue("Otro"); break;
-            }
-        }
-        dpFechaNacimiento.setValue(paciente.getFechaNacimiento());
-        txtAreaAlergias.setText(paciente.getAlergias() != null ? paciente.getAlergias() : "");
-        txtAreaAntecedentes.setText(paciente.getAntecedentes() != null ? paciente.getAntecedentes() : "");
-        txtAreaMedicacion.setText(paciente.getMedicacionActual() != null ? paciente.getMedicacionActual() : "");
-        chkConsentimientoRgpd.setSelected(paciente.isConsentimientoRgpd());
-
+        //Cargar foto
         cargarFotoDesdeBD(paciente.getDni());
     }
 
+    /**
+     * Carga la foto del paciente desde la base de datos
+     */
     private void cargarFotoDesdeBD(String dniPaciente) {
         try {
             Image imagen = pacienteDAO.obtenerFoto(dniPaciente);
@@ -365,12 +343,12 @@ public class controladorAgregarPaciente {
         }
     }
 
+    /**
+     * Guarda el paciente (crea nuevo o actualiza existente)
+     */
     @FXML
     void guardarPaciente(ActionEvent event) {
-        try {
-            validarCampos();
-        } catch (ValidacionException e) {
-            VentanaUtil.mostrarVentanaInformativa(e.getMessage(), TipoMensaje.ADVERTENCIA);
+        if (!validarCampos()) {
             return;
         }
 
@@ -380,6 +358,7 @@ public class controladorAgregarPaciente {
         String[] apellidosSeparados = separarApellidos(txtApellidos.getText().trim());
         int numProtesis = radioProtesisSi.isSelected() ? 1 : 0;
 
+        //Crear objeto Paciente
         Paciente paciente = new Paciente(
                 txtDNI.getText().trim().toUpperCase(),
                 txtNombre.getText().trim(),
@@ -395,32 +374,17 @@ public class controladorAgregarPaciente {
                 dniSanitario
         );
 
+        //Configurar telefonos
         paciente.setTelefono1(txtTelefono1.getText().trim());
         paciente.setTelefono2(txtTelefono2.getText().trim());
 
+        //Configurar direccion
         paciente.setCalle(txtCalle.getText().trim());
         paciente.setNumero(txtNumero.getText().trim());
         paciente.setPiso(txtPiso.getText().trim());
         paciente.setCodigoPostal(txtCodigoPostal.getText().trim());
         paciente.setLocalidad(txtLocalidad.getText().trim());
         paciente.setProvincia(txtProvincia.getText().trim());
-
-        String sexoSeleccionado = cmbSexo.getValue();
-        if (sexoSeleccionado != null) {
-            switch (sexoSeleccionado) {
-                case "Masculino": paciente.setSexo("M"); break;
-                case "Femenino": paciente.setSexo("F"); break;
-                case "Otro": paciente.setSexo("O"); break;
-            }
-        }
-        paciente.setFechaNacimiento(dpFechaNacimiento.getValue());
-        paciente.setAlergias(txtAreaAlergias.getText().trim());
-        paciente.setAntecedentes(txtAreaAntecedentes.getText().trim());
-        paciente.setMedicacionActual(txtAreaMedicacion.getText().trim());
-        paciente.setConsentimientoRgpd(chkConsentimientoRgpd.isSelected());
-        if (chkConsentimientoRgpd.isSelected()) {
-            paciente.setFechaConsentimiento(LocalDateTime.now());
-        }
 
         boolean exito;
         if (modoEdicion) {
@@ -435,78 +399,58 @@ public class controladorAgregarPaciente {
     }
 
     /**
-     * Inserta un nuevo paciente. Valida unicidad antes de insertar
-     * y captura excepciones especificas para mostrar mensajes claros.
+     * Inserta un nuevo paciente en la base de datos
      */
     private boolean insertarNuevoPaciente(Paciente paciente) {
-        //Validar unicidad antes de intentar insertar (para mensajes mas claros)
-        try {
-            if (pacienteDAO.existeDni(paciente.getDni())) {
-                VentanaUtil.mostrarVentanaInformativa(
-                        "Ya existe un paciente registrado con ese DNI.",
-                        TipoMensaje.ERROR
-                );
-                txtDNI.requestFocus();
-                return false;
-            }
-
-            if (pacienteDAO.existeEmail(paciente.getEmail())) {
-                VentanaUtil.mostrarVentanaInformativa(
-                        "Ya existe un paciente registrado con ese email.",
-                        TipoMensaje.ERROR
-                );
-                txtEmail.requestFocus();
-                return false;
-            }
-
-            if (pacienteDAO.existeNumSS(paciente.getNumSS())) {
-                VentanaUtil.mostrarVentanaInformativa(
-                        "Ya existe un paciente con ese numero de seguridad social.",
-                        TipoMensaje.ERROR
-                );
-                txtNSS.requestFocus();
-                return false;
-            }
-        } catch (ConexionException e) {
+        // REFACTORIZADO: Usar PacienteDAO directamente para validaciones (pendiente de mover al servicio)
+        if (pacienteDAO.existeDni(paciente.getDni())) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Error de conexion con la base de datos.",
+                    "Ya existe un paciente registrado con ese DNI.",
                     TipoMensaje.ERROR
             );
+            txtDNI.requestFocus();
             return false;
         }
 
-        try {
-            //Insertar paciente + telefonos + foto en una sola transaccion atomica
-            pacienteService.insertar(
-                    paciente,
-                    paciente.getTelefono1(),
-                    paciente.getTelefono2(),
-                    archivoFoto
+        if (pacienteDAO.existeEmail(paciente.getEmail())) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Ya existe un paciente registrado con ese email.",
+                    TipoMensaje.ERROR
             );
+            txtEmail.requestFocus();
+            return false;
+        }
+
+        if (pacienteDAO.existeNumSS(paciente.getNumSS())) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Ya existe un paciente con ese numero de seguridad social.",
+                    TipoMensaje.ERROR
+            );
+            txtNSS.requestFocus();
+            return false;
+        }
+
+        // REFACTORIZADO: Usar PacienteService que maneja insercion + telefonos en una sola llamada
+        boolean insertado = pacienteService.insertar(
+                paciente,
+                paciente.getTelefono1(),
+                paciente.getTelefono2()
+        );
+
+        if (insertado) {
+            // Insertar foto si existe (pendiente de mover al servicio)
+            if (archivoFoto != null) {
+                pacienteDAO.insertarFoto(paciente.getDni(), archivoFoto);
+            }
 
             VentanaUtil.mostrarVentanaInformativa(
                     "El paciente se ha registrado correctamente.",
                     TipoMensaje.EXITO
             );
             return true;
-
-        } catch (DuplicadoException e) {
+        } else {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Ya existe un registro con " + e.getCampo() + " duplicado.",
-                    TipoMensaje.ERROR
-            );
-            return false;
-
-        } catch (ConexionException e) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Error de conexion con la base de datos.",
-                    TipoMensaje.ERROR
-            );
-            return false;
-
-        } catch (RehabiAppException e) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Error: " + e.getMessage(),
+                    "No se pudo registrar el paciente. Verifica los datos de direccion.",
                     TipoMensaje.ERROR
             );
             return false;
@@ -514,79 +458,60 @@ public class controladorAgregarPaciente {
     }
 
     /**
-     * Actualiza un paciente existente. Valida unicidad y captura excepciones.
+     * Actualiza un paciente existente en la base de datos
      */
     private boolean actualizarPacienteExistente(Paciente paciente) {
-        try {
-            if (!paciente.getDni().equals(dniOriginal)) {
-                if (pacienteDAO.existeDni(paciente.getDni())) {
-                    VentanaUtil.mostrarVentanaInformativa(
-                            "Ya existe otro paciente con ese DNI.",
-                            TipoMensaje.ERROR
-                    );
-                    txtDNI.requestFocus();
-                    return false;
-                }
-            }
-
-            if (pacienteDAO.existeEmailExcluyendoDni(paciente.getEmail(), dniOriginal)) {
+        if (!paciente.getDni().equals(dniOriginal)) {
+            if (pacienteDAO.existeDni(paciente.getDni())) {
                 VentanaUtil.mostrarVentanaInformativa(
-                        "Ya existe otro paciente con ese email.",
+                        "Ya existe otro paciente con ese DNI.",
                         TipoMensaje.ERROR
                 );
-                txtEmail.requestFocus();
+                txtDNI.requestFocus();
                 return false;
             }
+        }
 
-            if (pacienteDAO.existeNumSSExcluyendoDni(paciente.getNumSS(), dniOriginal)) {
-                VentanaUtil.mostrarVentanaInformativa(
-                        "Ya existe otro paciente con ese numero de seguridad social.",
-                        TipoMensaje.ERROR
-                );
-                txtNSS.requestFocus();
-                return false;
-            }
-        } catch (ConexionException e) {
+        if (pacienteDAO.existeEmailExcluyendoDni(paciente.getEmail(), dniOriginal)) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Error de conexion con la base de datos.",
+                    "Ya existe otro paciente con ese email.",
                     TipoMensaje.ERROR
             );
+            txtEmail.requestFocus();
             return false;
         }
 
-        try {
-            //Actualizar paciente + telefonos + foto en una sola transaccion atomica
-            pacienteService.actualizar(
-                    paciente,
-                    dniOriginal,
-                    paciente.getTelefono1(),
-                    paciente.getTelefono2(),
-                    archivoFoto
+        if (pacienteDAO.existeNumSSExcluyendoDni(paciente.getNumSS(), dniOriginal)) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Ya existe otro paciente con ese numero de seguridad social.",
+                    TipoMensaje.ERROR
             );
+            txtNSS.requestFocus();
+            return false;
+        }
+
+        // REFACTORIZADO: Usar PacienteService que maneja actualizacion + telefonos
+        boolean actualizado = pacienteService.actualizar(
+                paciente,
+                dniOriginal,
+                paciente.getTelefono1(),
+                paciente.getTelefono2()
+        );
+
+        if (actualizado) {
+            // Actualizar foto si existe (pendiente de mover al servicio)
+            if (archivoFoto != null) {
+                pacienteDAO.actualizarFoto(paciente.getDni(), archivoFoto);
+            }
 
             VentanaUtil.mostrarVentanaInformativa(
                     "Los datos del paciente se han actualizado correctamente.",
                     TipoMensaje.EXITO
             );
             return true;
-
-        } catch (DuplicadoException e) {
+        } else {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Ya existe un registro con " + e.getCampo() + " duplicado.",
-                    TipoMensaje.ERROR
-            );
-            return false;
-
-        } catch (ConexionException e) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Error de conexion con la base de datos.",
-                    TipoMensaje.ERROR
-            );
-            return false;
-
-        } catch (RehabiAppException e) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Error: " + e.getMessage(),
+                    "No se pudieron actualizar los datos.",
                     TipoMensaje.ERROR
             );
             return false;
@@ -594,118 +519,141 @@ public class controladorAgregarPaciente {
     }
 
     /**
-     * Valida todos los campos obligatorios del formulario.
-     * Lanza ValidacionException indicando el campo que fallo.
+     * Valida que todos los campos obligatorios esten correctos
      */
-    private void validarCampos() {
+    private boolean validarCampos() {
+        //Sanitario
         if (cmbSanitario.getSelectionModel().getSelectedItem() == null) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Debe seleccionar un sanitario asignado.",
+                    TipoMensaje.ADVERTENCIA
+            );
             cmbSanitario.requestFocus();
-            throw new ValidacionException(
-                    "Debe seleccionar un sanitario asignado.", "sanitario");
+            return false;
         }
 
+        //Nombre
         if (txtNombre.getText().trim().isEmpty()) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "El nombre es obligatorio.",
+                    TipoMensaje.ADVERTENCIA
+            );
             txtNombre.requestFocus();
-            throw new ValidacionException(
-                    "El nombre es obligatorio.", "nombre");
+            return false;
         }
 
-        String apellidos = txtApellidos.getText().trim();
-        if (apellidos.isEmpty()) {
+        //Apellidos
+        if (txtApellidos.getText().trim().isEmpty()) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Los apellidos son obligatorios.",
+                    TipoMensaje.ADVERTENCIA
+            );
             txtApellidos.requestFocus();
-            throw new ValidacionException(
-                    "Los apellidos son obligatorios.", "apellidos");
+            return false;
         }
 
-        //La BD exige apellido1 y apellido2 NOT NULL con contenido
-        String[] apellidosSep = apellidos.split(" ", 2);
-        if (apellidosSep.length < 2 || apellidosSep[1].trim().isEmpty()) {
-            txtApellidos.requestFocus();
-            throw new ValidacionException(
-                    "Debe introducir los dos apellidos separados por un espacio.", "apellidos");
-        }
-
+        //DNI
         String dni = txtDNI.getText().trim();
         if (!dni.matches("^[0-9]{8}[A-Za-z]$")) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "El DNI debe tener 8 numeros seguidos de una letra.",
+                    TipoMensaje.ADVERTENCIA
+            );
             txtDNI.requestFocus();
-            throw new ValidacionException(
-                    "El DNI debe tener 8 numeros seguidos de una letra.", "dni");
+            return false;
         }
 
+        //Edad
         if (spinnerEdad.getValue() < 1 || spinnerEdad.getValue() > 120) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "La edad debe estar entre 1 y 120 años.",
+                    TipoMensaje.ADVERTENCIA
+            );
             spinnerEdad.requestFocus();
-            throw new ValidacionException(
-                    "La edad debe estar entre 1 y 120 anios.", "edad");
+            return false;
         }
 
+        //Email
         String email = txtEmail.getText().trim();
         if (!email.matches("^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$")) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "El formato del email no es valido.",
+                    TipoMensaje.ADVERTENCIA
+            );
             txtEmail.requestFocus();
-            throw new ValidacionException(
-                    "El formato del email no es valido.", "email");
+            return false;
         }
 
+        //NSS
         String nss = txtNSS.getText().trim();
         if (!nss.matches("^[0-9]{12}$")) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "El numero de seguridad social debe tener 12 digitos.",
+                    TipoMensaje.ADVERTENCIA
+            );
             txtNSS.requestFocus();
-            throw new ValidacionException(
-                    "El numero de seguridad social debe tener 12 digitos.", "numSS");
+            return false;
         }
 
+        //Telefono 1
         String tel1 = txtTelefono1.getText().trim();
         if (!tel1.matches("^[0-9]{9}$")) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "El telefono 1 es obligatorio y debe tener 9 digitos.",
+                    TipoMensaje.ADVERTENCIA
+            );
             txtTelefono1.requestFocus();
-            throw new ValidacionException(
-                    "El telefono 1 es obligatorio y debe tener 9 digitos.", "telefono1");
+            return false;
         }
 
+        //Telefono 2 (opcional)
         String tel2 = txtTelefono2.getText().trim();
         if (!tel2.isEmpty() && !tel2.matches("^[0-9]{9}$")) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "El telefono 2 debe tener 9 digitos.",
+                    TipoMensaje.ADVERTENCIA
+            );
             txtTelefono2.requestFocus();
-            throw new ValidacionException(
-                    "El telefono 2 debe tener 9 digitos.", "telefono2");
+            return false;
         }
 
+        //Calle (obligatoria)
         if (txtCalle.getText().trim().isEmpty()) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "La calle es obligatoria.",
+                    TipoMensaje.ADVERTENCIA
+            );
             txtCalle.requestFocus();
-            throw new ValidacionException(
-                    "La calle es obligatoria.", "calle");
+            return false;
         }
 
-        //La BD exige numero INT NOT NULL en la tabla direccion
-        String numero = txtNumero.getText().trim();
-        if (numero.isEmpty()) {
-            txtNumero.requestFocus();
-            throw new ValidacionException(
-                    "El numero de la direccion es obligatorio.", "numero");
-        }
-        if (!numero.matches("^[0-9]+$")) {
-            txtNumero.requestFocus();
-            throw new ValidacionException(
-                    "El numero de la direccion debe ser un valor numerico.", "numero");
-        }
-
+        //Codigo postal (obligatorio, 5 digitos)
         String cp = txtCodigoPostal.getText().trim();
         if (!cp.matches("^[0-9]{5}$")) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "El codigo postal debe tener 5 digitos.",
+                    TipoMensaje.ADVERTENCIA
+            );
             txtCodigoPostal.requestFocus();
-            throw new ValidacionException(
-                    "El codigo postal debe tener 5 digitos.", "codigoPostal");
+            return false;
         }
 
+        //Localidad (obligatoria)
         if (txtLocalidad.getText().trim().isEmpty()) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "La localidad es obligatoria.",
+                    TipoMensaje.ADVERTENCIA
+            );
             txtLocalidad.requestFocus();
-            throw new ValidacionException(
-                    "La localidad es obligatoria.", "localidad");
+            return false;
         }
 
-        //La BD exige provincia NOT NULL en la tabla localidad
-        if (txtProvincia.getText().trim().isEmpty()) {
-            txtProvincia.requestFocus();
-            throw new ValidacionException(
-                    "La provincia es obligatoria.", "provincia");
-        }
+        return true;
     }
 
+    /**
+     * Separa los apellidos en primer y segundo apellido
+     */
     private String[] separarApellidos(String apellidosCompletos) {
         String[] resultado = new String[2];
         String[] partes = apellidosCompletos.split(" ", 2);
@@ -716,6 +664,9 @@ public class controladorAgregarPaciente {
         return resultado;
     }
 
+    /**
+     * Abre un dialogo para seleccionar la foto del paciente
+     */
     @FXML
     void agregarFotoPaciente(ActionEvent event) {
         FileChooser fileChooser = new FileChooser();
@@ -742,6 +693,9 @@ public class controladorAgregarPaciente {
         }
     }
 
+    /**
+     * Cierra la ventana sin guardar cambios
+     */
     @FXML
     void cerrarVentana(ActionEvent event) {
         Stage stage = (Stage) btnCancelar.getScene().getWindow();

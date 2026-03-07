@@ -64,7 +64,6 @@ El ecosistema completo incluye:
 - Java 24 con JavaFX 23 y FXML (diseñados en SceneBuilder)
 - PostgreSQL 15+ (base de datos relacional)
 - JDBC con driver PostgreSQL (org.postgresql:postgresql:42.7.2)
-- HikariCP 5.1.0 (pool de conexiones JDBC)
 - Gradle 8.13 como build system
 - JasperReports 7.0.1 para informes PDF y HTML
 - CalendarFX para la vista de calendario de citas
@@ -83,15 +82,12 @@ El ecosistema completo incluye:
 ```
 CAPA DE PRESENTACION (FXML + Controladores)
     |
-CAPA DE SERVICIO (Services - logica de negocio + auditoria + transacciones)
+CAPA DE SERVICIO (Services - logica de negocio + auditoria)
     |
-CAPA DE ACCESO A DATOS (DAOs - operaciones SQL, excepciones tipadas)
+CAPA DE ACCESO A DATOS (DAOs - operaciones SQL)
     |
-BASE DE DATOS (PostgreSQL via HikariCP)
+BASE DE DATOS (PostgreSQL)
 ```
-
-Flujo de excepciones: DAO lanza excepcion tipada -> Service propaga -> Controlador captura y muestra mensaje al usuario.
-Flujo de transacciones: Service obtiene Connection del pool, la pasa a los DAOs, hace commit/rollback global.
 
 ---
 
@@ -100,8 +96,8 @@ Flujo de transacciones: Service obtiene Connection del pool, la pasa a los DAOs,
 ```
 src/main/java/com/javafx/
     |-- Clases/
-    |   |-- Main.java (punto de entrada, inicializa cifrado AES, shutdown hook para pool)
-    |   |-- ConexionBD.java (HikariCP pool: maxPoolSize=10, minIdle=2, connectionTimeout=10s)
+    |   |-- Main.java (punto de entrada, inicializa cifrado AES)
+    |   |-- ConexionBD.java (Singleton, conexion unica a PostgreSQL)
     |   |-- Paciente.java (modelo con propiedades JavaFX, incluye campos clinicos v2)
     |   |-- Sanitario.java (modelo con propiedades JavaFX)
     |   |-- Cita.java (modelo con propiedades JavaFX)
@@ -111,24 +107,22 @@ src/main/java/com/javafx/
     |   |-- controladorSesion.java (login con AuditService.login/logout)
     |   |-- controladorVentanaPrincipal.java (ventana principal con barra lateral)
     |   |-- controladorVentanaPacientes.java (tabla paginada de pacientes con col sexo)
-    |   |-- controladorAgregarPaciente.java (formulario alta/edicion con campos clinicos + ValidacionException)
+    |   |-- controladorAgregarPaciente.java (formulario alta/edicion con campos clinicos)
     |   |-- controladorVentanaPacienteListar.java (ficha detalle con datos clinicos + auditoria READ)
     |   |-- controladorVentanaSanitarios.java (tabla paginada de sanitarios)
-    |   |-- controladorAgregarSanitario.java (formulario alta/edicion sanitario + ValidacionException)
+    |   |-- controladorAgregarSanitario.java (formulario alta/edicion sanitario)
     |   |-- controladorVentanaSanitarioListar.java (ficha detalle sanitario)
     |   |-- controladorVentanaOpciones.java (tema claro/oscuro + tamaño fuente)
     |   |-- (mas controladores para citas, perfil, filtros, etc.)
     |-- DAO/
-    |   |-- BaseDAO.java (ejecutarTransaccion con conn.close() en finally)
-    |   |-- PacienteDAO.java (void + excepciones tipadas, sobrecargas con Connection, cifrado AES, soft delete)
-    |   |-- SanitarioDAO.java (void + excepciones tipadas, sobrecargas con Connection, BCrypt, soft delete)
-    |   |-- CitaDAO.java (void + excepciones tipadas)
+    |   |-- PacienteDAO.java (CRUD con cifrado AES y soft delete)
+    |   |-- SanitarioDAO.java (CRUD con BCrypt y soft delete)
+    |   |-- CitaDAO.java
     |   |-- DireccionDAO.java
-    |   |-- AuditLogDAO.java (solo INSERT, inmutable, fire-and-forget)
+    |   |-- AuditLogDAO.java (solo INSERT, inmutable)
     |-- service/
-    |   |-- PacienteService.java (transacciones atomicas: paciente+tel+foto, auditoria automatica)
-    |   |-- SanitarioService.java (transacciones atomicas: sanitario+cargo+tel, auditoria automatica)
-    |   |-- CitaService.java (void + excepciones)
+    |   |-- PacienteService.java (wrapper DAO + auditoria automatica)
+    |   |-- SanitarioService.java (wrapper DAO + auditoria automatica)
     |   |-- AuditService.java (servicio centralizado fire-and-forget)
     |   |-- CifradoService.java (AES-256-GCM para campos clinicos)
     |-- util/
@@ -137,12 +131,11 @@ src/main/java/com/javafx/
     |   |-- VentanaHelper.java
     |   |-- ConstantesApp.java
     |-- excepcion/
-    |   |-- RehabiAppException.java (base, extiende RuntimeException, campo codigoError)
-    |   |-- ConexionException.java (codigo "BD_CONEXION")
-    |   |-- ValidacionException.java (codigo "VALIDACION", campo campo)
-    |   |-- DuplicadoException.java (codigo "DUPLICADO", campo campo)
-    |   |-- AutenticacionException.java (codigo "AUTENTICACION")
-    |   |-- PermisoException.java (codigo "PERMISO_DENEGADO")
+    |   |-- RehabiAppException.java (base, extiende RuntimeException)
+    |   |-- ConexionException.java
+    |   |-- ValidacionException.java
+    |   |-- AutenticacionException.java
+    |   |-- PermisoException.java
 
 src/main/resources/
     |-- *.fxml (VentanaLogin, VentanaPrincipal, VentanaPacientes, VentanaAgregarPaciente, VentanaListarPaciente, VentanaSanitarios, etc.)
@@ -187,58 +180,17 @@ if (sesion.esEspecialista()) {
 }
 ```
 
-### Operaciones de base de datos (patron actual v2.1)
+### Operaciones de base de datos (patron actual)
 
 ```java
-// Los DAOs lanzan excepciones tipadas. Los Services gestionan transacciones + auditoria.
-// Los controladores capturan excepciones y muestran mensajes al usuario.
+// Los DAOs devuelven boolean o List<T>. Los Services envuelven DAO + auditoria.
 PacienteService pacienteService = new PacienteService();
-try {
-    pacienteService.insertar(paciente, tel1, tel2, archivoFoto); // transaccion atomica
-    VentanaUtil.mostrarVentanaInformativa("Registrado correctamente", TipoMensaje.EXITO);
-} catch (DuplicadoException e) {
-    VentanaUtil.mostrarVentanaInformativa("Duplicado: " + e.getCampo(), TipoMensaje.ERROR);
-} catch (ConexionException e) {
-    VentanaUtil.mostrarVentanaInformativa("Error de conexion", TipoMensaje.ERROR);
-} catch (RehabiAppException e) {
-    VentanaUtil.mostrarVentanaInformativa("Error: " + e.getMessage(), TipoMensaje.ERROR);
-}
-```
-
-### Validaciones en formularios (patron actual v2.1)
-
-```java
-// validarCampos() lanza ValidacionException con el nombre del campo
-try {
-    validarCampos();
-} catch (ValidacionException e) {
-    VentanaUtil.mostrarVentanaInformativa(e.getMessage(), TipoMensaje.ADVERTENCIA);
-    return;
-}
-```
-
-### Transacciones compuestas en Services (patron actual v2.1)
-
-```java
-// El Service obtiene UNA Connection del pool, la pasa a los DAOs, commit/rollback global
-Connection conn = ConexionBD.getConexion();
-conn.setAutoCommit(false);
-try {
-    dao.insertar(conn, entidad);
-    dao.insertarTelefonos(conn, dni, tel1, tel2);
-    conn.commit();
-    AuditService.insertEntidad(dni);
-} catch (Exception e) {
-    conn.rollback();
-    throw e;
-} finally {
-    conn.close(); // devuelve al pool
-}
+boolean exito = pacienteService.insertar(paciente, tel1, tel2); // DAO + AuditService.insertPaciente()
 ```
 
 ---
 
-## ESTADO ACTUAL DEL PROYECTO (v2.1 - 07/03/2026)
+## ESTADO ACTUAL DEL PROYECTO (v2.0 - 06/03/2026)
 
 ### YA IMPLEMENTADO Y FUNCIONANDO:
 
@@ -249,35 +201,6 @@ BASE DE DATOS:
 - Indices parciales en activo=TRUE para paciente y sanitario
 - Indices de rendimiento en audit_log (fecha, usuario, entidad)
 - Script de migracion idempotente en DOCUMENTACION/migracion_v2.sql
-- NOTA: Existen tablas de catalogo clinico (discapacidad, tratamiento, discapacidad_tratamiento) pero NO estan conectadas con la tabla paciente. Los campos discapacidad_pac y tratamiento_pac son texto libre. La integracion es la TAREA ACTUAL (ver seccion TAREA ACTUAL).
-
-POOL DE CONEXIONES (HikariCP):
-- ConexionBD.java reescrito: singleton HikariDataSource en vez de Connection unica.
-- maxPoolSize=10, minIdle=2, connectionTimeout=10s, idleTimeout=300s, maxLifetime=600s.
-- Cada llamada a getConexion() devuelve Connection independiente del pool.
-- Main.stop() cierra el pool al salir de la aplicacion.
-- Todos los DAOs con transacciones manuales cierran Connection en finally.
-
-EXCEPCIONES TIPADAS EN TODOS LOS DAOs:
-- DAOs lanzan excepciones tipadas (DuplicadoException, ConexionException, ValidacionException) en vez de return boolean.
-- Metodo traducirSQLException() en cada DAO mapea sqlState a excepcion personalizada (23505->DuplicadoException, 23503->ValidacionException, 08xxx->ConexionException).
-- DuplicadoException.java creada con campo String campo para identificar el campo duplicado.
-- Services propagan excepciones al controlador (void en vez de boolean).
-- Controladores capturan excepciones especificas y muestran mensajes claros.
-- Controladores de citas usan Task<Void> + setOnFailed() para operaciones asincronas.
-
-TRANSACCIONES COMPUESTAS ATOMICAS:
-- PacienteService: insertar(paciente, tel1, tel2, archivoFoto) = paciente + telefonos + foto en UNA transaccion. Si algo falla, rollback completo.
-- SanitarioService: insertar(sanitario, tel1, tel2) = sanitario + cargo + telefonos en UNA transaccion.
-- DAOs tienen sobrecargas que reciben Connection externa: insertar(Connection, entidad), insertarTelefonos(Connection, dni, t1, t2), insertarFoto(Connection, dni, archivo).
-- Los metodos sin Connection delegan en los nuevos gestionando su propia transaccion.
-- Foto integrada en la misma transaccion que el paciente (ya no se ejecuta separadamente).
-
-VALIDACIONES EN FORMULARIOS:
-- validarCampos() en controladorAgregarPaciente y controladorAgregarSanitario lanza ValidacionException con el nombre del campo que fallo.
-- Validaciones nuevas alineadas con BD: numero de direccion obligatorio y numerico (INT NOT NULL), provincia obligatoria (NOT NULL), dos apellidos obligatorios (apellido1 y apellido2 NOT NULL).
-- Validadores ControlsFX registrados para numero y provincia.
-- El llamante captura ValidacionException y muestra mensaje con TipoMensaje.ADVERTENCIA.
 
 SEGURIDAD:
 - CifradoService.java: AES-256-GCM (NIST SP 800-38D) para campos clinicos (alergias, antecedentes, medicacion_actual). IV aleatorio 12 bytes por operacion, tag 128 bits, formato Base64(IV + ciphertext + tag). Clave en cifrado.properties excluido de Git via .gitignore.
@@ -287,10 +210,16 @@ SEGURIDAD:
 AUDITORIA (ENS Nivel Alto):
 - AuditLogDAO.java: Solo metodo registrar(), inmutable, fire-and-forget.
 - AuditService.java: Metodos estaticos para login, logout, CRUD pacientes, CRUD sanitarios, consultaSensible, cambioContrasena.
-- PacienteService.java y SanitarioService.java: Wrappers DAO + auditoria automatica tras commit.
+- PacienteService.java y SanitarioService.java: Wrappers DAO + auditoria automatica.
 - consultaSensible() conectado en controladorVentanaPacienteListar: al abrir ficha de paciente se registra READ en audit_log.
 - Login/logout registrados en controladorSesion.
-- cambioContrasena registrado en controladorPerfil.
+
+CRUD COMPLETO:
+- PacienteDAO: INSERT/UPDATE/SELECT con todos los campos clinicos, cifrado AES en escritura/lectura, soft delete, filtro activo=TRUE.
+- SanitarioDAO: INSERT con BCrypt, autenticacion con migracion perezosa, soft delete, filtro activo=TRUE.
+- CitaDAO: CRUD completo con deteccion de conflictos.
+- DireccionDAO: Insercion con localidad/CP normalizados.
+- Ambos DAOs principales funcionan con return boolean (true/false) en vez de lanzar excepciones.
 
 INTERFAZ COMPLETA:
 - Login funcional con indicador de conexion, animaciones, boton Enter por defecto
@@ -305,8 +234,11 @@ INTERFAZ COMPLETA:
 - Animaciones (FadeIn, brillo, hover)
 - Paginacion de tablas (50 registros/pagina)
 - Informes JasperReports (PDF individual y listado)
-- Perfil de usuario con cambio de contraseña auditado
+- Perfil de usuario
 - Ventanas informativas y de confirmacion
+
+EXCEPCIONES:
+- Jerarquia creada (RehabiAppException -> ConexionException, ValidacionException, AutenticacionException, PermisoException) pero NO se usan todavia en los DAOs (usan return false + printStackTrace).
 
 CUMPLIMIENTO LEGAL:
 - RGPD: Consentimiento explicito (checkbox + fecha), cifrado AES-256-GCM en campos clinicos, soft delete, registro de actividades.
@@ -316,153 +248,54 @@ CUMPLIMIENTO LEGAL:
 
 ---
 
-## TAREA ACTUAL: INTEGRACION DISCAPACIDADES, TRATAMIENTOS Y NIVELES DE PROGRESION
-
-Esta es la tarea en curso. El documento completo con todos los detalles esta en `IMPLEMENTAR.md` en la raiz del proyecto.
-
-### Problema actual
-
-Las tablas de catalogo clinico (discapacidad, tratamiento, discapacidad_tratamiento) existen en la BD pero estan DESCONECTADAS de la tabla paciente. Los campos `discapacidad_pac` y `tratamiento_pac` en paciente son texto libre (VARCHAR/TEXT) sin relacion con las tablas de catalogo. Los tratamientos no tienen niveles de progresion clinica.
-
-### Objetivo
-
-Conectar pacientes con discapacidades y tratamientos a traves de tablas intermedias, organizando los tratamientos por niveles de progresion clinica. Un paciente tiene un nivel de progresion POR CADA discapacidad (no global). Un sanitario controla que tratamientos son visibles para cada paciente.
-
-### Cambios en la BD (3 tablas nuevas + 1 modificacion)
-
-```sql
--- Catalogo fijo de 4 niveles de progresion clinica
-nivel_progresion(id_nivel INT PK, nombre, nombre_corto, descripcion, estado_paciente, tipos_ejercicio)
-
--- Relacion N:M paciente-discapacidad con nivel actual por discapacidad
-paciente_discapacidad(dni_pac FK, cod_dis FK, id_nivel_actual FK DEFAULT 1, fecha_asignacion, notas) PK(dni_pac, cod_dis)
-
--- Tratamientos asignados a un paciente por discapacidad, con visibilidad
-paciente_tratamiento(dni_pac FK, cod_trat FK, cod_dis FK, visible BOOLEAN DEFAULT FALSE, fecha_asignacion, dni_san_asigna FK) PK(dni_pac, cod_trat, cod_dis)
-
--- Modificacion: tratamiento ahora tiene FK a nivel_progresion
-ALTER TABLE tratamiento ADD COLUMN id_nivel INT FK -> nivel_progresion(id_nivel)
-```
-
-### Los 4 niveles de progresion (datos fijos)
-
-1. Fase Aguda (Control y Movilidad Pasiva) - Post-lesion/cirugia, dolor agudo, movilizacion pasiva
-2. Fase Subaguda (Recuperacion del ROM) - Dolor reducido, movilidad activo-asistida
-3. Fortalecimiento (Resistencia Progresiva) - Recorrido casi completo, ejercicios isotonicos
-4. Funcional (Vuelta a la Normalidad) - Fuerza recuperada, propiocepcion y equilibrio
-
-### Logica de visibilidad de tratamientos
-
-Para que un tratamiento aparezca en la ficha de un paciente se deben cumplir 3 condiciones:
-1. El tratamiento esta asociado a una discapacidad que tiene el paciente (via discapacidad_tratamiento)
-2. El tratamiento pertenece al mismo nivel en que esta el paciente para esa discapacidad
-3. El sanitario ha marcado ese tratamiento como visible para ese paciente
-
-### Campos a deprecar en tabla paciente
-
-`discapacidad_pac` y `tratamiento_pac` quedan OBSOLETOS. Mantenerlos como legacy hasta que la logica nueva este probada, despues eliminar.
-
-### Consulta SQL clave
-
-```sql
--- Tratamientos activos de un paciente, agrupados por discapacidad y nivel
-SELECT d.nombre_dis, np.nombre_corto AS nivel_actual, t.nombre_trat, t.definicion_trat,
-       pt.visible, pt.fecha_asignacion
-FROM paciente_discapacidad pd
-JOIN discapacidad d ON pd.cod_dis = d.cod_dis
-JOIN nivel_progresion np ON pd.id_nivel_actual = np.id_nivel
-JOIN discapacidad_tratamiento dt ON dt.cod_dis = pd.cod_dis
-JOIN tratamiento t ON dt.cod_trat = t.cod_trat AND t.id_nivel = pd.id_nivel_actual
-LEFT JOIN paciente_tratamiento pt ON pt.dni_pac = pd.dni_pac
-    AND pt.cod_trat = t.cod_trat AND pt.cod_dis = pd.cod_dis
-WHERE pd.dni_pac = ?
-ORDER BY d.nombre_dis, np.id_nivel, t.nombre_trat;
-```
-
-### Orden de implementacion
-
-1. Crear tabla nivel_progresion con los 4 registros de catalogo
-2. Añadir columna id_nivel a tratamiento y actualizar tratamientos existentes
-3. Crear tabla paciente_discapacidad
-4. Crear tabla paciente_tratamiento
-5. Crear indices de rendimiento necesarios
-6. Crear/actualizar DAOs: NivelProgresionDAO (nuevo), DiscapacidadDAO (actualizar), TratamientoDAO (actualizar), PacienteDiscapacidadDAO (nuevo), PacienteTratamientoDAO (nuevo)
-7. Crear/actualizar Services correspondientes
-8. Actualizar interfaz grafica: ficha del paciente con discapacidades, niveles y tratamientos visibles
-9. NO eliminar discapacidad_pac y tratamiento_pac de paciente hasta que todo este probado
-
-### Diagrama de relaciones nuevas
-
-```
-nivel_progresion
-    |
-    | 1:N
-    v
-tratamiento ---- (N:M) ---- discapacidad
-    |                            |
-    | via                        | via
-    | paciente_tratamiento       | paciente_discapacidad
-    |                            |
-    +-------- PACIENTE ----------+
-                |
-         paciente_discapacidad: nivel actual por discapacidad
-         paciente_tratamiento: tratamientos visibles por discapacidad
-```
-
-### Flujo de uso en la aplicacion
-
-1. Sanitario abre ficha de paciente
-2. Ve lista de discapacidades asignadas (paciente_discapacidad)
-3. Para cada discapacidad, ve el nivel de progresion actual
-4. Clic en discapacidad -> ve tratamientos disponibles para esa discapacidad Y ese nivel
-5. Sanitario puede marcar como visible/no visible cada tratamiento (toggle en paciente_tratamiento)
-6. Cuando sube al paciente de nivel, se actualizan los tratamientos disponibles
-
-Total de tablas en la BD tras los cambios: 15 (las 12 actuales + nivel_progresion + paciente_discapacidad + paciente_tratamiento) + audit_log.
-
----
-
 ## HOJA DE RUTA - TRABAJO PENDIENTE
 
-### TAREA INMEDIATA (EN CURSO)
-Implementacion de discapacidades, tratamientos y niveles de progresion (ver seccion TAREA ACTUAL arriba y IMPLEMENTAR.md para detalles completos).
+Todo lo demas del SGE (login, CRUD pacientes, CRUD sanitarios, citas, calendario, filtros, busqueda, paginacion, informes JasperReports, perfil, ayuda, temas, animaciones, auditoria, cifrado, soft delete) YA ESTA IMPLEMENTADO Y FUNCIONANDO. No hay que reimplementar nada de eso.
 
-### DESPUES DE LA TAREA ACTUAL - INTEGRACIONES TFG
+Solo quedan estos 8 puntos, divididos en dos bloques. HAY QUE HACERLOS EN ORDEN: primero completar el BLOQUE 1 entero, y despues pasar al BLOQUE 2.
 
-Estos puntos son las integraciones avanzadas del TFG. Solo empezar cuando la tarea actual este terminada y probada:
+### BLOQUE 1 - DEUDA TECNICA (PRIORIDAD INMEDIATA)
 
-1. INTEGRACION API OPENAI EN EL SGE:
+Estos 4 puntos son deuda tecnica que hay que resolver antes de cualquier otra cosa:
+
+1. EXCEPCIONES SIN USAR EN DAOs:
+    - Los DAOs (PacienteDAO, SanitarioDAO, CitaDAO) usan `return false` y `e.printStackTrace()` en vez de lanzar las excepciones personalizadas que ya existen en el paquete `com.javafx.excepcion`.
+    - OBJETIVO: Refactorizar los DAOs para que lancen ConexionException, ValidacionException, etc. en vez de devolver boolean. Los Services deben capturar estas excepciones y manejarlas adecuadamente. Los controladores deben mostrar mensajes de error al usuario basados en el tipo de excepcion.
+    - ARCHIVOS AFECTADOS: PacienteDAO.java, SanitarioDAO.java, CitaDAO.java, DireccionDAO.java, PacienteService.java, SanitarioService.java, y los controladores que llaman a estos services.
+
+2. CONEXION SIN POOL (ConexionBD):
+    - ConexionBD usa una sola Connection compartida (Singleton simple).
+    - OBJETIVO: Migrar a HikariCP para tener un pool de conexiones thread-safe. Esto es critico para la carga asincrona y para evitar problemas de concurrencia.
+    - Dependencia Gradle: `implementation 'com.zaxxer:HikariCP:5.1.0'`
+    - ARCHIVOS AFECTADOS: ConexionBD.java, build.gradle, y todos los DAOs que llaman a ConexionBD.getConexion().
+
+3. FOTO FUERA DE TRANSACCION:
+    - insertarFoto() se ejecuta separadamente de la insercion principal del paciente.
+    - OBJETIVO: Integrar la insercion de la foto dentro de la misma transaccion que el INSERT del paciente en PacienteService, usando Connection.setAutoCommit(false) y commit/rollback.
+    - ARCHIVOS AFECTADOS: PacienteDAO.java, PacienteService.java.
+
+4. TRANSACCIONES EN OPERACIONES COMPUESTAS:
+    - Las operaciones compuestas (insertar paciente + telefonos + direccion, insertar sanitario + cargo + telefonos) no estan envueltas en transacciones.
+    - OBJETIVO: Implementar transacciones en PacienteService y SanitarioService para que las operaciones compuestas sean atomicas (commit si todo va bien, rollback si algo falla).
+    - ARCHIVOS AFECTADOS: PacienteService.java, SanitarioService.java, y los DAOs que participan en operaciones compuestas.
+
+### BLOQUE 2 - INTEGRACIONES TFG (DESPUES DE COMPLETAR BLOQUE 1)
+
+Estos 4 puntos son las integraciones avanzadas del TFG. Solo empezar cuando los 4 puntos del Bloque 1 esten terminados y probados:
+
+5. INTEGRACION API OPENAI EN EL SGE:
     - Integrar un modelo de IA que permita automatizar procesos o dar veredictos de graficos y datos de pacientes.
     - Se usara la API de OpenAI desde el SGE.
 
-2. SCANNER NFC DE TARJETAS SANITARIAS:
+6. SCANNER NFC DE TARJETAS SANITARIAS:
     - Implementar lectura de tarjetas sanitarias españolas mediante NFC para rellenar automaticamente los datos del paciente.
     - Se usara el escaner NFC del movil o un lector oficial.
 
-3. ACTIVAR SSL/TLS PARA PRODUCCION:
+7. ACTIVAR SSL/TLS PARA PRODUCCION:
     - El codigo ya esta preparado en ConexionBD. Solo hay que cambiar db.ssl=true y db.sslmode=require en database.properties y configurar los certificados en AWS RDS.
 
-4. CONEXION CON API REST DE SPRING BOOT:
+8. CONEXION CON API REST DE SPRING BOOT:
     - Conectar el SGE con la API REST del ecosistema (Spring Boot + Flyway) para interoperar con la app movil, los videojuegos y MongoDB.
-
-### YA COMPLETADO (NO REIMPLEMENTAR)
-
-BLOQUE 1 - DEUDA TECNICA (completado 07/03/2026, documentado en DOCUMENTACION/Bloque1_DeudaTecnica.md):
-- [HECHO] Migracion de ConexionBD singleton a HikariCP pool de conexiones
-- [HECHO] Excepciones personalizadas en todos los DAOs (DuplicadoException, ConexionException, ValidacionException)
-- [HECHO] Foto integrada en la misma transaccion que el paciente
-- [HECHO] Transacciones compuestas atomicas en PacienteService y SanitarioService
-- [HECHO] ValidacionException en validarCampos() de controladorAgregarPaciente y controladorAgregarSanitario
-- [HECHO] Validaciones alineadas con BD: numero direccion obligatorio+numerico, provincia obligatoria, dos apellidos obligatorios
-
-PRIMERA ITERACION v2.0 (completado 06/03/2026, documentado en DOCUMENTACION/FinalPrimerCambio.md):
-- [HECHO] Campos clinicos en tabla paciente (sexo, fecha_nacimiento, alergias, antecedentes, medicacion, consentimiento RGPD)
-- [HECHO] CifradoService AES-256-GCM para campos clinicos
-- [HECHO] CifradoUtil BCrypt para contraseñas con migracion perezosa
-- [HECHO] AuditLogDAO + AuditService (auditoria inmutable fire-and-forget)
-- [HECHO] Soft delete en paciente y sanitario
-- [HECHO] Jerarquia de excepciones personalizadas
-- [HECHO] Interfaz completa con campos clinicos, ficha paciente, columna sexo
 
 ---
 
@@ -475,7 +308,6 @@ MEDICO ESPECIALISTA:
 - Gestion de citas (crear, modificar, eliminar)
 - Generar informes PDF
 - Editar su propio perfil
-- Gestionar discapacidades, tratamientos y niveles de progresion de pacientes (NUEVO)
 
 ENFERMERO:
 - Solo lectura sobre pacientes (consultar pero NO modificar, crear ni eliminar)
@@ -485,7 +317,7 @@ ENFERMERO:
 
 ---
 
-## BASE DE DATOS POSTGRESQL - ESQUEMA v2.1
+## BASE DE DATOS POSTGRESQL - ESQUEMA v2.0
 
 ```sql
 -- Tablas del personal sanitario
@@ -498,13 +330,13 @@ localidad(nombre_localidad PK, provincia)
 cp(cp PK, nombre_localidad FK)
 direccion(id_direccion SERIAL PK, calle, numero, piso, cp FK)
 
--- Tablas de catalogo clinico (existentes, pendientes de integracion con paciente)
+-- Tablas de catalogo clinico
 discapacidad(cod_dis PK, nombre_dis UNIQUE, descripcion_dis, necesita_protesis BOOLEAN)
-tratamiento(cod_trat PK, nombre_trat UNIQUE, definicion_trat, id_nivel FK -> nivel_progresion) -- id_nivel PENDIENTE DE AÑADIR
+tratamiento(cod_trat PK, nombre_trat UNIQUE, definicion_trat)
 discapacidad_tratamiento(cod_dis FK CASCADE, cod_trat FK CASCADE) -- PK compuesta N:M
 
 -- Tabla de pacientes (v2.0 con campos clinicos)
-paciente(dni_pac PK, dni_san FK RESTRICT, nombre_pac, apellido1_pac, apellido2_pac, edad_pac, email_pac UNIQUE, num_ss UNIQUE, id_direccion FK, discapacidad_pac [LEGACY], tratamiento_pac [LEGACY], estado_tratamiento, protesis, foto BYTEA, fecha_nacimiento DATE, sexo VARCHAR(1) CHECK('M','F','O'), alergias TEXT, antecedentes TEXT, medicacion_actual TEXT, consentimiento_rgpd BOOLEAN, fecha_consentimiento TIMESTAMP, activo BOOLEAN, fecha_baja TIMESTAMP)
+paciente(dni_pac PK, dni_san FK RESTRICT, nombre_pac, apellido1_pac, apellido2_pac, edad_pac, email_pac UNIQUE, num_ss UNIQUE, id_direccion FK, discapacidad_pac, tratamiento_pac, estado_tratamiento, protesis, foto BYTEA, fecha_nacimiento DATE, sexo VARCHAR(1) CHECK('M','F','O'), alergias TEXT, antecedentes TEXT, medicacion_actual TEXT, consentimiento_rgpd BOOLEAN, fecha_consentimiento TIMESTAMP, activo BOOLEAN, fecha_baja TIMESTAMP)
 telefono_paciente(id_telefono SERIAL PK, dni_pac FK CASCADE, telefono)
 
 -- Tabla de citas (PK compuesta)
@@ -512,11 +344,6 @@ cita(dni_pac FK CASCADE, dni_san FK CASCADE, fecha_cita DATE, hora_cita TIME)
 
 -- Tabla de auditoria (INMUTABLE - solo INSERT)
 audit_log(id_audit BIGSERIAL PK, fecha_hora TIMESTAMP, dni_usuario, nombre_usuario, accion CHECK('LOGIN','LOGOUT','CREATE','READ','UPDATE','SOFT_DELETE','EXPORT','PRINT','CAMBIO_CONTRASENA'), entidad, id_entidad, detalle, ip_origen)
-
--- TABLAS NUEVAS (TAREA ACTUAL - pendientes de crear)
--- nivel_progresion(id_nivel INT PK, nombre, nombre_corto, descripcion, estado_paciente, tipos_ejercicio)
--- paciente_discapacidad(dni_pac FK, cod_dis FK, id_nivel_actual FK DEFAULT 1, fecha_asignacion, notas) PK(dni_pac, cod_dis)
--- paciente_tratamiento(dni_pac FK, cod_trat FK, cod_dis FK, visible BOOLEAN, fecha_asignacion, dni_san_asigna FK) PK(dni_pac, cod_trat, cod_dis)
 ```
 
 Campos cifrados con AES-256-GCM a nivel de aplicacion: alergias, antecedentes, medicacion_actual.
@@ -533,9 +360,6 @@ Contraseñas hasheadas con BCrypt (factor 12).
 | Telefono | 9 digitos |
 | Num. Seguridad Social | 12 digitos |
 | Codigo Postal | 5 digitos |
-| Numero direccion | Obligatorio, solo digitos |
-| Provincia | Obligatorio |
-| Apellidos | Obligatorio dos apellidos separados por espacio |
 
 ---
 
@@ -545,19 +369,6 @@ DNI: ADMIN0000
 Contraseña: admin (se migra a BCrypt tras primer login)
 Cargo: medico especialista
 Se crea automaticamente en el primer inicio si no existe.
-
----
-
-## DOCUMENTACION DE REFERENCIA
-
-| Archivo | Contenido |
-|---------|-----------|
-| IMPLEMENTAR.md | Especificacion completa de la tarea actual (discapacidades, tratamientos, niveles) |
-| DOCUMENTO_CONTEXTO.md | Descripcion funcional completa del SGE |
-| DOCUMENTACION/Bloque1_DeudaTecnica.md | Informe del Bloque 1 completado (HikariCP, excepciones, transacciones) |
-| DOCUMENTACION/FinalPrimerCambio.md | Informe de la v2.0 (campos clinicos, cifrado, auditoria) |
-| DOCUMENTACION/migracion_v2.sql | Script DDL de migracion de la BD |
-| DOCUMENTACION/rehabiAPPDB.sql | Script original de creacion de la BD |
 
 ---
 

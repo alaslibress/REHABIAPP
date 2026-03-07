@@ -1,16 +1,12 @@
 package com.javafx.Clases;
 
 import com.javafx.Interface.controladorVentanaOpciones;
-import com.javafx.service.CifradoService;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
-
-import java.io.InputStream;
-import java.util.Properties;
 
 /**
  * Clase principal de la aplicacion RehabiAPP
@@ -22,9 +18,6 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        //Inicializar servicio de cifrado AES-256 para campos clinicos
-        inicializarCifrado();
-
         // Cargar la ventana de inicio de sesion
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/SGEInicioSesion.fxml"));
         Parent root = loader.load();
@@ -71,37 +64,6 @@ public class Main extends Application {
         // Mostrar la ventana con animación (scale + fade)
         primaryStage.show();
         AnimacionUtil.animarVentana(primaryStage, 500);
-    }
-
-    /**
-     * Carga la clave AES-256 desde cifrado.properties e inicializa el servicio de cifrado.
-     * Si el archivo no existe o la clave no esta configurada, la app funciona sin cifrado (fallback).
-     */
-    private void inicializarCifrado() {
-        try {
-            InputStream input = getClass().getClassLoader().getResourceAsStream("config/cifrado.properties");
-            if (input == null) {
-                System.out.println("cifrado.properties no encontrado: campos clinicos sin cifrar (modo fallback)");
-                return;
-            }
-
-            Properties props = new Properties();
-            props.load(input);
-            input.close();
-
-            String clave = props.getProperty("aes.clave");
-            CifradoService.inicializar(clave);
-
-        } catch (Exception e) {
-            System.err.println("Error al inicializar cifrado: " + e.getMessage());
-            //La app continua sin cifrado (fallback seguro)
-        }
-    }
-
-    @Override
-    public void stop() {
-        //Cerrar el pool de conexiones HikariCP al salir de la aplicacion
-        ConexionBD.cerrarConexion();
     }
 
     public static void main(String[] args) {

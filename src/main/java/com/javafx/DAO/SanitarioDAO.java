@@ -2,11 +2,6 @@ package com.javafx.DAO;
 
 import com.javafx.Clases.Sanitario;
 import com.javafx.Clases.ConexionBD;
-import com.javafx.excepcion.ConexionException;
-import com.javafx.excepcion.DuplicadoException;
-import com.javafx.excepcion.ValidacionException;
-import com.javafx.service.AuditService;
-import com.javafx.util.CifradoUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -16,42 +11,40 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Clase DAO para gestionar operaciones de base de datos de Sanitario.
- * Trabaja con las tablas: sanitario, sanitario_agrega_sanitario, telefono_sanitario.
- *
- * Los metodos de escritura lanzan excepciones personalizadas en vez de devolver boolean.
- * El metodo autenticar() sigue devolviendo Sanitario o null (login fallido no es excepcion).
+ * Clase DAO (Data Access Object) para gestionar operaciones de base de datos
+ * relacionadas con la entidad Sanitario
+ * Trabaja con las tablas: sanitario, sanitario_agrega_sanitario, telefono_sanitario
  */
 public class SanitarioDAO {
 
     // ==================== METODOS DE CONSULTA ====================
 
     /**
-     * Lista todos los sanitarios activos con su cargo
+     * Lista todos los sanitarios de la base de datos con su cargo
      * @return Lista de sanitarios ordenados por nombre
-     * @throws ConexionException si hay error de conexion con la BD
      */
     public List<Sanitario> listarTodos() {
         List<Sanitario> sanitarios = new ArrayList<>();
 
+        //Consulta con JOIN para obtener el cargo desde la tabla sanitario_agrega_sanitario
         String query = "SELECT s.dni_san, s.nombre_san, s.apellido1_san, s.apellido2_san, " +
                 "s.email_san, s.num_de_pacientes, s.contrasena_san, sas.cargo " +
                 "FROM sanitario s " +
                 "LEFT JOIN sanitario_agrega_sanitario sas ON s.dni_san = sas.dni_san " +
-                "WHERE (s.activo IS NULL OR s.activo = TRUE) " +
                 "ORDER BY s.nombre_san";
 
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query);
              ResultSet rs = stmt.executeQuery()) {
 
+            //Recorrer resultados y crear objetos Sanitario
             while (rs.next()) {
                 Sanitario sanitario = mapearSanitarioDesdeResultSet(rs);
                 sanitarios.add(sanitario);
             }
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al listar sanitarios", e);
+            System.err.println("Error al listar sanitarios: " + e.getMessage());
         }
 
         return sanitarios;
@@ -59,22 +52,22 @@ public class SanitarioDAO {
 
     /**
      * Busca sanitarios que coincidan con el texto en cualquier campo
-     * @param texto Texto a buscar
-     * @return Lista de sanitarios que coinciden
-     * @throws ConexionException si hay error de conexion con la BD
+     * @param texto Texto a buscar en dni, nombre, apellidos o email
+     * @return Lista de sanitarios que coinciden con la busqueda
      */
     public List<Sanitario> buscarPorTexto(String texto) {
         List<Sanitario> sanitarios = new ArrayList<>();
 
+        //Busqueda en multiples campos usando LIKE con patron
         String query = "SELECT s.dni_san, s.nombre_san, s.apellido1_san, s.apellido2_san, " +
                 "s.email_san, s.num_de_pacientes, s.contrasena_san, sas.cargo " +
                 "FROM sanitario s " +
                 "LEFT JOIN sanitario_agrega_sanitario sas ON s.dni_san = sas.dni_san " +
-                "WHERE (s.activo IS NULL OR s.activo = TRUE) AND (" +
-                "LOWER(s.dni_san) LIKE ? OR LOWER(s.nombre_san) LIKE ? OR " +
+                "WHERE LOWER(s.dni_san) LIKE ? OR LOWER(s.nombre_san) LIKE ? OR " +
                 "LOWER(s.apellido1_san) LIKE ? OR LOWER(s.apellido2_san) LIKE ? OR " +
-                "LOWER(s.email_san) LIKE ?) ORDER BY s.nombre_san";
+                "LOWER(s.email_san) LIKE ? ORDER BY s.nombre_san";
 
+        //Preparar patron de busqueda con comodines
         String patron = "%" + texto.toLowerCase() + "%";
 
         try (Connection conn = ConexionBD.getConexion();
@@ -94,7 +87,7 @@ public class SanitarioDAO {
             }
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al buscar sanitarios", e);
+            System.err.println("Error al buscar sanitarios: " + e.getMessage());
         }
 
         return sanitarios;
@@ -102,9 +95,8 @@ public class SanitarioDAO {
 
     /**
      * Busca un sanitario por su DNI
-     * @param dni DNI del sanitario
+     * @param dni DNI del sanitario a buscar
      * @return Sanitario encontrado o null si no existe
-     * @throws ConexionException si hay error de conexion con la BD
      */
     public Sanitario buscarPorDni(String dni) {
         String query = "SELECT s.dni_san, s.nombre_san, s.apellido1_san, s.apellido2_san, " +
@@ -125,7 +117,7 @@ public class SanitarioDAO {
             }
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al buscar sanitario por DNI", e);
+            System.err.println("Error al buscar sanitario por DNI: " + e.getMessage());
         }
 
         return null;
@@ -137,9 +129,11 @@ public class SanitarioDAO {
      * @return Sanitario con todos sus datos o null si no existe
      */
     public Sanitario obtenerPorDNI(String dni) {
+        //Primero obtener datos basicos del sanitario
         Sanitario sanitario = buscarPorDni(dni);
 
         if (sanitario != null) {
+            //Obtener telefonos del sanitario desde la tabla telefono_sanitario
             cargarTelefonosSanitario(sanitario);
         }
 
@@ -148,7 +142,8 @@ public class SanitarioDAO {
 
     /**
      * Verifica si existe un sanitario con el DNI especificado
-     * @throws ConexionException si hay error de conexion con la BD
+     * @param dni DNI a verificar
+     * @return true si existe, false en caso contrario
      */
     public boolean existeDni(String dni) {
         String query = "SELECT COUNT(*) FROM sanitario WHERE dni_san = ?";
@@ -165,7 +160,7 @@ public class SanitarioDAO {
             }
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al verificar DNI", e);
+            System.err.println("Error al verificar DNI: " + e.getMessage());
         }
 
         return false;
@@ -173,7 +168,8 @@ public class SanitarioDAO {
 
     /**
      * Verifica si existe un sanitario con el email especificado
-     * @throws ConexionException si hay error de conexion con la BD
+     * @param email Email a verificar
+     * @return true si existe, false en caso contrario
      */
     public boolean existeEmail(String email) {
         String query = "SELECT COUNT(*) FROM sanitario WHERE email_san = ?";
@@ -190,7 +186,7 @@ public class SanitarioDAO {
             }
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al verificar email", e);
+            System.err.println("Error al verificar email: " + e.getMessage());
         }
 
         return false;
@@ -198,7 +194,10 @@ public class SanitarioDAO {
 
     /**
      * Verifica si existe un email excluyendo un DNI especifico
-     * @throws ConexionException si hay error de conexion con la BD
+     * Util para validar al actualizar un sanitario
+     * @param email Email a verificar
+     * @param dniExcluir DNI del sanitario a excluir de la busqueda
+     * @return true si existe otro sanitario con ese email
      */
     public boolean existeEmailExcluyendoDni(String email, String dniExcluir) {
         String query = "SELECT COUNT(*) FROM sanitario WHERE email_san = ? AND dni_san != ?";
@@ -216,7 +215,7 @@ public class SanitarioDAO {
             }
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al verificar email", e);
+            System.err.println("Error al verificar email excluyendo DNI: " + e.getMessage());
         }
 
         return false;
@@ -226,92 +225,100 @@ public class SanitarioDAO {
 
     /**
      * Inserta un nuevo sanitario en la base de datos
+     * Realiza la insercion en las tablas sanitario y sanitario_agrega_sanitario
      * @param sanitario Sanitario a insertar
-     * @throws DuplicadoException si el DNI o email ya existe
-     * @throws ConexionException si hay error de conexion con la BD
+     * @return true si la insercion fue exitosa
      */
-    public void insertar(Sanitario sanitario) {
+    public boolean insertar(Sanitario sanitario) {
         Connection conn = null;
 
         try {
             conn = ConexionBD.getConexion();
             conn.setAutoCommit(false);
 
-            insertar(conn, sanitario);
+            //Insertar en tabla sanitario
+            String querySanitario = "INSERT INTO sanitario (dni_san, nombre_san, apellido1_san, " +
+                    "apellido2_san, email_san, num_de_pacientes, contrasena_san) " +
+                    "VALUES (?, ?, ?, ?, ?, 0, ?)";
 
+            try (PreparedStatement stmt = conn.prepareStatement(querySanitario)) {
+                stmt.setString(1, sanitario.getDni());
+                stmt.setString(2, sanitario.getNombre());
+                stmt.setString(3, sanitario.getApellido1());
+                stmt.setString(4, sanitario.getApellido2());
+                stmt.setString(5, sanitario.getEmail());
+                stmt.setString(6, sanitario.getContrasena());
+                stmt.executeUpdate();
+            }
+
+            //Insertar cargo en tabla sanitario_agrega_sanitario
+            String queryCargo = "INSERT INTO sanitario_agrega_sanitario (dni_san, cargo) VALUES (?, ?)";
+            try (PreparedStatement stmtCargo = conn.prepareStatement(queryCargo)) {
+                stmtCargo.setString(1, sanitario.getDni());
+                stmtCargo.setString(2, sanitario.getCargo());
+                stmtCargo.executeUpdate();
+            }
+
+            //Confirmar transaccion
             conn.commit();
+            return true;
 
         } catch (SQLException e) {
-            hacerRollback(conn);
-            throw traducirSQLException(e);
+            //Revertir cambios en caso de error
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    System.err.println("Error al hacer rollback: " + ex.getMessage());
+                }
+            }
+            System.err.println("Error al insertar sanitario: " + e.getMessage());
+            return false;
 
         } finally {
-            cerrarConexion(conn);
-        }
-    }
-
-    /**
-     * Inserta un sanitario usando conexion externa (para transacciones compuestas)
-     */
-    public void insertar(Connection conn, Sanitario sanitario) throws SQLException {
-        //Insertar en tabla sanitario
-        String querySanitario = "INSERT INTO sanitario (dni_san, nombre_san, apellido1_san, " +
-                "apellido2_san, email_san, num_de_pacientes, contrasena_san) " +
-                "VALUES (?, ?, ?, ?, ?, 0, ?)";
-
-        try (PreparedStatement stmt = conn.prepareStatement(querySanitario)) {
-            stmt.setString(1, sanitario.getDni());
-            stmt.setString(2, sanitario.getNombre());
-            stmt.setString(3, sanitario.getApellido1());
-            stmt.setString(4, sanitario.getApellido2());
-            stmt.setString(5, sanitario.getEmail());
-            //Hashear contrasena con BCrypt antes de almacenar
-            stmt.setString(6, CifradoUtil.hashContrasena(sanitario.getContrasena()));
-            stmt.executeUpdate();
-        }
-
-        //Insertar cargo en tabla sanitario_agrega_sanitario
-        String queryCargo = "INSERT INTO sanitario_agrega_sanitario (dni_san, cargo) VALUES (?, ?)";
-        try (PreparedStatement stmtCargo = conn.prepareStatement(queryCargo)) {
-            stmtCargo.setString(1, sanitario.getDni());
-            stmtCargo.setString(2, sanitario.getCargo());
-            stmtCargo.executeUpdate();
+            //Restaurar autocommit
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException e) {
+                    System.err.println("Error al restaurar autocommit: " + e.getMessage());
+                }
+            }
         }
     }
 
     /**
      * Inserta los telefonos de un sanitario
      * @param dniSanitario DNI del sanitario
-     * @param telefono1 Primer telefono
-     * @param telefono2 Segundo telefono (opcional)
-     * @throws ConexionException si hay error de conexion con la BD
+     * @param telefono1 Primer telefono (puede ser null o vacio)
+     * @param telefono2 Segundo telefono (puede ser null o vacio)
+     * @return true si la insercion fue exitosa
      */
-    public void insertarTelefonos(String dniSanitario, String telefono1, String telefono2) {
-        try (Connection conn = ConexionBD.getConexion()) {
-            insertarTelefonos(conn, dniSanitario, telefono1, telefono2);
-        } catch (SQLException e) {
-            throw new ConexionException("Error al insertar telefonos", e);
-        }
-    }
-
-    /**
-     * Inserta telefonos usando conexion externa (para transacciones compuestas)
-     */
-    public void insertarTelefonos(Connection conn, String dniSanitario, String telefono1, String telefono2) throws SQLException {
+    public boolean insertarTelefonos(String dniSanitario, String telefono1, String telefono2) {
         String query = "INSERT INTO telefono_sanitario (dni_san, telefono) VALUES (?, ?)";
 
-        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+        try (Connection conn = ConexionBD.getConexion();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            //Insertar telefono 1 si no esta vacio
             if (telefono1 != null && !telefono1.trim().isEmpty()) {
                 stmt.setString(1, dniSanitario);
                 stmt.setString(2, telefono1.trim());
                 stmt.executeUpdate();
             }
 
+            //Insertar telefono 2 si no esta vacio
             if (telefono2 != null && !telefono2.trim().isEmpty()) {
                 stmt.setString(1, dniSanitario);
                 stmt.setString(2, telefono2.trim());
                 stmt.executeUpdate();
             }
+
+            return true;
+
+        } catch (SQLException e) {
+            System.err.println("Error al insertar telefonos: " + e.getMessage());
+            return false;
         }
     }
 
@@ -320,11 +327,10 @@ public class SanitarioDAO {
     /**
      * Actualiza los datos de un sanitario existente
      * @param sanitario Sanitario con los nuevos datos
-     * @param dniOriginal DNI original del sanitario
-     * @throws DuplicadoException si el nuevo DNI o email ya existe
-     * @throws ConexionException si hay error de conexion con la BD
+     * @param dniOriginal DNI original del sanitario (por si se modifica)
+     * @return true si la actualizacion fue exitosa
      */
-    public void actualizar(Sanitario sanitario, String dniOriginal) {
+    public boolean actualizar(Sanitario sanitario, String dniOriginal) {
         Connection conn = null;
 
         try {
@@ -347,7 +353,7 @@ public class SanitarioDAO {
                 stmt.executeUpdate();
             }
 
-            //Actualizar cargo
+            //Actualizar cargo en tabla sanitario_agrega_sanitario
             String queryCargo = "UPDATE sanitario_agrega_sanitario SET cargo = ? WHERE dni_san = ?";
             try (PreparedStatement stmtCargo = conn.prepareStatement(queryCargo)) {
                 stmtCargo.setString(1, sanitario.getCargo());
@@ -355,25 +361,43 @@ public class SanitarioDAO {
                 stmtCargo.executeUpdate();
             }
 
+            //Confirmar transaccion
             conn.commit();
+            return true;
 
         } catch (SQLException e) {
-            hacerRollback(conn);
-            throw traducirSQLException(e);
+            //Revertir cambios en caso de error
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    System.err.println("Error al hacer rollback: " + ex.getMessage());
+                }
+            }
+            System.err.println("Error al actualizar sanitario: " + e.getMessage());
+            return false;
 
         } finally {
-            cerrarConexion(conn);
+            //Restaurar autocommit
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException e) {
+                    System.err.println("Error al restaurar autocommit: " + e.getMessage());
+                }
+            }
         }
     }
 
     /**
      * Actualiza los telefonos de un sanitario
+     * Primero elimina los telefonos existentes y luego inserta los nuevos
      * @param dniSanitario DNI del sanitario
      * @param telefono1 Primer telefono
      * @param telefono2 Segundo telefono
-     * @throws ConexionException si hay error de conexion con la BD
+     * @return true si la actualizacion fue exitosa
      */
-    public void actualizarTelefonos(String dniSanitario, String telefono1, String telefono2) {
+    public boolean actualizarTelefonos(String dniSanitario, String telefono1, String telefono2) {
         Connection conn = null;
 
         try {
@@ -405,46 +429,91 @@ public class SanitarioDAO {
             }
 
             conn.commit();
+            return true;
 
         } catch (SQLException e) {
-            hacerRollback(conn);
-            throw new ConexionException("Error al actualizar telefonos", e);
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    System.err.println("Error al hacer rollback: " + ex.getMessage());
+                }
+            }
+            System.err.println("Error al actualizar telefonos: " + e.getMessage());
+            return false;
 
         } finally {
-            cerrarConexion(conn);
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException e) {
+                    System.err.println("Error al restaurar autocommit: " + e.getMessage());
+                }
+            }
         }
     }
 
     // ==================== METODOS DE ELIMINACION ====================
 
     /**
-     * Realiza una baja logica (soft delete) de un sanitario.
-     * @param dni DNI del sanitario a dar de baja
-     * @throws ConexionException si hay error de conexion con la BD
-     * @throws ValidacionException si el sanitario no existe
+     * Elimina un sanitario de la base de datos
+     * Las tablas relacionadas se eliminan automaticamente por ON DELETE CASCADE
+     * @param dni DNI del sanitario a eliminar
+     * @return true si la eliminacion fue exitosa
      */
-    public void eliminar(String dni) {
-        String softDelete = "UPDATE sanitario SET activo = FALSE, fecha_baja = CURRENT_TIMESTAMP WHERE dni_san = ?";
+    public boolean eliminar(String dni) {
+        Connection conn = null;
 
-        try (Connection conn = ConexionBD.getConexion();
-             PreparedStatement stmt = conn.prepareStatement(softDelete)) {
+        try {
+            conn = ConexionBD.getConexion();
+            conn.setAutoCommit(false);
 
-            stmt.setString(1, dni);
-            int filasAfectadas = stmt.executeUpdate();
+            //Eliminar el sanitario (las FK con CASCADE eliminan telefonos y cargo)
+            String deleteSanitario = "DELETE FROM sanitario WHERE dni_san = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(deleteSanitario)) {
+                stmt.setString(1, dni);
+                int filasAfectadas = stmt.executeUpdate();
 
-            if (filasAfectadas == 0) {
-                throw new ValidacionException("No se encontro el sanitario con DNI: " + dni, "dni");
+                if (filasAfectadas > 0) {
+                    conn.commit();
+                    return true;
+                } else {
+                    conn.rollback();
+                    return false;
+                }
             }
 
-            System.out.println("Sanitario dado de baja (soft delete): " + dni);
-
         } catch (SQLException e) {
-            throw new ConexionException("Error al dar de baja sanitario", e);
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    System.err.println("Error al hacer rollback: " + ex.getMessage());
+                }
+            }
+            System.err.println("Error al eliminar sanitario: " + e.getMessage());
+            return false;
+
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException e) {
+                    System.err.println("Error al restaurar autocommit: " + e.getMessage());
+                }
+            }
         }
     }
 
     // ==================== METODOS AUXILIARES PRIVADOS ====================
 
+    /**
+     * Mapea un ResultSet a un objeto Sanitario
+     * Metodo auxiliar para evitar duplicacion de codigo
+     * @param rs ResultSet posicionado en una fila valida
+     * @return Objeto Sanitario con los datos del ResultSet
+     * @throws SQLException Si hay error al leer el ResultSet
+     */
     private Sanitario mapearSanitarioDesdeResultSet(ResultSet rs) throws SQLException {
         String dni = rs.getString("dni_san");
         String nombre = rs.getString("nombre_san");
@@ -455,6 +524,7 @@ public class SanitarioDAO {
         String contrasena = rs.getString("contrasena_san");
         String cargo = rs.getString("cargo");
 
+        //Crear objeto sanitario con los datos obtenidos
         Sanitario sanitario = new Sanitario(
                 dni,
                 nombre,
@@ -465,11 +535,16 @@ public class SanitarioDAO {
                 numPacientes
         );
 
+        //Asignar contrasena
         sanitario.setContrasena(contrasena);
 
         return sanitario;
     }
 
+    /**
+     * Carga los telefonos de un sanitario desde la base de datos
+     * @param sanitario Sanitario al que se le asignaran los telefonos
+     */
     private void cargarTelefonosSanitario(Sanitario sanitario) {
         String queryTel = "SELECT telefono FROM telefono_sanitario WHERE dni_san = ? ORDER BY id_telefono LIMIT 2";
 
@@ -497,108 +572,38 @@ public class SanitarioDAO {
         }
     }
 
-    /**
-     * Traduce una SQLException a la excepcion personalizada correspondiente
-     */
-    private RuntimeException traducirSQLException(SQLException e) {
-        String sqlState = e.getSQLState();
-        String mensaje = e.getMessage();
-
-        if (sqlState != null && "23505".equals(sqlState)) {
-            String campo = detectarCampoDuplicado(mensaje);
-            return new DuplicadoException("Ya existe un registro con ese " + campo, campo, e);
-        }
-
-        if (sqlState != null && "23503".equals(sqlState)) {
-            return new ValidacionException("Referencia invalida: " + mensaje, "clave_foranea", e);
-        }
-
-        return new ConexionException("Error de base de datos: " + mensaje, e);
-    }
-
-    private String detectarCampoDuplicado(String mensaje) {
-        if (mensaje == null) return "campo desconocido";
-        String mensajeLower = mensaje.toLowerCase();
-
-        if (mensajeLower.contains("dni_san") || mensajeLower.contains("sanitario_pkey")) {
-            return "DNI";
-        }
-        if (mensajeLower.contains("email_san") || mensajeLower.contains("email")) {
-            return "email";
-        }
-
-        return "campo duplicado";
-    }
-
-    private void hacerRollback(Connection conn) {
-        if (conn != null) {
-            try {
-                conn.rollback();
-            } catch (SQLException ex) {
-                System.err.println("Error al hacer rollback: " + ex.getMessage());
-            }
-        }
-    }
-
-    private void cerrarConexion(Connection conn) {
-        if (conn != null) {
-            try {
-                conn.setAutoCommit(true);
-            } catch (SQLException e) {
-                System.err.println("Error al restaurar autocommit: " + e.getMessage());
-            }
-            try {
-                conn.close();
-            } catch (SQLException e) {
-                System.err.println("Error al cerrar conexion: " + e.getMessage());
-            }
-        }
-    }
-
     // ==================== METODOS DE AUTENTICACION ====================
 
     /**
-     * Autentica un sanitario con DNI y contrasena.
-     * Devuelve null si las credenciales son incorrectas (no es excepcion).
-     * Lanza ConexionException si hay error de BD.
-     *
+     * Autentica un sanitario con DNI y contraseña
      * @param dni DNI del sanitario
-     * @param contrasena Contrasena del sanitario
+     * @param contrasena Contraseña del sanitario
      * @return Sanitario si las credenciales son correctas, null si no
-     * @throws ConexionException si hay error de conexion con la BD
      */
     public Sanitario autenticar(String dni, String contrasena) {
         String query = "SELECT s.dni_san, s.nombre_san, s.apellido1_san, s.apellido2_san, " +
                 "s.email_san, s.num_de_pacientes, s.contrasena_san, sas.cargo " +
                 "FROM sanitario s " +
                 "LEFT JOIN sanitario_agrega_sanitario sas ON s.dni_san = sas.dni_san " +
-                "WHERE s.dni_san = ?";
+                "WHERE s.dni_san = ? AND s.contrasena_san = ?";
 
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, dni.toUpperCase());
+            stmt.setString(2, contrasena);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    String hashAlmacenado = rs.getString("contrasena_san");
-
-                    if (CifradoUtil.verificarContrasena(contrasena, hashAlmacenado)) {
-                        Sanitario sanitario = mapearSanitarioDesdeResultSet(rs);
-
-                        //Migracion perezosa: si la contrasena estaba en texto plano, rehashear
-                        if (!CifradoUtil.esBCrypt(hashAlmacenado)) {
-                            migrarContrasenaBCrypt(dni.toUpperCase(), contrasena);
-                        }
-
-                        System.out.println("Autenticacion exitosa para: " + sanitario.getDni());
-                        return sanitario;
-                    }
+                    Sanitario sanitario = mapearSanitarioDesdeResultSet(rs);
+                    System.out.println("Autenticacion exitosa para: " + sanitario.getDni());
+                    return sanitario;
                 }
             }
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al autenticar", e);
+            System.err.println("Error al autenticar: " + e.getMessage());
+            e.printStackTrace();
         }
 
         System.out.println("Autenticacion fallida para DNI: " + dni);
@@ -606,27 +611,8 @@ public class SanitarioDAO {
     }
 
     /**
-     * Migra una contrasena de texto plano a BCrypt tras login exitoso
-     */
-    private void migrarContrasenaBCrypt(String dni, String contrasenaPlana) {
-        String query = "UPDATE sanitario SET contrasena_san = ? WHERE dni_san = ?";
-
-        try (Connection conn = ConexionBD.getConexion();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setString(1, CifradoUtil.hashContrasena(contrasenaPlana));
-            stmt.setString(2, dni);
-            stmt.executeUpdate();
-            System.out.println("Contrasena migrada a BCrypt para: " + dni);
-
-        } catch (SQLException e) {
-            //No bloquear el login si falla la migracion
-            System.err.println("Error al migrar contrasena a BCrypt: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Verifica si existe el usuario admin en el sistema
+     * Verifica si existe un usuario admin en el sistema
+     * @return true si existe el usuario admin
      */
     public boolean existeAdmin() {
         String query = "SELECT COUNT(*) FROM sanitario WHERE dni_san = 'ADMIN0000'";
@@ -640,7 +626,7 @@ public class SanitarioDAO {
             }
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al verificar admin", e);
+            System.err.println("Error al verificar admin: " + e.getMessage());
         }
 
         return false;
@@ -648,12 +634,12 @@ public class SanitarioDAO {
 
     /**
      * Crea el usuario admin por defecto si no existe
-     * @throws ConexionException si hay error de conexion con la BD
+     * @return true si se creo correctamente o ya existia
      */
-    public void crearAdminSiNoExiste() {
+    public boolean crearAdminSiNoExiste() {
         if (existeAdmin()) {
             System.out.println("Usuario admin ya existe");
-            return;
+            return true;
         }
 
         Connection conn = null;
@@ -662,17 +648,16 @@ public class SanitarioDAO {
             conn = ConexionBD.getConexion();
             conn.setAutoCommit(false);
 
-            //1. Insertar sanitario admin con contrasena hasheada con BCrypt
+            //1. Insertar sanitario admin
             String queryInsertSanitario = "INSERT INTO sanitario (dni_san, nombre_san, apellido1_san, " +
                     "apellido2_san, email_san, num_de_pacientes, contrasena_san) " +
-                    "VALUES ('ADMIN0000', 'Administrador', 'Sistema', '', 'admin@rehabiapp.com', 0, ?)";
+                    "VALUES ('ADMIN0000', 'Administrador', 'Sistema', '', 'admin@rehabiapp.com', 0, 'admin')";
 
             try (PreparedStatement stmt = conn.prepareStatement(queryInsertSanitario)) {
-                stmt.setString(1, CifradoUtil.hashContrasena("admin"));
                 stmt.executeUpdate();
             }
 
-            //2. Asignar cargo medico especialista al admin
+            //2. Asignar cargo medico especialista al admin (en minusculas segun CHECK)
             String queryInsertCargo = "INSERT INTO sanitario_agrega_sanitario (dni_san, cargo) " +
                     "VALUES ('ADMIN0000', 'medico especialista')";
 
@@ -682,76 +667,93 @@ public class SanitarioDAO {
 
             conn.commit();
             System.out.println("Usuario admin creado correctamente");
+            return true;
 
         } catch (SQLException e) {
-            hacerRollback(conn);
-            throw new ConexionException("Error al crear admin", e);
+            System.err.println("Error al crear admin: " + e.getMessage());
+            e.printStackTrace();
+
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    System.err.println("Error al hacer rollback: " + ex.getMessage());
+                }
+            }
+            return false;
 
         } finally {
-            cerrarConexion(conn);
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException e) {
+                    System.err.println("Error al restaurar autocommit: " + e.getMessage());
+                }
+            }
         }
     }
 
     /**
-     * Cambia la contrasena de un sanitario
+     * Cambia la contraseña de un sanitario
      * @param dni DNI del sanitario
-     * @param nuevaContrasena Nueva contrasena
-     * @throws ConexionException si hay error de conexion con la BD
+     * @param nuevaContrasena Nueva contraseña
+     * @return true si se cambio correctamente
      */
-    public void cambiarContrasena(String dni, String nuevaContrasena) {
+    public boolean cambiarContrasena(String dni, String nuevaContrasena) {
         String query = "UPDATE sanitario SET contrasena_san = ? WHERE dni_san = ?";
 
         try (Connection conn = ConexionBD.getConexion();
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
-            stmt.setString(1, CifradoUtil.hashContrasena(nuevaContrasena));
+            stmt.setString(1, nuevaContrasena);
             stmt.setString(2, dni);
 
             int filasAfectadas = stmt.executeUpdate();
-
-            if (filasAfectadas > 0) {
-                AuditService.cambioContrasena(dni);
-            }
+            return filasAfectadas > 0;
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al cambiar contrasena", e);
-        }
-    }
-
-    /**
-     * Verifica si la contrasena actual es correcta
-     * @param dni DNI del sanitario
-     * @param contrasena Contrasena a verificar
-     * @return true si la contrasena es correcta
-     * @throws ConexionException si hay error de conexion con la BD
-     */
-    public boolean verificarContrasena(String dni, String contrasena) {
-        String query = "SELECT contrasena_san FROM sanitario WHERE dni_san = ?";
-
-        try (Connection conn = ConexionBD.getConexion();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            stmt.setString(1, dni);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    String hashAlmacenado = rs.getString("contrasena_san");
-                    return CifradoUtil.verificarContrasena(contrasena, hashAlmacenado);
-                }
-            }
-
-        } catch (SQLException e) {
-            throw new ConexionException("Error al verificar contrasena", e);
+            System.err.println("Error al cambiar contraseña: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return false;
     }
 
     /**
-     * Actualiza el cargo de un sanitario
-     * @throws ConexionException si hay error de conexion con la BD
+     * Verifica si la contraseña actual es correcta
+     * @param dni DNI del sanitario
+     * @param contrasena Contraseña a verificar
+     * @return true si la contraseña es correcta
      */
-    public void actualizarCargo(String dni, String cargo) {
+    public boolean verificarContrasena(String dni, String contrasena) {
+        String query = "SELECT COUNT(*) FROM sanitario WHERE dni_san = ? AND contrasena_san = ?";
+
+        try (Connection conn = ConexionBD.getConexion();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, dni);
+            stmt.setString(2, contrasena);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error al verificar contraseña: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    /**
+     * Actualiza el cargo de un sanitario en la tabla sanitario_agrega_sanitario
+     * @param dni DNI del sanitario
+     * @param cargo Nuevo cargo (medico especialista o enfermero)
+     * @return true si se actualizo correctamente
+     */
+    public boolean actualizarCargo(String dni, String cargo) {
         String query = "UPDATE sanitario_agrega_sanitario SET cargo = ? WHERE dni_san = ?";
 
         try (Connection conn = ConexionBD.getConexion();
@@ -764,15 +766,24 @@ public class SanitarioDAO {
 
             if (filasAfectadas == 0) {
                 //Si no existe registro, insertarlo
-                insertarCargo(dni, cargo);
+                return insertarCargo(dni, cargo);
             }
 
+            return filasAfectadas > 0;
+
         } catch (SQLException e) {
-            throw new ConexionException("Error al actualizar cargo", e);
+            System.err.println("Error al actualizar cargo: " + e.getMessage());
+            return false;
         }
     }
 
-    private void insertarCargo(String dni, String cargo) {
+    /**
+     * Inserta el cargo de un sanitario si no existe
+     * @param dni DNI del sanitario
+     * @param cargo Cargo a insertar
+     * @return true si se inserto correctamente
+     */
+    private boolean insertarCargo(String dni, String cargo) {
         String query = "INSERT INTO sanitario_agrega_sanitario (dni_san, cargo) VALUES (?, ?)";
 
         try (Connection conn = ConexionBD.getConexion();
@@ -780,18 +791,21 @@ public class SanitarioDAO {
 
             stmt.setString(1, dni);
             stmt.setString(2, cargo.toLowerCase());
-            stmt.executeUpdate();
+
+            return stmt.executeUpdate() > 0;
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al insertar cargo", e);
+            System.err.println("Error al insertar cargo: " + e.getMessage());
+            return false;
         }
     }
 
     /**
      * Elimina todos los telefonos de un sanitario
-     * @throws ConexionException si hay error de conexion con la BD
+     * @param dni DNI del sanitario
+     * @return true si se eliminaron correctamente
      */
-    public void eliminarTelefonos(String dni) {
+    public boolean eliminarTelefonos(String dni) {
         String query = "DELETE FROM telefono_sanitario WHERE dni_san = ?";
 
         try (Connection conn = ConexionBD.getConexion();
@@ -799,17 +813,21 @@ public class SanitarioDAO {
 
             stmt.setString(1, dni);
             stmt.executeUpdate();
+            return true;
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al eliminar telefonos", e);
+            System.err.println("Error al eliminar telefonos: " + e.getMessage());
+            return false;
         }
     }
 
     /**
      * Inserta un telefono para un sanitario
-     * @throws ConexionException si hay error de conexion con la BD
+     * @param dni DNI del sanitario
+     * @param telefono Numero de telefono
+     * @return true si se inserto correctamente
      */
-    public void insertarTelefono(String dni, String telefono) {
+    public boolean insertarTelefono(String dni, String telefono) {
         String query = "INSERT INTO telefono_sanitario (dni_san, telefono) VALUES (?, ?)";
 
         try (Connection conn = ConexionBD.getConexion();
@@ -817,15 +835,19 @@ public class SanitarioDAO {
 
             stmt.setString(1, dni);
             stmt.setString(2, telefono);
-            stmt.executeUpdate();
+
+            return stmt.executeUpdate() > 0;
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al insertar telefono", e);
+            System.err.println("Error al insertar telefono: " + e.getMessage());
+            return false;
         }
     }
 
     /**
-     * Obtiene los telefonos de un sanitario como String separados por coma
+     * Obtiene los telefonos de un sanitario
+     * @param dni DNI del sanitario
+     * @return String con los telefonos separados por coma
      */
     public String obtenerTelefonos(String dni) {
         String query = "SELECT telefono FROM telefono_sanitario WHERE dni_san = ?";
@@ -846,7 +868,7 @@ public class SanitarioDAO {
             }
 
         } catch (SQLException e) {
-            throw new ConexionException("Error al obtener telefonos", e);
+            System.err.println("Error al obtener telefonos: " + e.getMessage());
         }
 
         return telefonos.toString();

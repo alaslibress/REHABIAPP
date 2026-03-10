@@ -256,7 +256,9 @@
 #btnPestaniaSanitarios,
 #btnPestaniaPacientes,
 #btnPestaniaCitas,
-#btnPestaniaAyuda {
+#btnPestaniaAyuda,
+#btnPestaniaDiscapacidades,
+#btnPestaniaTratamientos {
     -fx-background-color: transparent;
     -fx-text-fill: #BDC3C7;
     -fx-background-radius: 0;
@@ -272,7 +274,9 @@
 #btnPestaniaSanitarios:hover,
 #btnPestaniaPacientes:hover,
 #btnPestaniaCitas:hover,
-#btnPestaniaAyuda:hover {
+#btnPestaniaAyuda:hover,
+#btnPestaniaDiscapacidades:hover,
+#btnPestaniaTratamientos:hover {
     -fx-background-color: #2D2D2D;
     -fx-text-fill: #7FB3D5;
 }

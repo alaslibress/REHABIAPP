@@ -1,24 +1,30 @@
 package com.javafx.Clases;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-//Clase para gestionar la conexion con la base de datos PostgreSQL
-//Lee la configuracion desde un archivo properties
+/**
+ * Clase para gestionar la conexion con la base de datos PostgreSQL.
+ * Usa HikariCP como pool de conexiones thread-safe.
+ *
+ * Cada llamada a getConexion() devuelve una conexion independiente del pool.
+ * El llamante es responsable de cerrarla (preferiblemente con try-with-resources),
+ * lo que la devuelve automaticamente al pool.
+ */
 public class ConexionBD {
 
-    //Propiedades de configuracion de base de datos
+    //Pool de conexiones HikariCP
+    private static HikariDataSource dataSource = null;
+
+    //Propiedades de configuracion
     private static Properties props = null;
-
-    //Propiedades de configuracion de IP (para exportacion)
     private static Properties ipProps = null;
-
-    //Instancia unica de la conexion (Singleton)
-    private static Connection conexion = null;
 
     //Constructor privado para evitar instanciacion externa
     private ConexionBD() {
@@ -29,7 +35,6 @@ public class ConexionBD {
         if (props == null) {
             props = new Properties();
             try {
-                //Cargar el archivo properties desde resources
                 InputStream input = ConexionBD.class.getClassLoader()
                         .getResourceAsStream("config/database.properties");
 
@@ -53,7 +58,6 @@ public class ConexionBD {
         if (ipProps == null) {
             ipProps = new Properties();
             try {
-                //Cargar el archivo ip.properties desde resources
                 InputStream input = ConexionBD.class.getClassLoader()
                         .getResourceAsStream("config/ip.properties");
 
@@ -72,52 +76,77 @@ public class ConexionBD {
         }
     }
 
-    //Metodo que obtiene la conexion a la base de datos
-    //Retorna Connection objeto de conexion a la BD
-    public static Connection getConexion() {
-        try {
-            //Si la conexion no existe o esta cerrada, crear nueva conexion
-            if (conexion == null || conexion.isClosed()) {
-
-                //Cargar propiedades si no estan cargadas
-                cargarPropiedades();
-                cargarPropiedadesIP();
-
-                //Obtener datos de conexion del properties
-                String url;
-
-                // Si existe ip.properties, construir URL desde ahí (para exportación)
-                if (ipProps != null && ipProps.getProperty("aws.ip") != null) {
-                    String ip = ipProps.getProperty("aws.ip");
-                    String port = ipProps.getProperty("aws.port");
-                    String database = ipProps.getProperty("aws.database");
-                    url = "jdbc:postgresql://" + ip + ":" + port + "/" + database;
-                } else {
-                    // Sino, usar la URL del database.properties
-                    url = props.getProperty("db.url");
-                }
-
-                String usuario = props.getProperty("db.usuario");
-                String password = props.getProperty("db.password");
-                String driver = props.getProperty("db.driver");
-
-                //Cargar el driver de PostgreSQL
-                Class.forName(driver);
-
-                //Establecer la conexion
-                conexion = DriverManager.getConnection(url, usuario, password);
-                System.out.println("Conexion establecida correctamente con PostgreSQL");
-                System.out.println("URL de conexion: " + url);
-            }
-        } catch (ClassNotFoundException e) {
-            System.err.println("Error: No se encontro el driver de PostgreSQL");
-            e.printStackTrace();
-        } catch (SQLException e) {
-            System.err.println("Error al conectar con la base de datos");
-            e.printStackTrace();
+    /**
+     * Inicializa el pool de conexiones HikariCP.
+     * Se invoca de forma perezosa en la primera llamada a getConexion().
+     */
+    private static synchronized void inicializarPool() {
+        if (dataSource != null) {
+            return;
         }
 
-        return conexion;
+        cargarPropiedades();
+        cargarPropiedadesIP();
+
+        //Construir URL de conexion
+        String url;
+        if (ipProps != null && ipProps.getProperty("aws.ip") != null) {
+            String ip = ipProps.getProperty("aws.ip");
+            String port = ipProps.getProperty("aws.port");
+            String database = ipProps.getProperty("aws.database");
+            url = "jdbc:postgresql://" + ip + ":" + port + "/" + database;
+        } else {
+            url = props.getProperty("db.url");
+        }
+
+        String usuario = props.getProperty("db.usuario");
+        String password = props.getProperty("db.password");
+
+        //Configurar HikariCP
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setUsername(usuario);
+        config.setPassword(password);
+        config.setDriverClassName("org.postgresql.Driver");
+
+        //Parametros del pool
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(2);
+        config.setConnectionTimeout(30000);   // 30 segundos
+        config.setIdleTimeout(600000);         // 10 minutos
+        config.setMaxLifetime(1800000);        // 30 minutos
+        config.setAutoCommit(true);
+
+        //Nombre del pool para identificacion en logs
+        config.setPoolName("RehabiAPP-Pool");
+
+        //Query de validacion
+        config.setConnectionTestQuery("SELECT 1");
+
+        dataSource = new HikariDataSource(config);
+        System.out.println("Pool de conexiones HikariCP inicializado correctamente");
+        System.out.println("URL de conexion: " + url);
+    }
+
+    /**
+     * Obtiene una conexion del pool.
+     * Cada llamada devuelve una conexion independiente que DEBE cerrarse
+     * tras su uso (try-with-resources recomendado).
+     * Al cerrarla se devuelve automaticamente al pool.
+     *
+     * @return Connection nueva del pool
+     */
+    public static Connection getConexion() {
+        try {
+            if (dataSource == null) {
+                inicializarPool();
+            }
+            return dataSource.getConnection();
+        } catch (SQLException e) {
+            System.err.println("Error al obtener conexion del pool: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
 
     //Alias del metodo getConexion para compatibilidad
@@ -125,80 +154,40 @@ public class ConexionBD {
         return getConexion();
     }
 
-    //Metodo para cerrar la conexion a la base de datos
+    /**
+     * Cierra el pool de conexiones.
+     * Debe invocarse al cerrar la aplicacion.
+     */
     public static void cerrarConexion() {
-        try {
-            if (conexion != null && !conexion.isClosed()) {
-                conexion.close();
-                System.out.println("Conexion cerrada correctamente");
-            }
-        } catch (SQLException e) {
-            System.err.println("Error al cerrar la conexion");
-            e.printStackTrace();
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+            dataSource = null;
+            System.out.println("Pool de conexiones cerrado correctamente");
         }
     }
 
     /**
-     * Metodo para probar la conexion a la base de datos
-     * Ejecuta una consulta real para verificar que la base de datos responde
+     * Prueba la conexion a la base de datos ejecutando una consulta real.
      *
      * @return true si la conexion es exitosa y la BD responde, false en caso contrario
      */
     public static boolean probarConexion() {
-        Connection conn = null;
-        java.sql.Statement stmt = null;
-        java.sql.ResultSet rs = null;
-
-        try {
-            // Intentar obtener o crear una nueva conexión
-            conn = getConexion();
-
-            // Verificar que la conexión no es null y no está cerrada
+        try (Connection conn = getConexion()) {
             if (conn == null || conn.isClosed()) {
                 return false;
             }
 
-            // Ejecutar una consulta simple para verificar que la BD responde
-            // SELECT 1 es una consulta universal que funciona en PostgreSQL
-            stmt = conn.createStatement();
-            rs = stmt.executeQuery("SELECT 1");
-
-            // Si la consulta retorna algún resultado, la conexión es válida
-            if (rs.next()) {
-                return true;
+            try (java.sql.Statement stmt = conn.createStatement();
+                 java.sql.ResultSet rs = stmt.executeQuery("SELECT 1")) {
+                return rs.next();
             }
-
-            // Si no retorna nada, hay un problema con la BD
-            return false;
 
         } catch (SQLException e) {
-            System.err.println("Error al verificar conexión con consulta: " + e.getMessage());
-
-            // Resetear la conexión en caso de error
-            try {
-                if (conn != null && !conn.isClosed()) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                // Ignorar
-            }
-            conexion = null;
-
+            System.err.println("Error al verificar conexion: " + e.getMessage());
             return false;
         } catch (Exception e) {
-            // Capturar cualquier otra excepción (NullPointerException, etc.)
-            System.err.println("Error inesperado al probar conexión: " + e.getMessage());
-            conexion = null;
+            System.err.println("Error inesperado al probar conexion: " + e.getMessage());
             return false;
-        } finally {
-            // Cerrar recursos en orden inverso
-            try {
-                if (rs != null) rs.close();
-                if (stmt != null) stmt.close();
-                // NO cerramos conn porque es la conexión singleton que se reutiliza
-            } catch (SQLException e) {
-                System.err.println("Error al cerrar recursos de prueba: " + e.getMessage());
-            }
         }
     }
 }

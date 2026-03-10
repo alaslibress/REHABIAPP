@@ -105,6 +105,8 @@
                 <Button fx:id="btnPestaniaCitas" mnemonicParsing="false" onAction="#abrirPestaniaCitas" prefHeight="60.0" prefWidth="225.0" text="Citas" />
                 <Button fx:id="btnPestaniaPacientes" mnemonicParsing="false" onAction="#abrirPestaniaPacientes" prefHeight="60.0" prefWidth="225.0" text="Pacientes" />
                 <Button fx:id="btnPestaniaSanitarios" mnemonicParsing="false" onAction="#abrirPestaniaSanitarios" prefHeight="60.0" prefWidth="225.0" text="Sanitarios" />
+                <Button fx:id="btnPestaniaDiscapacidades" mnemonicParsing="false" onAction="#abrirPestaniaDiscapacidades" prefHeight="60.0" prefWidth="225.0" text="Discapacidades" />
+                <Button fx:id="btnPestaniaTratamientos" mnemonicParsing="false" onAction="#abrirPestaniaTratamientos" prefHeight="60.0" prefWidth="225.0" text="Tratamientos" />
                 <Button fx:id="btnPestaniaAyuda" mnemonicParsing="false" onAction="#abrirPestaniaAyuda" prefHeight="60.0" prefWidth="225.0" text="Ayuda">
                     <VBox.margin>
                         <Insets />

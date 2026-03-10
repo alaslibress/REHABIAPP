@@ -67,6 +67,7 @@ El ecosistema completo incluye:
 - Gradle 8.13 como build system
 - JasperReports 7.0.1 para informes PDF y HTML
 - CalendarFX para la vista de calendario de citas
+- HikariCP 5.1.0 para pool de conexiones JDBC thread-safe
 - BCrypt (jBCrypt 0.4) para hash de contraseñas
 - AES-256-GCM para cifrado de campos clinicos sensibles
 - ControlsFX 11.2.2 para validaciones visuales
@@ -97,7 +98,7 @@ BASE DE DATOS (PostgreSQL)
 src/main/java/com/javafx/
     |-- Clases/
     |   |-- Main.java (punto de entrada, inicializa cifrado AES)
-    |   |-- ConexionBD.java (Singleton, conexion unica a PostgreSQL)
+    |   |-- ConexionBD.java (HikariCP pool de conexiones thread-safe)
     |   |-- Paciente.java (modelo con propiedades JavaFX, incluye campos clinicos v2)
     |   |-- Sanitario.java (modelo con propiedades JavaFX)
     |   |-- Cita.java (modelo con propiedades JavaFX)
@@ -113,18 +114,30 @@ src/main/java/com/javafx/
     |   |-- controladorAgregarSanitario.java (formulario alta/edicion sanitario)
     |   |-- controladorVentanaSanitarioListar.java (ficha detalle sanitario)
     |   |-- controladorVentanaOpciones.java (tema claro/oscuro + tamaño fuente)
+    |   |-- controladorVentanaDiscapacidades.java (catalogo discapacidades, CRUD + paginacion)
+    |   |-- controladorVentanaTratamientos.java (catalogo tratamientos, CRUD + filtro por nivel)
+    |   |-- controladorAgregarDiscapacidad.java (formulario alta/edicion discapacidad)
+    |   |-- controladorAgregarTratamiento.java (formulario alta/edicion tratamiento)
     |   |-- (mas controladores para citas, perfil, filtros, etc.)
     |-- DAO/
-    |   |-- PacienteDAO.java (CRUD con cifrado AES y soft delete)
-    |   |-- SanitarioDAO.java (CRUD con BCrypt y soft delete)
+    |   |-- BaseDAO.java (clase base con metodos comunes)
+    |   |-- PacienteDAO.java (CRUD con cifrado AES, soft delete, excepciones tipadas)
+    |   |-- SanitarioDAO.java (CRUD con BCrypt, migracion perezosa, soft delete, excepciones tipadas)
     |   |-- CitaDAO.java
     |   |-- DireccionDAO.java
     |   |-- AuditLogDAO.java (solo INSERT, inmutable)
+    |   |-- DiscapacidadDAO.java (CRUD catalogo discapacidades)
+    |   |-- TratamientoDAO.java (CRUD catalogo tratamientos)
+    |   |-- NivelProgresionDAO.java (lectura catalogo niveles de progresion)
+    |   |-- PacienteDiscapacidadDAO.java (relacion N:M paciente-discapacidad con nivel)
+    |   |-- PacienteTratamientoDAO.java (tratamientos visibles por paciente)
     |-- service/
-    |   |-- PacienteService.java (wrapper DAO + auditoria automatica)
-    |   |-- SanitarioService.java (wrapper DAO + auditoria automatica)
+    |   |-- PacienteService.java (transacciones atomicas + auditoria automatica)
+    |   |-- SanitarioService.java (transacciones atomicas + auditoria automatica)
     |   |-- AuditService.java (servicio centralizado fire-and-forget)
     |   |-- CifradoService.java (AES-256-GCM para campos clinicos)
+    |   |-- CatalogoService.java (discapacidades, tratamientos, niveles)
+    |   |-- PacienteClinicoService.java (discapacidades y tratamientos del paciente)
     |-- util/
     |   |-- CifradoUtil.java (BCrypt para contraseñas)
     |   |-- PaginacionUtil.java
@@ -134,11 +147,12 @@ src/main/java/com/javafx/
     |   |-- RehabiAppException.java (base, extiende RuntimeException)
     |   |-- ConexionException.java
     |   |-- ValidacionException.java
+    |   |-- DuplicadoException.java (extends ValidacionException, indica campo duplicado)
     |   |-- AutenticacionException.java
     |   |-- PermisoException.java
 
 src/main/resources/
-    |-- *.fxml (VentanaLogin, VentanaPrincipal, VentanaPacientes, VentanaAgregarPaciente, VentanaListarPaciente, VentanaSanitarios, etc.)
+    |-- *.fxml (VentanaLogin, VentanaPrincipal, VentanaPacientes, VentanaAgregarPaciente, VentanaListarPaciente, VentanaSanitarios, VentanaDiscapacidades, VentanaAgregarDiscapacidad, VentanaTratamientos, VentanaAgregarTratamiento, etc.)
     |-- css/ (tema_claro.css, tema_oscuro.css)
     |-- config/ (database.properties, preferencias.properties, cifrado.properties [excluido de Git])
     |-- imagenes/
@@ -183,9 +197,17 @@ if (sesion.esEspecialista()) {
 ### Operaciones de base de datos (patron actual)
 
 ```java
-// Los DAOs devuelven boolean o List<T>. Los Services envuelven DAO + auditoria.
+// Los DAOs lanzan excepciones tipadas (ConexionException, ValidacionException, DuplicadoException).
+// Los Services envuelven DAO + transacciones atomicas + auditoria.
+// Las conexiones se obtienen del pool HikariCP y se cierran con try-with-resources.
 PacienteService pacienteService = new PacienteService();
-boolean exito = pacienteService.insertar(paciente, tel1, tel2); // DAO + AuditService.insertPaciente()
+try {
+    pacienteService.insertar(paciente, tel1, tel2, archivoFoto); // Transaccion atomica + AuditService
+} catch (DuplicadoException e) {
+    // DNI, email o num_ss duplicado
+} catch (ConexionException e) {
+    // Error de conexion/SQL
+}
 ```
 
 ---

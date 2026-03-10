@@ -22,6 +22,12 @@ dependencies {
     // PostgreSQL Driver
     implementation 'org.postgresql:postgresql:42.7.2'
 
+    // BCrypt para hash de contraseñas
+    implementation 'org.mindrot:jbcrypt:0.4'
+
+    // HikariCP - Pool de conexiones thread-safe
+    implementation 'com.zaxxer:HikariCP:5.1.0'
+
     // CalendarFX - Mantenemos la exclusión para evitar conflictos de versiones de JFX
     implementation('com.calendarfx:view:11.12.7') {
         exclude group: 'org.openjfx'

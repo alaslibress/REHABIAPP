@@ -1,6 +1,7 @@
 package com.javafx.DAO;
 
 import com.javafx.Clases.ConexionBD;
+import com.javafx.excepcion.ConexionException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -10,80 +11,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Clase abstracta con metodos helper compartidos para todos los DAOs
- * Proporciona funcionalidad comun para operaciones de base de datos
+ * Clase abstracta con metodos helper compartidos para todos los DAOs.
+ * Proporciona funcionalidad comun para operaciones de base de datos.
  */
 public abstract class BaseDAO {
 
     /**
-     * Interface funcional para ejecutar transacciones
-     * @param <T> Tipo de retorno de la transaccion
-     */
-    public interface TransaccionCallback<T> {
-        T ejecutar(Connection conn) throws SQLException;
-    }
-
-    /**
-     * Ejecuta una transaccion de forma segura con manejo automatico de commit/rollback
-     * @param callback Callback con la logica de la transaccion
-     * @param valorDefecto Valor a retornar en caso de error
-     * @param <T> Tipo de retorno
-     * @return Resultado de la transaccion o valorDefecto si hay error
-     */
-    protected <T> T ejecutarTransaccion(TransaccionCallback<T> callback, T valorDefecto) {
-        Connection conn = null;
-
-        try {
-            conn = ConexionBD.getConexion();
-            conn.setAutoCommit(false);
-
-            T resultado = callback.ejecutar(conn);
-
-            conn.commit();
-            return resultado;
-
-        } catch (SQLException e) {
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (SQLException ex) {
-                    System.err.println("Error al hacer rollback: " + ex.getMessage());
-                }
-            }
-            System.err.println("Error en transaccion: " + e.getMessage());
-            e.printStackTrace();
-            return valorDefecto;
-
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                } catch (SQLException e) {
-                    System.err.println("Error al restaurar autocommit: " + e.getMessage());
-                }
-                try {
-                    conn.close();
-                } catch (SQLException e) {
-                    System.err.println("Error al cerrar conexion: " + e.getMessage());
-                }
-            }
-        }
-    }
-
-    /**
-     * Inserta telefonos en la tabla especificada
+     * Inserta telefonos en la tabla especificada.
+     * Usa la conexion proporcionada para participar en una transaccion externa.
+     *
+     * @param conn Conexion activa (gestionada externamente)
      * @param tablaTelefono Nombre de la tabla de telefonos (telefono_paciente o telefono_sanitario)
      * @param dniColumna Nombre de la columna DNI (dni_pac o dni_san)
      * @param dni DNI del paciente o sanitario
      * @param tel1 Primer telefono (puede ser null o vacio)
      * @param tel2 Segundo telefono (puede ser null o vacio)
-     * @return true si la insercion fue exitosa
+     * @throws ConexionException si hay error de base de datos
      */
-    protected boolean insertarTelefonos(String tablaTelefono, String dniColumna, String dni, String tel1, String tel2) {
+    protected void insertarTelefonos(Connection conn, String tablaTelefono, String dniColumna,
+                                     String dni, String tel1, String tel2) {
         String query = "INSERT INTO " + tablaTelefono + " (" + dniColumna + ", telefono) VALUES (?, ?)";
 
-        try (Connection conn = ConexionBD.getConexion();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
 
             if (tel1 != null && !tel1.trim().isEmpty()) {
                 stmt.setString(1, dni);
@@ -97,24 +46,49 @@ public abstract class BaseDAO {
                 stmt.executeUpdate();
             }
 
-            return true;
-
         } catch (SQLException e) {
-            System.err.println("Error al insertar telefonos: " + e.getMessage());
-            e.printStackTrace();
-            return false;
+            throw new ConexionException("Error al insertar telefonos en " + tablaTelefono, e);
         }
     }
 
     /**
+     * Elimina y reinserta telefonos en la tabla especificada (actualizacion).
+     * Usa la conexion proporcionada para participar en una transaccion externa.
+     *
+     * @param conn Conexion activa (gestionada externamente)
+     * @param tablaTelefono Nombre de la tabla de telefonos
+     * @param dniColumna Nombre de la columna DNI
+     * @param dni DNI del paciente o sanitario
+     * @param tel1 Primer telefono
+     * @param tel2 Segundo telefono
+     * @throws ConexionException si hay error de base de datos
+     */
+    protected void actualizarTelefonos(Connection conn, String tablaTelefono, String dniColumna,
+                                       String dni, String tel1, String tel2) {
+        //Eliminar telefonos existentes
+        String queryEliminar = "DELETE FROM " + tablaTelefono + " WHERE " + dniColumna + " = ?";
+
+        try (PreparedStatement stmtEliminar = conn.prepareStatement(queryEliminar)) {
+            stmtEliminar.setString(1, dni);
+            stmtEliminar.executeUpdate();
+        } catch (SQLException e) {
+            throw new ConexionException("Error al eliminar telefonos de " + tablaTelefono, e);
+        }
+
+        //Reinsertar los nuevos
+        insertarTelefonos(conn, tablaTelefono, dniColumna, dni, tel1, tel2);
+    }
+
+    /**
      * Carga los telefonos desde la tabla especificada
-     * @param tablaTelefono Nombre de la tabla de telefonos (telefono_paciente o telefono_sanitario)
-     * @param dniColumna Nombre de la columna DNI (dni_pac o dni_san)
+     *
+     * @param tablaTelefono Nombre de la tabla de telefonos
+     * @param dniColumna Nombre de la columna DNI
      * @param dni DNI del paciente o sanitario
      * @return Lista de telefonos (maximo 2)
      */
     protected List<String> cargarTelefonos(String tablaTelefono, String dniColumna, String dni) {
-        List<String> telefonos = new ArrayList<String>();
+        List<String> telefonos = new ArrayList<>();
         String query = "SELECT telefono FROM " + tablaTelefono + " WHERE " + dniColumna + " = ? ORDER BY id_telefono LIMIT 2";
 
         try (Connection conn = ConexionBD.getConexion();
@@ -129,9 +103,34 @@ public abstract class BaseDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("Error al cargar telefonos: " + e.getMessage());
+            throw new ConexionException("Error al cargar telefonos de " + tablaTelefono, e);
         }
 
         return telefonos;
+    }
+
+    /**
+     * Traduce una SQLException a la excepcion tipada correspondiente
+     * segun el sqlState de PostgreSQL.
+     *
+     * @param e SQLException original
+     * @param mensajeGenerico Mensaje para ConexionException si no se identifica el error
+     * @return RuntimeException tipada (nunca null)
+     */
+    protected RuntimeException traducirSQLException(SQLException e, String mensajeGenerico) {
+        String sqlState = e.getSQLState();
+
+        if (sqlState != null) {
+            if ("23505".equals(sqlState)) {
+                //Unique violation - se maneja en la subclase con mas detalle
+                return new ConexionException(mensajeGenerico + " (constraint unica)", e);
+            }
+            if ("23503".equals(sqlState)) {
+                //FK violation
+                return new ConexionException(mensajeGenerico + " (referencia invalida)", e);
+            }
+        }
+
+        return new ConexionException(mensajeGenerico, e);
     }
 }

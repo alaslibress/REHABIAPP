@@ -6,6 +6,8 @@
 <?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.image.ImageView?>
@@ -93,31 +95,49 @@
                             </children>
                         </VBox>
 
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <Separator />
+                        <Label style="-fx-font-weight: bold;" text="Discapacidades asignadas" />
+
+                        <TableView fx:id="tblDiscapacidadesPaciente" prefHeight="130.0" prefWidth="430.0">
+                            <columns>
+                                <TableColumn fx:id="colDisCodigo" prefWidth="60.0" text="Codigo" />
+                                <TableColumn fx:id="colDisNombre" prefWidth="150.0" text="Discapacidad" />
+                                <TableColumn fx:id="colDisNivel" prefWidth="100.0" text="Nivel actual" />
+                                <TableColumn fx:id="colDisNotas" prefWidth="110.0" text="Notas" />
+                            </columns>
+                        </TableView>
+
+                        <HBox fx:id="hboxBotonesDiscapacidad" alignment="CENTER_LEFT" spacing="8.0">
                             <children>
-                                <Label prefWidth="180.0" text="Discapacidad:" />
-                                <Label fx:id="lblDiscapacidadValor" prefWidth="250.0" wrapText="true" />
+                                <Button fx:id="btnAsignarDiscapacidad" mnemonicParsing="false" onAction="#asignarDiscapacidad" prefWidth="100.0" text="Asignar" />
+                                <Button fx:id="btnDesasignarDiscapacidad" mnemonicParsing="false" onAction="#desasignarDiscapacidad" prefWidth="110.0" text="Desasignar" />
+                                <Button fx:id="btnSubirNivel" mnemonicParsing="false" onAction="#subirNivel" prefWidth="90.0" text="Subir nivel" />
+                                <Button fx:id="btnBajarNivel" mnemonicParsing="false" onAction="#bajarNivel" prefWidth="90.0" text="Bajar nivel" />
+                                <Button fx:id="btnEditarNotas" mnemonicParsing="false" onAction="#editarNotas" prefWidth="100.0" text="Editar notas" />
                             </children>
                         </HBox>
 
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <Label style="-fx-font-weight: bold;" text="Tratamientos del paciente" >
+                            <VBox.margin>
+                                <Insets top="5.0" />
+                            </VBox.margin>
+                        </Label>
+
+                        <TableView fx:id="tblTratamientosPaciente" prefHeight="130.0" prefWidth="430.0">
+                            <columns>
+                                <TableColumn fx:id="colTratNombre" prefWidth="150.0" text="Tratamiento" />
+                                <TableColumn fx:id="colTratDefinicion" prefWidth="180.0" text="Definicion" />
+                                <TableColumn fx:id="colTratVisible" prefWidth="90.0" text="Visible" />
+                            </columns>
+                        </TableView>
+
+                        <HBox fx:id="hboxBotonesTratamiento" alignment="CENTER_LEFT" spacing="8.0">
                             <children>
-                                <Label prefWidth="180.0" text="Protesis:" />
-                                <RadioButton fx:id="radioProtesisSi" disable="true" text="Si">
-                                    <toggleGroup>
-                                        <ToggleGroup fx:id="grupoProtesis" />
-                                    </toggleGroup>
-                                </RadioButton>
-                                <RadioButton fx:id="radioProtesisNo" disable="true" text="No" toggleGroup="$grupoProtesis" />
+                                <Button fx:id="btnAsignarTratamiento" mnemonicParsing="false" onAction="#asignarTratamiento" prefWidth="100.0" text="Asignar" />
+                                <Button fx:id="btnDesasignarTratamiento" mnemonicParsing="false" onAction="#desasignarTratamiento" prefWidth="110.0" text="Desasignar" />
+                                <Button fx:id="btnToggleVisibilidad" mnemonicParsing="false" onAction="#toggleVisibilidad" prefWidth="140.0" text="Cambiar visibilidad" />
                             </children>
                         </HBox>
-
-                        <VBox spacing="5.0">
-                            <children>
-                                <Label text="Tratamiento:" />
-                                <TextArea fx:id="txtAreaTratamiento" editable="false" prefHeight="60.0" prefWidth="430.0" wrapText="true" />
-                            </children>
-                        </VBox>
 
                         <Separator />
                         <Label style="-fx-font-weight: bold;" text="Datos Clinicos" />

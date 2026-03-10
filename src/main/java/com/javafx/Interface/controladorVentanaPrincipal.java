@@ -57,6 +57,12 @@ public class controladorVentanaPrincipal {
     private Button btnPestaniaSanitarios;
 
     @FXML
+    private Button btnPestaniaDiscapacidades;
+
+    @FXML
+    private Button btnPestaniaTratamientos;
+
+    @FXML
     private Button btnSalir;
 
     @FXML
@@ -199,10 +205,14 @@ public class controladorVentanaPrincipal {
             lblNombreTemporal.setText(sesion.getNombreCompleto());
             lblCargoTemporal.setText(sesion.getCargo());
 
-            // Ocultar pestaña de sanitarios si no es especialista
+            // Ocultar pestanas de gestion si no es especialista
             if (!sesion.esEspecialista()) {
                 btnPestaniaSanitarios.setVisible(false);
                 btnPestaniaSanitarios.setManaged(false);
+                btnPestaniaDiscapacidades.setVisible(false);
+                btnPestaniaDiscapacidades.setManaged(false);
+                btnPestaniaTratamientos.setVisible(false);
+                btnPestaniaTratamientos.setManaged(false);
             }
         }
     }
@@ -245,6 +255,10 @@ public class controladorVentanaPrincipal {
                 ((controladorVentanaSanitarios) controlador).configurarPermisos();
             } else if (controlador instanceof controladorVentanaPacientes) {
                 ((controladorVentanaPacientes) controlador).configurarPermisos();
+            } else if (controlador instanceof controladorVentanaDiscapacidades) {
+                ((controladorVentanaDiscapacidades) controlador).configurarPermisos();
+            } else if (controlador instanceof controladorVentanaTratamientos) {
+                ((controladorVentanaTratamientos) controlador).configurarPermisos();
             }
 
             // Cargar contenido en el centro del BorderPane
@@ -400,6 +414,24 @@ public class controladorVentanaPrincipal {
     void abrirPestaniaAyuda(ActionEvent event) {
         cargarPestania("Ayuda");
         marcarPestaniaSeleccionada(btnPestaniaAyuda);
+    }
+
+    /**
+     * Abre la pestana de discapacidades (catalogo clinico)
+     */
+    @FXML
+    void abrirPestaniaDiscapacidades(ActionEvent event) {
+        cargarPestania("Discapacidades");
+        marcarPestaniaSeleccionada(btnPestaniaDiscapacidades);
+    }
+
+    /**
+     * Abre la pestana de tratamientos (catalogo clinico)
+     */
+    @FXML
+    void abrirPestaniaTratamientos(ActionEvent event) {
+        cargarPestania("Tratamientos");
+        marcarPestaniaSeleccionada(btnPestaniaTratamientos);
     }
 
     /**

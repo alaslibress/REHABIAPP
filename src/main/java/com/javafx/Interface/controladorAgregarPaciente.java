@@ -6,6 +6,9 @@ import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.PacienteDAO;
 import com.javafx.DAO.SanitarioDAO;
+import com.javafx.excepcion.ConexionException;
+import com.javafx.excepcion.DuplicadoException;
+import com.javafx.excepcion.ValidacionException;
 import com.javafx.service.PacienteService;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -13,7 +16,9 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.RadioButton;
@@ -31,6 +36,7 @@ import org.controlsfx.validation.ValidationSupport;
 import org.controlsfx.validation.Validator;
 
 import java.io.File;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -118,6 +124,25 @@ public class controladorAgregarPaciente {
     @FXML
     private TextField txtProvincia;
 
+    //Campos clinicos v2
+    @FXML
+    private ComboBox<String> cmbSexo;
+
+    @FXML
+    private DatePicker dpFechaNacimiento;
+
+    @FXML
+    private TextArea txtAreaAlergias;
+
+    @FXML
+    private TextArea txtAreaAntecedentes;
+
+    @FXML
+    private TextArea txtAreaMedicacion;
+
+    @FXML
+    private CheckBox chkConsentimientoRgpd;
+
     //Variables para la gestion de archivos
     private File archivoFoto;
 
@@ -159,6 +184,13 @@ public class controladorAgregarPaciente {
 
         //Seleccionar "No" por defecto en protesis
         radioProtesisNo.setSelected(true);
+
+        //Configurar ComboBox de sexo
+        cmbSexo.setItems(FXCollections.observableArrayList("M", "F", "O"));
+
+        //Campos legacy: la gestion de discapacidades y tratamientos se realiza desde la ficha del paciente
+        txtDiscapacidad.setPromptText("Campo legacy - usar ficha de paciente");
+        txtAreaTratamiento.setPromptText("Campo legacy - usar ficha de paciente");
 
         //Inicializar soporte de validacion
         validationSupport = new ValidationSupport();
@@ -325,6 +357,16 @@ public class controladorAgregarPaciente {
             radioProtesisNo.setSelected(true);
         }
 
+        //Campos clinicos v2
+        if (paciente.getSexo() != null && !paciente.getSexo().isEmpty()) {
+            cmbSexo.setValue(paciente.getSexo());
+        }
+        dpFechaNacimiento.setValue(paciente.getFechaNacimiento());
+        txtAreaAlergias.setText(paciente.getAlergias() != null ? paciente.getAlergias() : "");
+        txtAreaAntecedentes.setText(paciente.getAntecedentes() != null ? paciente.getAntecedentes() : "");
+        txtAreaMedicacion.setText(paciente.getMedicacionActual() != null ? paciente.getMedicacionActual() : "");
+        chkConsentimientoRgpd.setSelected(paciente.isConsentimientoRgpd());
+
         //Cargar foto
         cargarFotoDesdeBD(paciente.getDni());
     }
@@ -386,135 +428,89 @@ public class controladorAgregarPaciente {
         paciente.setLocalidad(txtLocalidad.getText().trim());
         paciente.setProvincia(txtProvincia.getText().trim());
 
-        boolean exito;
-        if (modoEdicion) {
-            exito = actualizarPacienteExistente(paciente);
-        } else {
-            exito = insertarNuevoPaciente(paciente);
-        }
+        //Configurar campos clinicos v2
+        paciente.setSexo(cmbSexo.getValue() != null ? cmbSexo.getValue() : "");
+        paciente.setFechaNacimiento(dpFechaNacimiento.getValue());
+        paciente.setAlergias(txtAreaAlergias.getText() != null ? txtAreaAlergias.getText().trim() : "");
+        paciente.setAntecedentes(txtAreaAntecedentes.getText() != null ? txtAreaAntecedentes.getText().trim() : "");
+        paciente.setMedicacionActual(txtAreaMedicacion.getText() != null ? txtAreaMedicacion.getText().trim() : "");
+        paciente.setConsentimientoRgpd(chkConsentimientoRgpd.isSelected());
 
-        if (exito) {
+        try {
+            if (modoEdicion) {
+                actualizarPacienteExistente(paciente);
+            } else {
+                insertarNuevoPaciente(paciente);
+            }
             cerrarVentana(event);
+        } catch (DuplicadoException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Dato duplicado: " + e.getMessage(),
+                    TipoMensaje.ERROR
+            );
+            enfocarCampoDuplicado(e.getCampo());
+        } catch (ValidacionException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    e.getMessage(),
+                    TipoMensaje.ERROR
+            );
+        } catch (ConexionException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error de conexion con la base de datos.",
+                    TipoMensaje.ERROR
+            );
         }
     }
 
     /**
-     * Inserta un nuevo paciente en la base de datos
+     * Inserta un nuevo paciente en la base de datos.
+     * La operacion es atomica: paciente + telefonos + foto en una sola transaccion.
+     * Lanza excepciones tipadas que se capturan en guardarPaciente().
      */
-    private boolean insertarNuevoPaciente(Paciente paciente) {
-        // REFACTORIZADO: Usar PacienteDAO directamente para validaciones (pendiente de mover al servicio)
-        if (pacienteDAO.existeDni(paciente.getDni())) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Ya existe un paciente registrado con ese DNI.",
-                    TipoMensaje.ERROR
-            );
-            txtDNI.requestFocus();
-            return false;
-        }
-
-        if (pacienteDAO.existeEmail(paciente.getEmail())) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Ya existe un paciente registrado con ese email.",
-                    TipoMensaje.ERROR
-            );
-            txtEmail.requestFocus();
-            return false;
-        }
-
-        if (pacienteDAO.existeNumSS(paciente.getNumSS())) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Ya existe un paciente con ese numero de seguridad social.",
-                    TipoMensaje.ERROR
-            );
-            txtNSS.requestFocus();
-            return false;
-        }
-
-        // REFACTORIZADO: Usar PacienteService que maneja insercion + telefonos en una sola llamada
-        boolean insertado = pacienteService.insertar(
+    private void insertarNuevoPaciente(Paciente paciente) {
+        pacienteService.insertar(
                 paciente,
                 paciente.getTelefono1(),
-                paciente.getTelefono2()
+                paciente.getTelefono2(),
+                archivoFoto
         );
 
-        if (insertado) {
-            // Insertar foto si existe (pendiente de mover al servicio)
-            if (archivoFoto != null) {
-                pacienteDAO.insertarFoto(paciente.getDni(), archivoFoto);
-            }
-
-            VentanaUtil.mostrarVentanaInformativa(
-                    "El paciente se ha registrado correctamente.",
-                    TipoMensaje.EXITO
-            );
-            return true;
-        } else {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "No se pudo registrar el paciente. Verifica los datos de direccion.",
-                    TipoMensaje.ERROR
-            );
-            return false;
-        }
+        VentanaUtil.mostrarVentanaInformativa(
+                "El paciente se ha registrado correctamente.",
+                TipoMensaje.EXITO
+        );
     }
 
     /**
-     * Actualiza un paciente existente en la base de datos
+     * Actualiza un paciente existente en la base de datos.
+     * La operacion es atomica: paciente + telefonos + foto en una sola transaccion.
+     * Lanza excepciones tipadas que se capturan en guardarPaciente().
      */
-    private boolean actualizarPacienteExistente(Paciente paciente) {
-        if (!paciente.getDni().equals(dniOriginal)) {
-            if (pacienteDAO.existeDni(paciente.getDni())) {
-                VentanaUtil.mostrarVentanaInformativa(
-                        "Ya existe otro paciente con ese DNI.",
-                        TipoMensaje.ERROR
-                );
-                txtDNI.requestFocus();
-                return false;
-            }
-        }
-
-        if (pacienteDAO.existeEmailExcluyendoDni(paciente.getEmail(), dniOriginal)) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Ya existe otro paciente con ese email.",
-                    TipoMensaje.ERROR
-            );
-            txtEmail.requestFocus();
-            return false;
-        }
-
-        if (pacienteDAO.existeNumSSExcluyendoDni(paciente.getNumSS(), dniOriginal)) {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Ya existe otro paciente con ese numero de seguridad social.",
-                    TipoMensaje.ERROR
-            );
-            txtNSS.requestFocus();
-            return false;
-        }
-
-        // REFACTORIZADO: Usar PacienteService que maneja actualizacion + telefonos
-        boolean actualizado = pacienteService.actualizar(
+    private void actualizarPacienteExistente(Paciente paciente) {
+        pacienteService.actualizar(
                 paciente,
                 dniOriginal,
                 paciente.getTelefono1(),
-                paciente.getTelefono2()
+                paciente.getTelefono2(),
+                archivoFoto
         );
 
-        if (actualizado) {
-            // Actualizar foto si existe (pendiente de mover al servicio)
-            if (archivoFoto != null) {
-                pacienteDAO.actualizarFoto(paciente.getDni(), archivoFoto);
-            }
+        VentanaUtil.mostrarVentanaInformativa(
+                "Los datos del paciente se han actualizado correctamente.",
+                TipoMensaje.EXITO
+        );
+    }
 
-            VentanaUtil.mostrarVentanaInformativa(
-                    "Los datos del paciente se han actualizado correctamente.",
-                    TipoMensaje.EXITO
-            );
-            return true;
-        } else {
-            VentanaUtil.mostrarVentanaInformativa(
-                    "No se pudieron actualizar los datos.",
-                    TipoMensaje.ERROR
-            );
-            return false;
+    /**
+     * Enfoca el campo correspondiente al dato duplicado detectado
+     */
+    private void enfocarCampoDuplicado(String campo) {
+        if (campo == null) return;
+
+        switch (campo.toLowerCase()) {
+            case "dni" -> txtDNI.requestFocus();
+            case "email" -> txtEmail.requestFocus();
+            case "nss", "num_ss" -> txtNSS.requestFocus();
         }
     }
 

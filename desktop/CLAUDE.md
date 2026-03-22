@@ -1,424 +1,206 @@
-# CLAUDE.md - RehabiAPP SGE
+# CLAUDE.md - RehabiAPP Desktop (SGE)
 
-Eres un asistente de desarrollo que trabaja en el proyecto RehabiAPP, una aplicacion de escritorio en JavaFX que funciona como Sistema de Gestion de Expedientes (SGE) para centros de rehabilitacion medica. Trabajas con Alejandro Pozo Perez en su TFG.
+> **File:** `/desktop/CLAUDE.md`
+> **Agent:** Agent 3 (Desktop Developer)
+> **Role:** Thinker (Opus) + Doer (Sonnet)
 
-## Build Commands
+---
 
-```bash
-# Compilar el proyecto
-./gradlew compileJava
+## 1. PROJECT DEFINITION
 
-# Ejecutar la aplicacion
-./gradlew run
+This directory contains the Desktop ERP (SGE - Sistema de Gestion de Expedientes) of RehabiAPP. It is a JavaFX client application used by healthcare practitioners (specialists and nurses) to manage patients, practitioners, appointments, disability-linked treatments organized by clinical progression levels, and to visualize patient rehabilitation progress.
 
-# Limpiar artefactos
-./gradlew clean
+The SGE has direct JDBC connection to PostgreSQL. This is a legacy architecture that will progressively migrate to consume the ecosystem REST API (/api) in a future phase.
+
+---
+
+## 2. OPERATING RULES
+
+1. **Global context:** You are part of a larger ecosystem. Read and respect the root `/CLAUDE.md` before any cross-domain decision. This local file takes precedence for desktop-specific decisions only.
+
+2. **Skills are mandatory:** Before any architectural change, design pattern implementation, or technical task in Java/JavaFX, you MUST read and follow the manuals in `.claude/skills/` of this directory. Skills override default behavior.
+
+3. **Maintain this file:** This document is the living state of the project. When you complete a task, change `[ ]` to `[x]`. When a resolved item no longer provides useful context, remove it to keep this file short and token-efficient.
+
+4. **Testing requirement:** Any refactoring of DAOs, Services, or database connections (such as the HikariCP migration or the custom exceptions refactor) MUST be accompanied by unit tests (JUnit 5) or mocked tests (Mockito) that verify the refactored code does not break existing logic. Do not mark a refactoring task as `[x]` without passing tests. Run `./gradlew test` before considering any refactoring task complete.
+
+---
+
+## 3. LOCAL STACK
+
+- Java 24, JavaFX 23 (FXML via SceneBuilder), CSS (light/dark themes).
+- PostgreSQL 15+ (direct JDBC connection, temporary until API migration).
+- jBCrypt 0.4 (password hashing, cost factor 12, lazy migration of plain-text passwords).
+- AES-256-GCM (authenticated encryption of clinical fields: allergies, medical history, current medication).
+- ControlsFX 11.x (visual field validation).
+- CalendarFX 11.12+ (monthly calendar view for appointments).
+- JasperReports 6.20+ (PDF and HTML report generation).
+- Gradle (build system).
+
+### Build commands
+
+```
+./gradlew compileJava     # Compile
+./gradlew run             # Run
+./gradlew clean           # Clean
+./gradlew test            # Run tests
 ```
 
 ---
 
-## REGLAS DE ESTILO OBLIGATORIAS
-
-1. Todos los comentarios del codigo deben estar en español.
-2. No uses emojis en ningun momento.
-3. El nivel tecnico es el de un ingeniero de datos junior. Se pueden usar patrones de diseño profesionales (Singleton, DAO, Repository, Factory, Observer, Strategy) siempre que aporten valor real al proyecto. El codigo debe ser profesional, limpio y demostrar buenas practicas de ingenieria de software.
-4. Usa PreparedStatement siempre para evitar inyeccion SQL (nunca Statement directo con concatenacion de strings).
-5. Los nombres de clases en castellano con notacion PascalCase (ej: ControladorPacientes, SanitarioDAO).
-6. Los nombres de metodos en castellano con notacion camelCase (ej: insertarPaciente, obtenerTodos).
-7. Los nombres de variables en castellano con notacion camelCase.
-8. Las constantes en MAYUSCULAS_CON_GUION_BAJO.
-9. El codigo debe ser escalable y mantenible. Se valorara el uso correcto de interfaces, herencia, encapsulamiento, manejo de excepciones con clases propias, y separacion de responsabilidades.
-10. Cuando crees archivos nuevos, indica siempre la ruta exacta donde debe colocarse dentro de la estructura del proyecto.
-11. Documentar decisiones de arquitectura relevantes con comentarios de bloque explicativos.
-12. Aplicar principios SOLID donde sea razonable sin sobreingenieria.
-
----
-
-## DESCRIPCION DEL PROYECTO
-
-RehabiAPP es un ecosistema de software orientado a la rehabilitacion medica. El SGE es la aplicacion de escritorio que usan los sanitarios (medicos especialistas y enfermeros) para gestionar pacientes, personal sanitario y citas medicas.
-
-Este proyecto es un TFG orientado a demostrar competencias de ingeniero de datos junior. El enfoque tecnico debe reflejar:
-- Arquitectura de software profesional y escalable
-- Ingenieria de datos: modelado relacional riguroso, normalizacion, triggers, trazabilidad (audit log), soft deletes, integridad referencial estricta
-- Analisis de datos: preparacion de datos para su posterior analisis (los datos de videojuegos en MongoDB se procesaran con herramientas de ingenieria de datos)
-- Cumplimiento legal: RGPD, LOPDGDD, Ley 41/2002, ENS Nivel Alto
-- Integracion de IA: API de OpenAI integrada en el SGE
-- Infraestructura cloud: AWS (EC2, RDS, S3), Docker, Kubernetes, microservicios
-- Interoperabilidad: API REST con Spring Boot y Flyway que conecta todo el ecosistema
-- Seguridad: BCrypt, cifrado AES-256-GCM en campos clinicos, SSL/TLS, RBAC, 2FA (planificado)
-
-El ecosistema completo incluye:
-- SGE de escritorio (JavaFX + PostgreSQL) <-- ESTAMOS AQUI
-- APP movil (React Native + Expo)
-- API REST (Spring Boot + Flyway)
-- Videojuegos de rehabilitacion (Unity, exportados a WebGL)
-- BD documental (MongoDB para datos de videojuegos)
-- Infraestructura (AWS, Docker, Kubernetes)
-- Chatbot IA para WhatsApp (reservas automaticas)
-
----
-
-## TECNOLOGIAS DEL SGE
-
-- Java 24 con JavaFX 23 y FXML (diseñados en SceneBuilder)
-- PostgreSQL 15+ (base de datos relacional)
-- JDBC con driver PostgreSQL (org.postgresql:postgresql:42.7.2)
-- Gradle 8.13 como build system
-- JasperReports 7.0.1 para informes PDF y HTML
-- CalendarFX para la vista de calendario de citas
-- HikariCP 5.1.0 para pool de conexiones JDBC thread-safe
-- BCrypt (jBCrypt 0.4) para hash de contraseñas
-- AES-256-GCM para cifrado de campos clinicos sensibles
-- ControlsFX 11.2.2 para validaciones visuales
-- CSS para temas claro y oscuro
-- SLF4J 2.0.9 para logging
-- IntelliJ IDEA como IDE
-- Git para control de versiones
-
----
-
-## ARQUITECTURA EN TRES CAPAS
-
-```
-CAPA DE PRESENTACION (FXML + Controladores)
-    |
-CAPA DE SERVICIO (Services - logica de negocio + auditoria)
-    |
-CAPA DE ACCESO A DATOS (DAOs - operaciones SQL)
-    |
-BASE DE DATOS (PostgreSQL)
-```
-
----
-
-## ESTRUCTURA DE PAQUETES (estado actual del proyecto)
+## 4. PACKAGE STRUCTURE
 
 ```
 src/main/java/com/javafx/
-    |-- Clases/
-    |   |-- Main.java (punto de entrada, inicializa cifrado AES)
-    |   |-- ConexionBD.java (HikariCP pool de conexiones thread-safe)
-    |   |-- Paciente.java (modelo con propiedades JavaFX, incluye campos clinicos v2)
-    |   |-- Sanitario.java (modelo con propiedades JavaFX)
-    |   |-- Cita.java (modelo con propiedades JavaFX)
-    |   |-- SesionUsuario.java (Singleton - datos del usuario logueado)
-    |   |-- VentanaUtil.java, AnimacionUtil.java, InformeService.java, Persona.java
-    |-- Interface/
-    |   |-- controladorSesion.java (login con AuditService.login/logout)
-    |   |-- controladorVentanaPrincipal.java (ventana principal con barra lateral)
-    |   |-- controladorVentanaPacientes.java (tabla paginada de pacientes con col sexo)
-    |   |-- controladorAgregarPaciente.java (formulario alta/edicion con campos clinicos)
-    |   |-- controladorVentanaPacienteListar.java (ficha detalle con datos clinicos + auditoria READ)
-    |   |-- controladorVentanaSanitarios.java (tabla paginada de sanitarios)
-    |   |-- controladorAgregarSanitario.java (formulario alta/edicion sanitario)
-    |   |-- controladorVentanaSanitarioListar.java (ficha detalle sanitario)
-    |   |-- controladorVentanaOpciones.java (tema claro/oscuro + tamaño fuente)
-    |   |-- controladorVentanaDiscapacidades.java (catalogo discapacidades, CRUD + paginacion)
-    |   |-- controladorVentanaTratamientos.java (catalogo tratamientos, CRUD + filtro por nivel)
-    |   |-- controladorAgregarDiscapacidad.java (formulario alta/edicion discapacidad)
-    |   |-- controladorAgregarTratamiento.java (formulario alta/edicion tratamiento)
-    |   |-- (mas controladores para citas, perfil, filtros, etc.)
-    |-- DAO/
-    |   |-- BaseDAO.java (clase base con metodos comunes)
-    |   |-- PacienteDAO.java (CRUD con cifrado AES, soft delete, excepciones tipadas)
-    |   |-- SanitarioDAO.java (CRUD con BCrypt, migracion perezosa, soft delete, excepciones tipadas)
-    |   |-- CitaDAO.java
-    |   |-- DireccionDAO.java
-    |   |-- AuditLogDAO.java (solo INSERT, inmutable)
-    |   |-- DiscapacidadDAO.java (CRUD catalogo discapacidades)
-    |   |-- TratamientoDAO.java (CRUD catalogo tratamientos)
-    |   |-- NivelProgresionDAO.java (lectura catalogo niveles de progresion)
-    |   |-- PacienteDiscapacidadDAO.java (relacion N:M paciente-discapacidad con nivel)
-    |   |-- PacienteTratamientoDAO.java (tratamientos visibles por paciente)
-    |-- service/
-    |   |-- PacienteService.java (transacciones atomicas + auditoria automatica)
-    |   |-- SanitarioService.java (transacciones atomicas + auditoria automatica)
-    |   |-- AuditService.java (servicio centralizado fire-and-forget)
-    |   |-- CifradoService.java (AES-256-GCM para campos clinicos)
-    |   |-- CatalogoService.java (discapacidades, tratamientos, niveles)
-    |   |-- PacienteClinicoService.java (discapacidades y tratamientos del paciente)
-    |-- util/
-    |   |-- CifradoUtil.java (BCrypt para contraseñas)
-    |   |-- PaginacionUtil.java
-    |   |-- VentanaHelper.java
-    |   |-- ConstantesApp.java
-    |-- excepcion/
-    |   |-- RehabiAppException.java (base, extiende RuntimeException)
-    |   |-- ConexionException.java
-    |   |-- ValidacionException.java
-    |   |-- DuplicadoException.java (extends ValidacionException, indica campo duplicado)
-    |   |-- AutenticacionException.java
-    |   |-- PermisoException.java
+    |-- Clases/        Main, ConexionBD (Singleton), Paciente, Sanitario, Cita, SesionUsuario
+    |-- Interface/     All JavaFX controllers (controladorSesion, controladorMenuPrincipal, etc.)
+    |-- DAO/           PacienteDAO, SanitarioDAO, CitaDAO, DireccionDAO, AuditLogDAO
+    |-- service/       PacienteService, SanitarioService, AuditService, CifradoService
+    |-- util/          CifradoUtil, VentanaUtil, AnimacionUtil, ValidacionUtil, PaginacionUtil, VentanaHelper, ConstantesApp
+    |-- excepcion/     RehabiAppException, ConexionException, ValidacionException, AutenticacionException, PermisoException
 
 src/main/resources/
-    |-- *.fxml (VentanaLogin, VentanaPrincipal, VentanaPacientes, VentanaAgregarPaciente, VentanaListarPaciente, VentanaSanitarios, VentanaDiscapacidades, VentanaAgregarDiscapacidad, VentanaTratamientos, VentanaAgregarTratamiento, etc.)
-    |-- css/ (tema_claro.css, tema_oscuro.css)
-    |-- config/ (database.properties, preferencias.properties, cifrado.properties [excluido de Git])
-    |-- imagenes/
+    |-- fxml/          All FXML files (designed in SceneBuilder)
+    |-- css/           tema-claro.css, tema-oscuro.css
+    |-- config/        database.properties, preferencias.properties, cifrado.properties (excluded from Git)
+    |-- imagenes/      Icons and images
 ```
 
-NOTA CRITICA: El paquete raiz real es `com.javafx`, NO `com.rehabiapp`. Respetar siempre esta estructura.
+Root package is `com.javafx`. Respect this structure in all operations.
 
 ---
 
-## PATRONES DE REFERENCIA RAPIDA
+## 5. ROLES AND PERMISSIONS (RBAC)
 
-### Abrir ventana modal (OBLIGATORIO aplicar CSS)
+Two user types, both healthcare practitioners:
 
-```java
-FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaName.fxml"));
-Parent root = loader.load();
-ControllerClass controlador = loader.getController();
+**Specialist (medico especialista):** Full CRUD on patients and practitioners. Appointment management. Report generation. Profile editing.
 
-Scene scene = new Scene(root);
-controladorVentanaOpciones.aplicarConfiguracionAScene(scene); // SIEMPRE
+**Nurse (enfermero):** Read-only access to patients (cannot create, edit or delete). No access to practitioner management (tab hidden). Appointment management. Profile editing.
 
-Stage stage = new Stage();
-stage.setTitle("Titulo");
-stage.setScene(scene);
-stage.initModality(Modality.APPLICATION_MODAL);
-stage.setResizable(false);
-VentanaUtil.establecerIconoVentana(stage);
-stage.showAndWait();
+---
+
+## 6. SECURITY RULES
+
+- Passwords: BCrypt with cost factor 12. Lazy migration of legacy plain-text passwords on successful login.
+- Clinical fields (allergies, medical history, current medication): AES-256-GCM with random 96-bit IV per operation. Key stored in cifrado.properties (excluded from Git via .gitignore).
+- Audit: Every CRUD operation and every READ access to patient records logged in audit_log (immutable, INSERT only).
+- Deletion: Soft delete only (active=FALSE, deactivation_date). Physical deletion prohibited. 5-year retention (Ley 41/2002).
+- SSL/TLS: Code prepared in ConexionBD, disabled for local development, activatable for production.
+
+---
+
+## 7. IMPLEMENTATION CHECKLIST
+
+Completed items provide context of what already exists. Uncompleted items are the current work focus. When a task is completed, mark it `[x]`. When a completed task no longer needs explanation, remove it entirely.
+
+### Database and schema
+
+- [x] Relational schema (12 core tables) in PostgreSQL.
+- [x] Immutable audit_log table with performance indexes.
+- [x] Clinical fields added to patient table: date_of_birth, sex, allergies, medical_history, current_medication, rgpd_consent, consent_date, active, deactivation_date.
+- [x] Soft delete fields (active, deactivation_date) on both patient and practitioner tables.
+- [x] Disability and treatment catalog tables with N:M relationship (discapacidad, tratamiento, discapacidad_tratamiento).
+- [ ] Progression level catalog table (nivel_progresion) with 4 clinical phases (acute, subacute, strengthening, functional).
+- [ ] Patient-disability assignment table (paciente_discapacidad) with per-disability progression level tracking.
+- [ ] Patient-treatment visibility table (paciente_tratamiento) with practitioner-controlled visibility flag.
+- [ ] Add id_nivel foreign key to tratamiento table linking treatments to progression levels.
+- [ ] Migration script for progression level integration.
+- [ ] Deprecate and eventually remove legacy text fields discapacidad_pac and tratamiento_pac from patient table.
+
+### Security and encryption
+
+- [x] BCrypt password hashing with lazy migration of plain-text passwords.
+- [x] AES-256-GCM encryption/decryption of clinical fields in PacienteDAO.
+- [x] Encryption key management via cifrado.properties (excluded from Git).
+- [x] Fallback mode: app functions without encryption for development if key is missing.
+- [x] Audit logging for all CRUD operations via AuditService (fire-and-forget pattern).
+- [x] READ audit logging when opening patient records (consultaSensible).
+- [x] SSL/TLS support prepared in ConexionBD (disabled for local, configurable for production).
+- [x] Custom exception hierarchy created (RehabiAppException, ConexionException, ValidacionException, AutenticacionException, PermisoException).
+- [ ] Refactor all DAOs to throw custom exceptions instead of returning boolean.
+- [ ] Migrate ConexionBD from single-connection Singleton to HikariCP connection pool.
+
+### CRUD operations
+
+- [x] Full CRUD for patients with AES encryption, soft delete, active=TRUE filtering.
+- [x] Full CRUD for practitioners with BCrypt, soft delete, active=TRUE filtering.
+- [x] Appointment management with calendar view, conflict detection, async loading.
+- [x] PacienteService and SanitarioService wrappers with automatic audit logging.
+- [ ] Implement atomic transactions (commit/rollback) in PacienteService for compound operations (patient + phones + address + photo).
+- [ ] Implement atomic transactions in SanitarioService for compound operations (practitioner + role + phones).
+- [ ] Integrate photo upload within the same transaction as patient INSERT.
+
+### User interface
+
+- [x] Login screen with database connection indicator.
+- [x] Main window with sidebar navigation and dynamic tab loading.
+- [x] Role-based UI (practitioner tab hidden for nurses).
+- [x] Paginated tables (50 records per page) for patients and practitioners.
+- [x] Text search filtering by DNI, name, surnames, email, social security number.
+- [x] Advanced filters for patients (prosthesis, age range, sorting) and practitioners (role, assigned patients, sorting).
+- [x] Patient form with all clinical fields (sex combo, date picker, allergy/history/medication text areas, RGPD consent checkbox).
+- [x] Patient detail view with clinical data section (read-only).
+- [x] Sex column added to patient table.
+- [x] Patient photo management (BYTEA storage).
+- [x] Light and dark CSS themes (switchable).
+- [x] Configurable font size (12px, 14px, 16px, 18px).
+- [x] Window animations (open/close scale + fade, tab transitions, shake on validation error, hover effects).
+- [x] Informational and confirmation dialog windows.
+- [x] PDF report generation with JasperReports (individual patient, practitioner list).
+- [x] Practitioner agenda in HTML rendered via WebView.
+- [x] Help tab with integrated documentation.
+- [x] User profile view and edit.
+- [x] Quick search bar in header for fast patient report access.
+- [ ] Implement progression level UI: display patient disabilities with current level, show treatments filtered by matching level, toggle treatment visibility.
+- [ ] Update patient form to assign disabilities from catalog instead of free text.
+- [ ] Update patient detail view to show disability-treatment-progression hierarchy.
+
+### Advanced integrations (future phases)
+
+- [ ] OpenAI API integration for automated clinical text processing and chart interpretation.
+- [ ] NFC scanner integration for Spanish health card reading (auto-fill patient forms).
+- [ ] Activate and test SSL/TLS connection with production database (AWS RDS).
+- [ ] Architectural migration: replace direct JDBC calls with REST API consumption from /api.
+
+---
+
+## 8. DATABASE SCHEMA REFERENCE
+
+Current schema (quick reference for query writing):
+
 ```
+sanitario(dni_san PK, nombre_san, apellido1_san, apellido2_san, email_san UNIQUE,
+          num_de_pacientes, contrasena_san, activo, fecha_baja)
 
-### Comprobar permisos
+sanitario_agrega_sanitario(dni_san PK/FK CASCADE, cargo CHECK)
 
-```java
-SesionUsuario sesion = SesionUsuario.getInstancia();
-if (sesion.esEspecialista()) {
-    // Acceso completo
-} else {
-    // Solo lectura (enfermero)
-}
-```
-
-### Operaciones de base de datos (patron actual)
-
-```java
-// Los DAOs lanzan excepciones tipadas (ConexionException, ValidacionException, DuplicadoException).
-// Los Services envuelven DAO + transacciones atomicas + auditoria.
-// Las conexiones se obtienen del pool HikariCP y se cierran con try-with-resources.
-PacienteService pacienteService = new PacienteService();
-try {
-    pacienteService.insertar(paciente, tel1, tel2, archivoFoto); // Transaccion atomica + AuditService
-} catch (DuplicadoException e) {
-    // DNI, email o num_ss duplicado
-} catch (ConexionException e) {
-    // Error de conexion/SQL
-}
-```
-
----
-
-## ESTADO ACTUAL DEL PROYECTO (v2.0 - 06/03/2026)
-
-### YA IMPLEMENTADO Y FUNCIONANDO:
-
-BASE DE DATOS:
-- 12 tablas (sanitario, sanitario_agrega_sanitario, telefono_sanitario, localidad, cp, direccion, discapacidad, tratamiento, discapacidad_tratamiento, paciente, telefono_paciente, cita) + audit_log
-- Campos clinicos en paciente: fecha_nacimiento, sexo, alergias, antecedentes, medicacion_actual, consentimiento_rgpd, fecha_consentimiento, activo, fecha_baja
-- Campos activo y fecha_baja en sanitario
-- Indices parciales en activo=TRUE para paciente y sanitario
-- Indices de rendimiento en audit_log (fecha, usuario, entidad)
-- Script de migracion idempotente en DOCUMENTACION/migracion_v2.sql
-
-SEGURIDAD:
-- CifradoService.java: AES-256-GCM (NIST SP 800-38D) para campos clinicos (alergias, antecedentes, medicacion_actual). IV aleatorio 12 bytes por operacion, tag 128 bits, formato Base64(IV + ciphertext + tag). Clave en cifrado.properties excluido de Git via .gitignore.
-- CifradoUtil.java: BCrypt factor 12 para contraseñas. Migracion perezosa de texto plano a BCrypt tras login exitoso.
-- SSL/TLS preparado en ConexionBD (db.ssl y db.sslmode en database.properties), desactivado para entorno local.
-
-AUDITORIA (ENS Nivel Alto):
-- AuditLogDAO.java: Solo metodo registrar(), inmutable, fire-and-forget.
-- AuditService.java: Metodos estaticos para login, logout, CRUD pacientes, CRUD sanitarios, consultaSensible, cambioContrasena.
-- PacienteService.java y SanitarioService.java: Wrappers DAO + auditoria automatica.
-- consultaSensible() conectado en controladorVentanaPacienteListar: al abrir ficha de paciente se registra READ en audit_log.
-- Login/logout registrados en controladorSesion.
-
-CRUD COMPLETO:
-- PacienteDAO: INSERT/UPDATE/SELECT con todos los campos clinicos, cifrado AES en escritura/lectura, soft delete, filtro activo=TRUE.
-- SanitarioDAO: INSERT con BCrypt, autenticacion con migracion perezosa, soft delete, filtro activo=TRUE.
-- CitaDAO: CRUD completo con deteccion de conflictos.
-- DireccionDAO: Insercion con localidad/CP normalizados.
-- Ambos DAOs principales funcionan con return boolean (true/false) en vez de lanzar excepciones.
-
-INTERFAZ COMPLETA:
-- Login funcional con indicador de conexion, animaciones, boton Enter por defecto
-- Ventana principal con barra lateral y carga dinamica de pestañas
-- Tabla pacientes con columna sexo, paginacion, busqueda, filtros avanzados
-- Formulario agregar paciente con 6 campos clinicos (ComboBox sexo, DatePicker fecha nacimiento, TextAreas alergias/antecedentes/medicacion, CheckBox consentimiento RGPD)
-- Ficha paciente con seccion datos clinicos (solo lectura, ScrollPane)
-- CRUD sanitarios completo (tabla, formulario, ficha, filtros)
-- Gestion de citas con CalendarFX
-- Sistema de roles (especialista/enfermero) con permisos diferenciados
-- Tema claro y oscuro con tamaño de fuente configurable
-- Animaciones (FadeIn, brillo, hover)
-- Paginacion de tablas (50 registros/pagina)
-- Informes JasperReports (PDF individual y listado)
-- Perfil de usuario
-- Ventanas informativas y de confirmacion
-
-EXCEPCIONES:
-- Jerarquia creada (RehabiAppException -> ConexionException, ValidacionException, AutenticacionException, PermisoException) pero NO se usan todavia en los DAOs (usan return false + printStackTrace).
-
-CUMPLIMIENTO LEGAL:
-- RGPD: Consentimiento explicito (checkbox + fecha), cifrado AES-256-GCM en campos clinicos, soft delete, registro de actividades.
-- LOPDGDD: Datos sanitarios como categoria especial cifrados, RBAC por roles.
-- Ley 41/2002: Soft delete con conservacion 5 años, audit_log de accesos a fichas clinicas (READ).
-- ENS Nivel Alto: Cifrado en reposo (AES-256-GCM), trazabilidad inmutable (audit_log), RBAC, SSL preparado.
-
----
-
-## HOJA DE RUTA - TRABAJO PENDIENTE
-
-Todo lo demas del SGE (login, CRUD pacientes, CRUD sanitarios, citas, calendario, filtros, busqueda, paginacion, informes JasperReports, perfil, ayuda, temas, animaciones, auditoria, cifrado, soft delete) YA ESTA IMPLEMENTADO Y FUNCIONANDO. No hay que reimplementar nada de eso.
-
-Solo quedan estos 8 puntos, divididos en dos bloques. HAY QUE HACERLOS EN ORDEN: primero completar el BLOQUE 1 entero, y despues pasar al BLOQUE 2.
-
-### BLOQUE 1 - DEUDA TECNICA (PRIORIDAD INMEDIATA)
-
-Estos 4 puntos son deuda tecnica que hay que resolver antes de cualquier otra cosa:
-
-1. EXCEPCIONES SIN USAR EN DAOs:
-    - Los DAOs (PacienteDAO, SanitarioDAO, CitaDAO) usan `return false` y `e.printStackTrace()` en vez de lanzar las excepciones personalizadas que ya existen en el paquete `com.javafx.excepcion`.
-    - OBJETIVO: Refactorizar los DAOs para que lancen ConexionException, ValidacionException, etc. en vez de devolver boolean. Los Services deben capturar estas excepciones y manejarlas adecuadamente. Los controladores deben mostrar mensajes de error al usuario basados en el tipo de excepcion.
-    - ARCHIVOS AFECTADOS: PacienteDAO.java, SanitarioDAO.java, CitaDAO.java, DireccionDAO.java, PacienteService.java, SanitarioService.java, y los controladores que llaman a estos services.
-
-2. CONEXION SIN POOL (ConexionBD):
-    - ConexionBD usa una sola Connection compartida (Singleton simple).
-    - OBJETIVO: Migrar a HikariCP para tener un pool de conexiones thread-safe. Esto es critico para la carga asincrona y para evitar problemas de concurrencia.
-    - Dependencia Gradle: `implementation 'com.zaxxer:HikariCP:5.1.0'`
-    - ARCHIVOS AFECTADOS: ConexionBD.java, build.gradle, y todos los DAOs que llaman a ConexionBD.getConexion().
-
-3. FOTO FUERA DE TRANSACCION:
-    - insertarFoto() se ejecuta separadamente de la insercion principal del paciente.
-    - OBJETIVO: Integrar la insercion de la foto dentro de la misma transaccion que el INSERT del paciente en PacienteService, usando Connection.setAutoCommit(false) y commit/rollback.
-    - ARCHIVOS AFECTADOS: PacienteDAO.java, PacienteService.java.
-
-4. TRANSACCIONES EN OPERACIONES COMPUESTAS:
-    - Las operaciones compuestas (insertar paciente + telefonos + direccion, insertar sanitario + cargo + telefonos) no estan envueltas en transacciones.
-    - OBJETIVO: Implementar transacciones en PacienteService y SanitarioService para que las operaciones compuestas sean atomicas (commit si todo va bien, rollback si algo falla).
-    - ARCHIVOS AFECTADOS: PacienteService.java, SanitarioService.java, y los DAOs que participan en operaciones compuestas.
-
-### BLOQUE 2 - INTEGRACIONES TFG (DESPUES DE COMPLETAR BLOQUE 1)
-
-Estos 4 puntos son las integraciones avanzadas del TFG. Solo empezar cuando los 4 puntos del Bloque 1 esten terminados y probados:
-
-5. INTEGRACION API OPENAI EN EL SGE:
-    - Integrar un modelo de IA que permita automatizar procesos o dar veredictos de graficos y datos de pacientes.
-    - Se usara la API de OpenAI desde el SGE.
-
-6. SCANNER NFC DE TARJETAS SANITARIAS:
-    - Implementar lectura de tarjetas sanitarias españolas mediante NFC para rellenar automaticamente los datos del paciente.
-    - Se usara el escaner NFC del movil o un lector oficial.
-
-7. ACTIVAR SSL/TLS PARA PRODUCCION:
-    - El codigo ya esta preparado en ConexionBD. Solo hay que cambiar db.ssl=true y db.sslmode=require en database.properties y configurar los certificados en AWS RDS.
-
-8. CONEXION CON API REST DE SPRING BOOT:
-    - Conectar el SGE con la API REST del ecosistema (Spring Boot + Flyway) para interoperar con la app movil, los videojuegos y MongoDB.
-
----
-
-## ROLES Y PERMISOS
-
-MEDICO ESPECIALISTA:
-- Acceso completo a todas las funcionalidades
-- CRUD completo de pacientes (con soft delete)
-- CRUD completo de sanitarios (con soft delete)
-- Gestion de citas (crear, modificar, eliminar)
-- Generar informes PDF
-- Editar su propio perfil
-
-ENFERMERO:
-- Solo lectura sobre pacientes (consultar pero NO modificar, crear ni eliminar)
-- NO tiene acceso a la gestion de sanitarios (la pestaña queda OCULTA)
-- Gestion de citas (crear, modificar, eliminar)
-- Editar su propio perfil
-
----
-
-## BASE DE DATOS POSTGRESQL - ESQUEMA v2.0
-
-```sql
--- Tablas del personal sanitario
-sanitario(dni_san PK, nombre_san, apellido1_san, apellido2_san, email_san UNIQUE, num_de_pacientes, contrasena_san, activo BOOLEAN, fecha_baja TIMESTAMP)
-sanitario_agrega_sanitario(dni_san PK/FK CASCADE, cargo CHECK('medico especialista','enfermero'))
 telefono_sanitario(id_telefono SERIAL PK, dni_san FK CASCADE, telefono)
 
--- Tablas de direccion normalizada
 localidad(nombre_localidad PK, provincia)
 cp(cp PK, nombre_localidad FK)
 direccion(id_direccion SERIAL PK, calle, numero, piso, cp FK)
 
--- Tablas de catalogo clinico
-discapacidad(cod_dis PK, nombre_dis UNIQUE, descripcion_dis, necesita_protesis BOOLEAN)
+discapacidad(cod_dis PK, nombre_dis UNIQUE, descripcion_dis, necesita_protesis)
 tratamiento(cod_trat PK, nombre_trat UNIQUE, definicion_trat)
-discapacidad_tratamiento(cod_dis FK CASCADE, cod_trat FK CASCADE) -- PK compuesta N:M
+discapacidad_tratamiento(cod_dis FK, cod_trat FK -- composite PK)
 
--- Tabla de pacientes (v2.0 con campos clinicos)
-paciente(dni_pac PK, dni_san FK RESTRICT, nombre_pac, apellido1_pac, apellido2_pac, edad_pac, email_pac UNIQUE, num_ss UNIQUE, id_direccion FK, discapacidad_pac, tratamiento_pac, estado_tratamiento, protesis, foto BYTEA, fecha_nacimiento DATE, sexo VARCHAR(1) CHECK('M','F','O'), alergias TEXT, antecedentes TEXT, medicacion_actual TEXT, consentimiento_rgpd BOOLEAN, fecha_consentimiento TIMESTAMP, activo BOOLEAN, fecha_baja TIMESTAMP)
+paciente(dni_pac PK, dni_san FK RESTRICT, nombre_pac, apellido1_pac, apellido2_pac,
+         edad_pac, email_pac UNIQUE, num_ss UNIQUE, id_direccion FK,
+         discapacidad_pac, tratamiento_pac, estado_tratamiento, protesis, foto BYTEA,
+         fecha_nacimiento, sexo, alergias, antecedentes, medicacion_actual,
+         consentimiento_rgpd, fecha_consentimiento, activo, fecha_baja)
+
 telefono_paciente(id_telefono SERIAL PK, dni_pac FK CASCADE, telefono)
 
--- Tabla de citas (PK compuesta)
-cita(dni_pac FK CASCADE, dni_san FK CASCADE, fecha_cita DATE, hora_cita TIME)
+cita(dni_pac FK CASCADE, dni_san FK CASCADE, fecha_cita, hora_cita -- composite PK)
 
--- Tabla de auditoria (INMUTABLE - solo INSERT)
-audit_log(id_audit BIGSERIAL PK, fecha_hora TIMESTAMP, dni_usuario, nombre_usuario, accion CHECK('LOGIN','LOGOUT','CREATE','READ','UPDATE','SOFT_DELETE','EXPORT','PRINT','CAMBIO_CONTRASENA'), entidad, id_entidad, detalle, ip_origen)
+audit_log(id_audit BIGSERIAL PK, fecha_hora, dni_usuario, nombre_usuario,
+          accion CHECK, entidad, id_entidad, detalle, ip_origen)
 ```
 
-Campos cifrados con AES-256-GCM a nivel de aplicacion: alergias, antecedentes, medicacion_actual.
-Contraseñas hasheadas con BCrypt (factor 12).
+Tables pending creation: nivel_progresion, paciente_discapacidad, paciente_tratamiento.
 
 ---
 
-## VALIDACIONES DE CAMPOS
-
-| Campo | Formato |
-|-------|---------|
-| DNI | 8 digitos + 1 letra (12345678A) |
-| Email | Formato estandar de correo |
-| Telefono | 9 digitos |
-| Num. Seguridad Social | 12 digitos |
-| Codigo Postal | 5 digitos |
-
----
-
-## USUARIO ADMIN POR DEFECTO
-
-DNI: ADMIN0000
-Contraseña: admin (se migra a BCrypt tras primer login)
-Cargo: medico especialista
-Se crea automaticamente en el primer inicio si no existe.
-
----
-
-## NOTAS IMPORTANTES
-
-- El paquete raiz es `com.javafx`, NO `com.rehabiapp`. Respetar siempre esta estructura.
-- Siempre que modifiques un archivo existente, muestra que lineas cambias y por que.
-- Antes de implementar una funcionalidad, explica brevemente que vas a hacer y por que.
-- Si una tarea es grande, dividela en pasos y confirma con el desarrollador antes de avanzar.
-- No generes archivos FXML completos. Los FXML se diseñan en SceneBuilder. Solo indica que componentes debe tener y sus fx:id.
-- Los comentarios del codigo siguen el estilo del desarrollador: breves, directos, en español.
-- El nivel tecnico es de ingeniero de datos junior. El codigo debe ser profesional, con manejo de excepciones robusto, logging adecuado, y arquitectura escalable.
-- Justifica las decisiones de diseño con argumentos tecnicos cuando sean relevantes.
-- Cuando trabajes con la base de datos, ten en cuenta siempre la trazabilidad (audit_log), los soft deletes, y la integridad referencial.
-- El proyecto debe poder presentarse como portfolio profesional orientado a ingenieria de datos.
-
----
-
-## USO DE OPUS PLAN MODE
-
-Este proyecto se trabaja con Opus Plan Mode activado en Claude Code (opcion 4: Opus 1M context + Shift+Tab para plan mode). El flujo de trabajo es:
-
-1. PLANIFICAR: Ante cualquier tarea compleja, crear primero un plan estructurado con archivos a crear/modificar, orden de ejecucion, decisiones de diseño con justificacion tecnica, y riesgos.
-
-2. REVISAR: Presentar el plan al desarrollador para su aprobacion. No ejecutar nada hasta que apruebe.
-
-3. EJECUTAR: Implementar el plan paso a paso, confirmando tras cada bloque significativo.
-
-4. DOCUMENTAR: Guardar los planes como archivos markdown en DOCUMENTACION/ para referencia futura.
-
-Las tareas pequeñas (corregir un bug puntual, añadir un campo) no necesitan plan formal.
+*This file is the single source of truth for the desktop SGE domain. Update it as tasks are completed. Remove resolved items that no longer provide useful context.*

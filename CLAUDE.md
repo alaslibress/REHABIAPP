@@ -1,8 +1,8 @@
 # CLAUDE.md - RehabiAPP Monorepo Global Orchestrator
 
-> **File:** `/CLAUDE.md` (monorepo root)  
-> **Project:** RehabiAPP - Healthcare software ecosystem for physical rehabilitation  
-> **Architecture:** Multi-agent Planner-Worker hierarchy with domain isolation  
+> **File:** `/CLAUDE.md` (monorepo root)
+> **Project:** RehabiAPP - Healthcare software ecosystem for physical rehabilitation
+> **Architecture:** Multi-agent Planner-Worker hierarchy with domain isolation and AI-driven QA
 
 ---
 
@@ -29,21 +29,31 @@ rehabiapp/
 |-- /desktop                 <-- Desktop ERP (JavaFX + PostgreSQL)
 |   |-- CLAUDE.md            <-- Agent 3 local context
 |
-|-- /api                     <-- REST API (Spring Boot + Flyway)
+|-- /api                     <-- Central REST API (Spring Boot + Flyway)
 |   |-- CLAUDE.md            <-- Agent 1 local context
 |
-|-- /mobile                  <-- Mobile app (React Native + Expo)
-|   |-- CLAUDE.md            <-- Agent 2 local context
-|
-|-- /games                   <-- Rehabilitation minigames (Unity + C#)
-|   |-- CLAUDE.md            <-- Agent 4 local context
+|-- /mobile
+|   |-- /frontend            <-- Patient mobile app (React Native + Expo)
+|   |   |-- CLAUDE.md        <-- Agent 2 local context (frontend)
+|   |-- /backend             <-- Mobile BFF (Node.js)
+|   |   |-- CLAUDE.md        <-- Agent 2 local context (backend)
 |
 |-- /data                    <-- Data pipeline (Node.js + MongoDB)
-|   |-- CLAUDE.md            <-- Agent 1 local context (shared with /api)
+|   |-- CLAUDE.md            <-- Agent 1 local context
 |
 |-- /infra                   <-- Infrastructure (Docker, Kubernetes, AWS)
 |   |-- docker/
 |   |-- k8s/
+```
+
+**External systems (hosted on AWS, not in this repository):**
+
+```
+AWS Cloud
+|
+|-- Unity WebGL Games        <-- Therapeutic minigames (S3/CloudFront)
+|   Communicates with /api via HTTPS REST endpoints.
+|   Not stored in this monorepo due to repository size constraints.
 ```
 
 ---
@@ -53,24 +63,24 @@ rehabiapp/
 ```
                     ┌─────────────────────────┐
                     |        DEVELOPER         |
-                    |    (Human authority)     |
+                    |    (Human authority)      |
                     └────────────┬────────────┘
                                  |
                     ┌────────────v────────────┐
                     |    AGENT 0 - GLOBAL     |
-                    |    Root Orchestrator    |
-                    |    Thinker: Opus        |
-                    |    Doer: Sonnet         |
+                    |    Root Orchestrator     |
+                    |    Thinker: Opus         |
+                    |    Doer: Sonnet          |
                     └────────────┬────────────┘
                                  |
           ┌──────────┬───────────┼───────────┬──────────┐
           |          |           |           |          |
-    ┌─────v─────┐ ┌──v───┐ ┌────v────┐ ┌────v────┐ ┌──v──────────┐
-    | AGENT 1   | | AG 2 | | AGENT 3 | | AGENT 4 | | AGENT 5     |
-    | API+Data  | |Mobile| | Desktop | |  Games  | | Observer    |
-    | /api /data| |/mobil| | /desktop| | /games  | | Local AI    |
-    | Opus+Son. | |Op+So | | Op+Son  | | Op+Son  | | READ-ONLY   |
-    └───────────┘ └──────┘ └─────────┘ └─────────┘ └─────────────┘
+    ┌─────v─────┐ ┌──v──────┐ ┌─v────────┐ ┌v────────┐ ┌v────────────┐
+    | AGENT 1   | | AGENT 2 | | AGENT 3  | | AGENT 4 | | AGENT 5     |
+    | API+Data  | | Mobile  | | Desktop  | | Games   | | Observer    |
+    | /api /data| | /mobile | | /desktop | | External| | Qwen Local  |
+    | Opus+Son. | | Op+Son  | | Op+Son   | | Op+Son  | | READ-ONLY   |
+    └───────────┘ └─────────┘ └──────────┘ └─────────┘ └─────────────┘
 ```
 
 ### AGENT 0: Global Orchestrator (root directory)
@@ -80,23 +90,23 @@ rehabiapp/
 | Thinker | Opus | Root, /infra, /docs, cross-domain | Approves global architecture decisions. Resolves conflicts between domains. Defines communication contracts between services. Validates cross-folder coherence. |
 | Doer | Sonnet | Root, /infra | Implements root-level configurations: docker-compose.yml, CI/CD scripts, global environment variables, infrastructure manifests. |
 
-### AGENT 1: API & Data (/api, /data)
+### AGENT 1: API and Data (/api, /data)
 
 | Role | Model | Scope | Responsibility |
 |------|-------|-------|----------------|
 | Thinker | Opus | /api, /data | Designs database schemas (PostgreSQL and MongoDB). Defines REST API endpoints and data contracts. Designs ETL pipelines. Architects Flyway migration strategy. |
 | Doer | Sonnet | /api, /data | Writes Spring Boot code (Java). Writes Node.js code for data pipelines. Writes SQL migration scripts. Configures MongoDB collections and indexes. |
 
-This is the only agent authorized to touch database schemas and API endpoint definitions.
+This is the only agent authorized to define database schemas and API endpoint contracts.
 
-### AGENT 2: Mobile (/mobile)
+### AGENT 2: Mobile (/mobile/frontend, /mobile/backend)
 
 | Role | Model | Scope | Responsibility |
 |------|-------|-------|----------------|
-| Thinker | Opus | /mobile | Designs React Native architecture, screen navigation, AI chatbot logic for WhatsApp, and patient interaction flows. |
-| Doer | Sonnet | /mobile | Implements React Native components, screens, API connections, Expo integrations, styles and animations. |
+| Thinker | Opus | /mobile/frontend, /mobile/backend | Designs React Native architecture, screen navigation, Node.js BFF logic, AI chatbot flows, and patient interaction patterns. |
+| Doer | Sonnet | /mobile/frontend, /mobile/backend | Implements React Native components, screens, Expo integrations, Node.js backend routes, and API connections. |
 
-Consumes the API. Never accesses the database directly.
+The mobile frontend NEVER communicates with the central API (/api) directly. All traffic from /mobile/frontend routes through /mobile/backend (BFF pattern), which then calls /api.
 
 ### AGENT 3: Desktop (/desktop)
 
@@ -107,22 +117,51 @@ Consumes the API. Never accesses the database directly.
 
 Has direct JDBC connection to PostgreSQL (legacy ERP). This exception will be removed when /desktop migrates to consume the REST API.
 
-### AGENT 4: Games (/games)
+### AGENT 4: Games (external, AWS Cloud)
 
 | Role | Model | Scope | Responsibility |
 |------|-------|-------|----------------|
-| Thinker | Opus | /games | Designs Unity architecture, session telemetry system, result export formats, and therapeutic minigame mechanics. |
-| Doer | Sonnet | /games | Writes C# Unity scripts, implements game mechanics, WebGL export configuration, and API connection for result submission. |
+| Thinker | Opus | External Unity project | Designs Unity architecture, session telemetry system, result export formats, and therapeutic minigame mechanics. |
+| Doer | Sonnet | External Unity project | Writes C# Unity scripts, implements game mechanics, WebGL export configuration, and API connection for result submission. |
 
-Exports session data to MongoDB through the API. Never accesses any database directly.
+Games are hosted externally on AWS (S3/CloudFront). They communicate with /api via HTTPS REST endpoints. The Unity project is NOT stored in this monorepo due to repository size constraints. Agent 4 operates on the external Unity repository when needed.
 
-### AGENT 5: Local Observer (root directory)
+### AGENT 5: Local Observer (root directory, local AI)
 
 | Role | Model | Scope | Responsibility |
 |------|-------|-------|----------------|
-| Observer | Local AI (Ollama) | Full monorepo (READ-ONLY) | Has complete context of the entire monorepo. Answers questions about project status, architecture, documentation, and inter-component relationships. Saves API tokens by handling informational queries without invoking Opus or Sonnet. |
+| Observer | Ollama running **Qwen 2.5 Coder** | Full monorepo (READ-ONLY) | Answers developer questions about project status, architecture, documentation, and inter-component relationships. Saves API tokens by handling informational queries locally without invoking Opus or Sonnet. |
 
 **ABSOLUTE RESTRICTION:** Agent 5 has NO write permissions under any circumstance. It cannot write code, create files, execute commands, or modify anything. If asked to make changes, it must refuse and indicate which agent should handle the task.
+
+**Context loading protocol (RAG via Repomix):**
+
+Agent 5 cannot hold the entire monorepo in its context window simultaneously. To avoid overflowing the context window and to keep the working disk clean, context is generated dynamically by isolating a single domain at a time and storing the packed output in the Linux temporary directory.
+
+Mandatory commands to interrogate Agent 5:
+
+```bash
+# Step 1: Pack the target domain into a single context file
+repomix [domain]/ --output /tmp/[domain]-context.xml
+
+# Step 2: Pipe the context into Ollama with your query
+cat /tmp/[domain]-context.xml | ollama run qwen2.5-coder "Your query here"
+```
+
+Examples:
+
+```bash
+repomix desktop/ --output /tmp/desktop-context.xml
+cat /tmp/desktop-context.xml | ollama run qwen2.5-coder "What DAOs exist and what exceptions do they throw?"
+
+repomix api/ --output /tmp/api-context.xml
+cat /tmp/api-context.xml | ollama run qwen2.5-coder "List all REST endpoints and their HTTP methods"
+
+repomix data/ --output /tmp/data-context.xml
+cat /tmp/data-context.xml | ollama run qwen2.5-coder "Describe the MongoDB aggregation pipelines"
+```
+
+The /tmp/ files are ephemeral and cleaned automatically by the OS. Do not store context files anywhere else.
 
 ---
 
@@ -132,19 +171,20 @@ These rules apply to ALL agents without exception.
 
 ### 4.1 Boundary Isolation
 
-No frontend module (/desktop, /mobile, /games) communicates directly with another frontend module. All inter-domain communication routes through /api.
+No frontend module communicates directly with another frontend module or with a database it does not own. All inter-domain communication routes through the appropriate backend layer.
 
 ```
-VALID:    /mobile  --> /api --> PostgreSQL
-VALID:    /games   --> /api --> MongoDB
+VALID:    /mobile/frontend --> /mobile/backend --> /api --> PostgreSQL
+VALID:    Unity Games (external) --> /api --> /data --> MongoDB
 VALID:    /desktop --> PostgreSQL (direct legacy connection, will migrate to /api)
-INVALID:  /mobile  --> /desktop (direct frontend-to-frontend)
-INVALID:  /games   --> MongoDB (direct access bypassing /api)
+INVALID:  /mobile/frontend --> /api (bypassing mobile backend)
+INVALID:  /mobile/frontend --> /desktop (direct frontend-to-frontend)
+INVALID:  Unity Games --> MongoDB (direct access bypassing /api)
 ```
 
 ### 4.2 Thinker/Doer Protocol
 
-A Doer (Sonnet) cannot alter architecture designed by a Thinker (Opus) without explicit developer approval. If a Doer identifies a flaw or improvement in an architectural decision, it must report to the developer and wait for instructions. It cannot make the decision autonomously.
+A Doer (Sonnet) cannot alter architecture designed by a Thinker (Opus) without explicit developer approval.
 
 Mandatory flow:
 
@@ -153,27 +193,28 @@ Mandatory flow:
 2. Thinker (Opus) analyzes, plans, and presents a structured plan
 3. Developer approves, rejects, or modifies the plan
 4. Doer (Sonnet) executes the approved plan
-5. Developer verifies the result
+5. Doer delegates verification to TestSprite MCP (see Section 10)
+6. Task marked complete only after TestSprite returns 100% success
 ```
 
-Trivial tasks (fixing a typo, adding a simple field) do not require a formal plan.
+Trivial tasks (fixing a typo, adding a simple field) do not require a formal plan but still require TestSprite verification if they touch code.
 
 ### 4.3 Mandatory Local Context Reading
 
-Before executing any task inside a domain directory, the agent MUST read the local CLAUDE.md of that folder first. The local CLAUDE.md contains domain-specific context: file structure, implementation status, design decisions, and pending tasks.
+Before executing any task inside a domain directory, the agent MUST read the local CLAUDE.md of that folder first.
 
 ```
-Task in /desktop --> read /desktop/CLAUDE.md first
-Task in /api     --> read /api/CLAUDE.md first
-Task in /mobile  --> read /mobile/CLAUDE.md first
-Task in /games   --> read /games/CLAUDE.md first
-Task in /data    --> read /data/CLAUDE.md first
-Task in root     --> read /CLAUDE.md (this file)
+Task in /desktop          --> read /desktop/CLAUDE.md
+Task in /api              --> read /api/CLAUDE.md
+Task in /mobile/frontend  --> read /mobile/frontend/CLAUDE.md
+Task in /mobile/backend   --> read /mobile/backend/CLAUDE.md
+Task in /data             --> read /data/CLAUDE.md
+Task in root              --> read /CLAUDE.md (this file)
 ```
 
 ### 4.4 Mandatory Skills Reading
 
-Before performing any task, the agent MUST check and read the installed skills relevant to the task. Skills contain best practices, templates, and domain-specific instructions that override general knowledge. Always follow skill instructions over default behavior.
+Before performing any task, the agent MUST check and read the installed skills relevant to the task. Skills are located in `.claude/skills/` within each domain directory. Skills override general knowledge and default behavior.
 
 ### 4.5 Code Style (all domains)
 
@@ -189,7 +230,7 @@ Before performing any task, the agent MUST check and read the installed skills r
 - Passwords hashed with BCrypt (cost factor 12). Never plain text.
 - Sensitive clinical fields (allergies, medical history, current medication) encrypted with AES-256-GCM.
 - Every CRUD operation on patient or practitioner data logged in audit_log.
-- READ access to clinical records also logged in audit_log (mandatory in Spanish healthcare law).
+- READ access to clinical records also logged in audit_log.
 - Patients are never physically deleted. Soft delete only (active=FALSE, deactivation_date).
 - Patient data retained minimum 5 years after deactivation (Ley 41/2002).
 - Database communication in production over SSL/TLS.
@@ -202,10 +243,11 @@ Before performing any task, the agent MUST check and read the installed skills r
 | Domain | Directory | Language | Framework | Database | Build |
 |--------|-----------|----------|-----------|----------|-------|
 | Desktop ERP | /desktop | Java | JavaFX, FXML, CSS, ControlsFX, CalendarFX, JasperReports | PostgreSQL (direct JDBC) | Gradle |
-| REST API | /api | Java | Spring Boot, Flyway, Spring Security, Spring Data JPA | PostgreSQL | Maven |
-| Mobile App | /mobile | TypeScript | React Native, Expo | None (consumes API) | npm / Expo CLI |
-| Minigames | /games | C# | Unity, WebGL | None (sends to API) | Unity Build |
+| Central API | /api | Java | Spring Boot 3, Flyway, Spring Security, Spring Data JPA | PostgreSQL | Maven |
+| Mobile Frontend | /mobile/frontend | TypeScript | React Native, Expo | None (calls mobile backend) | npm / Expo CLI |
+| Mobile Backend (BFF) | /mobile/backend | JavaScript | Node.js, Express | None (calls central API) | npm |
 | Data Pipeline | /data | JavaScript | Node.js, Express, Mongoose | MongoDB | npm |
+| Games | External (AWS) | C# | Unity, WebGL | None (calls central API) | Unity Build |
 | Infrastructure | /infra | YAML / HCL | Docker, Kubernetes, Terraform | None | docker-compose |
 
 ### Security stack (cross-domain):
@@ -219,30 +261,35 @@ Before performing any task, the agent MUST check and read the installed skills r
 | RBAC | Role-based access control: specialist (full access) and nurse (read-only patients, no practitioner management) |
 | audit_log | Immutable append-only table recording all operations including clinical record reads |
 
+### AI stack:
+
+| Tool | Purpose |
+|------|---------|
+| Ollama + Qwen 2.5 Coder | Local read-only observer (Agent 5) for project queries without API token consumption |
+| OpenAI API | Integrated in desktop ERP for automated clinical text processing and chart interpretation |
+| TestSprite MCP | Automated QA, test generation, and self-healing verification for all Doer agents |
+
 ---
 
 ## 6. INTER-SERVICE COMMUNICATION CONTRACTS
 
 ### /desktop --> PostgreSQL (legacy direct)
 
-- Protocol: JDBC with PreparedStatement (never raw Statement)
-- Driver: org.postgresql:postgresql
+- Protocol: JDBC with PreparedStatement
 - Encryption: AES-256-GCM on clinical fields, BCrypt on passwords
 - Audit: Every operation recorded in audit_log via AuditService
 
-### /mobile --> /api (REST)
+### /mobile/frontend --> /mobile/backend --> /api (BFF pattern)
 
-- Protocol: HTTPS (TLS 1.3)
-- Format: JSON
-- Authentication: JWT bearer tokens
-- Rule: Mobile never accesses the database directly
+- /mobile/frontend --> /mobile/backend: HTTPS, JSON, session management
+- /mobile/backend --> /api: HTTPS, JSON, JWT bearer tokens
+- Rule: Mobile frontend NEVER calls /api directly
 
-### /games --> /api (REST)
+### Unity Games (external) --> /api (REST)
 
-- Protocol: HTTPS
-- Format: JSON
+- Protocol: HTTPS, JSON
 - Payload: Game session telemetry (movement metrics, times, scores)
-- Flow: API receives data and stores in MongoDB via /data pipeline
+- Flow: Games POST to /api, which routes to /data for MongoDB storage
 
 ### /api --> PostgreSQL (JPA)
 
@@ -252,9 +299,9 @@ Before performing any task, the agent MUST check and read the installed skills r
 
 ### /api --> /data --> MongoDB
 
-- API delegates game data operations to the /data pipeline
+- API delegates game data operations to /data pipeline
 - MongoDB stores high-volume semi-structured session documents
-- Data processed with data engineering tools for analytics and visualization
+- Data processed with aggregation pipelines for analytics
 
 ---
 
@@ -279,27 +326,31 @@ Before performing any task, the agent MUST check and read the installed skills r
 
 ### /desktop - Desktop ERP (Agent 3)
 
-The core management application used by healthcare practitioners. Built with JavaFX. Manages the full lifecycle of patients (registration, clinical data, disabilities, treatments, progression levels), practitioners (specialists and nurses with RBAC), and appointments (calendar view, conflict detection, async loading). Features AES-256-GCM encryption on clinical fields, BCrypt password hashing, immutable audit logging, soft deletes, PDF/HTML report generation with JasperReports, dual CSS themes (light/dark), configurable font sizes, and visual field validation with ControlsFX.
+Core management application for healthcare practitioners. JavaFX. Full patient/practitioner/appointment lifecycle, disability-treatment-progression management, AES-256-GCM encryption, BCrypt hashing, immutable audit logging, soft deletes, JasperReports, dual CSS themes, ControlsFX validation.
 
-### /api - REST API (Agent 1)
+### /api - Central REST API (Agent 1)
 
-The central communication hub of the ecosystem. Built with Spring Boot. Exposes all data operations as RESTful endpoints consumed by /mobile and /games. Manages PostgreSQL via JPA with Flyway migrations. Handles JWT authentication, role-based authorization, and routes game telemetry data to the /data pipeline. All frontend modules except /desktop (legacy) communicate exclusively through this API.
+Central communication hub. Spring Boot. Exposes all data operations as RESTful endpoints consumed by /mobile/backend and external Unity games. PostgreSQL via JPA with Flyway migrations. JWT authentication, RBAC, telemetry routing to /data.
 
-### /mobile - Mobile App (Agent 2)
+### /mobile/frontend - Patient Mobile App (Agent 2)
 
-The patient-facing application. Built with React Native and Expo for cross-platform deployment (Android and iOS). Provides patients with access to their clinical profile, assigned treatments filtered by progression level, game session history, and appointment scheduling. Includes an AI-powered WhatsApp chatbot for automated appointment booking. Designed for accessibility across all age groups.
+Patient-facing application. React Native + Expo. Clinical profile, treatments by progression level, game history, appointment scheduling. Communicates exclusively with /mobile/backend.
 
-### /games - Rehabilitation Minigames (Agent 4)
+### /mobile/backend - Mobile BFF (Agent 2)
 
-Therapeutic minigames built with Unity and exported to WebGL. Each game targets specific rehabilitation exercises mapped to clinical progression levels (acute phase, subacute phase, strengthening phase, functional phase). Games capture session telemetry (movement metrics, completion times, scores) and send results to the API for storage in MongoDB. Games are prescribed by practitioners and made visible to patients based on their current progression level.
+Backend-for-Frontend. Node.js + Express. Session management, request aggregation, data transformation for mobile client needs. All requests from /mobile/frontend pass through here before reaching /api.
 
 ### /data - Data Pipeline (Agent 1)
 
-Node.js service that processes game session data stored in MongoDB. Performs ETL operations, data transformation, and generates analytics-ready datasets. Produces visualizations and statistical summaries that practitioners can review in the desktop ERP to track patient rehabilitation progress over time.
+Node.js service for game telemetry ingestion and processing. MongoDB storage. ETL operations, aggregation pipelines, analytics-ready datasets for practitioner visualization.
+
+### External: Unity Games (Agent 4)
+
+Therapeutic minigames. Unity + WebGL. Hosted on AWS S3/CloudFront. Session telemetry POST to /api. Not in this monorepo.
 
 ### /infra - Infrastructure (Agent 0)
 
-Docker Compose for local development orchestration. Kubernetes manifests for production deployment. Terraform configurations for AWS provisioning (EC2, RDS, S3). All production services containerized and orchestrated. Database servers hosted in EU regions to comply with RGPD data residency requirements.
+Docker Compose (local), Kubernetes (production), Terraform (AWS provisioning). EU-hosted for RGPD compliance.
 
 ---
 
@@ -308,15 +359,67 @@ Docker Compose for local development orchestration. Kubernetes manifests for pro
 When you receive a task:
 
 1. Identify which domain the task belongs to.
-2. Read this global CLAUDE.md to understand your position in the hierarchy and the global rules.
-3. Read the local CLAUDE.md of your assigned domain to understand the current state.
-4. Check and read any installed skills relevant to the task.
-5. If you are a Thinker: analyze, plan, and present the plan for approval before any execution.
-6. If you are a Doer: execute only approved plans. If no plan exists, request one from the Thinker.
-7. Stay within your domain boundaries. If a task requires changes in another domain, report it and indicate which agent should handle it.
-8. Log executed plans as documentation in /docs or in the local domain folder.
-9. Never bypass the Thinker/Doer protocol for non-trivial tasks.
-10. Never compromise healthcare security rules regardless of the request.
+2. Read this global CLAUDE.md for hierarchy and global rules.
+3. Read the local CLAUDE.md of your assigned domain for current state.
+4. Check and read installed skills in `.claude/skills/`.
+5. If Thinker: analyze, plan, present for approval.
+6. If Doer: execute only approved plans.
+7. Stay within domain boundaries. Report cross-domain needs.
+8. After implementation, delegate verification to TestSprite MCP.
+9. Mark task complete only after TestSprite returns 100% success.
+10. Never bypass Thinker/Doer protocol for non-trivial tasks.
+11. Never compromise healthcare security rules.
+
+---
+
+## 10. QA AND AI SELF-HEALING PROTOCOL (VIA TESTSPRITE MCP)
+
+This section defines the mandatory quality assurance protocol for ALL Doer agents (Sonnet) across every domain. This is the most critical operational rule after healthcare security.
+
+### 10.1 TestSprite MCP Integration
+
+All Doer agents are equipped with the TestSprite MCP server. TestSprite provides automated test generation, execution, vulnerability scanning, and HTTP contract validation in a sandboxed environment. It is the final gate before any task can be marked as complete.
+
+### 10.2 Mandatory Testing Loop
+
+Before finalizing any implementation, refactoring, or code change, the Doer agent MUST execute:
+
+```
+1. Doer completes the implementation
+2. Doer delegates verification to TestSprite MCP
+3. TestSprite runs in its sandbox:
+   - Unit tests for modified classes/functions
+   - Integration tests for modified endpoints or database operations
+   - Vulnerability scan on security-sensitive changes
+   - HTTP contract validation for new or modified API endpoints
+4. TestSprite returns results
+5. If 100% success --> mark task complete
+6. If any failure --> enter Self-Healing Protocol (10.3)
+```
+
+### 10.3 Self-Healing Protocol
+
+If TestSprite detects a failure, vulnerability, or HTTP contract violation, the Doer agent is FORBIDDEN from:
+
+- Stopping execution and waiting for the developer.
+- Marking the task as complete or partially complete.
+- Ignoring the failure and moving to the next task.
+
+The Doer agent MUST autonomously:
+
+```
+1. Read the full error trace returned by TestSprite MCP
+2. Identify the root cause of the failure
+3. Correct the code that caused the failure
+4. Request TestSprite to re-run the verification
+5. Repeat steps 1-4 until TestSprite returns 100% success
+```
+
+The developer is only notified if the agent exhausts 5 consecutive failed attempts on the same issue and genuinely cannot resolve the problem.
+
+### 10.4 Pass Condition
+
+A task is only marked as "Done" (changing `[ ]` to `[x]` in the local CLAUDE.md checklist) when TestSprite returns a 100% success rate on all applicable test categories for that task. No exceptions.
 
 ---
 

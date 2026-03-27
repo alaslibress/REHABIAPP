@@ -1,0 +1,55 @@
+# NetworkPolicy del servicio Data para entorno AWS — REEMPLAZO COMPLETO
+# En AWS: MongoDB es DocumentDB (CIDR block), no un pod
+# Egress a Secrets Manager/KMS via VPC endpoint (CIDR de la VPC)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-data-traffic
+  namespace: rehabiapp-data
+spec:
+  podSelector:
+    matchLabels:
+      app: rehabiapp-data
+      tier: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Permitir trafico SOLO desde la API
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: rehabiapp-api
+          podSelector:
+            matchLabels:
+              app: rehabiapp-api
+              tier: backend
+      ports:
+        - protocol: TCP
+          port: 8081
+  egress:
+    # Permitir conexion a DocumentDB (subnet privada de MongoDB/DocumentDB en la VPC)
+    - to:
+        - ipBlock:
+            cidr: 10.0.101.0/24
+      ports:
+        - protocol: TCP
+          port: 27017
+    # Permitir acceso a AWS Secrets Manager y KMS via VPC endpoint (HTTPS)
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+    # Permitir resolucion DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

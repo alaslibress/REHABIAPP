@@ -1,0 +1,21 @@
+# Service headless para MongoDB (StatefulSet)
+# ClusterIP: None — permite conexion directa al pod por nombre DNS estable
+# Solo accesible desde el namespace rehabiapp-data (NetworkPolicy lo garantiza)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: rehabiapp-data
+  labels:
+    app: mongodb
+    tier: database
+spec:
+  clusterIP: None
+  selector:
+    app: mongodb
+    tier: database
+  ports:
+    - name: mongodb
+      protocol: TCP
+      port: 27017
+      targetPort: 27017

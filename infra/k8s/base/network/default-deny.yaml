@@ -1,0 +1,53 @@
+# =============================================================================
+# Politicas de red de denegacion por defecto - Zero Trust
+# Se aplica una politica default-deny a TODOS los pods de cada namespace
+# Ningun pod puede comunicarse a menos que exista una NetworkPolicy explicita
+# que lo permita (principio Zero Trust, requerido por ENS Alto)
+# IMPORTANTE: Este archivo debe aplicarse ANTES que cualquier otra NetworkPolicy
+# =============================================================================
+
+# Denegacion por defecto en el namespace de la API central
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: rehabiapp-api
+spec:
+  # Selector vacio: aplica a TODOS los pods del namespace
+  podSelector: {}
+  # Bloquea todo el trafico entrante y saliente por defecto
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+
+# Denegacion por defecto en el namespace del pipeline de datos
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: rehabiapp-data
+spec:
+  # Selector vacio: aplica a TODOS los pods del namespace
+  podSelector: {}
+  # Bloquea todo el trafico entrante y saliente por defecto
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+
+# Denegacion por defecto en el namespace del backend movil BFF
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: rehabiapp-mobile
+spec:
+  # Selector vacio: aplica a TODOS los pods del namespace
+  podSelector: {}
+  # Bloquea todo el trafico entrante y saliente por defecto
+  policyTypes:
+    - Ingress
+    - Egress

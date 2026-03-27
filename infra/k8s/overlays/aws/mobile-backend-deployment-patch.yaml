@@ -1,0 +1,34 @@
+# Patch del Deployment del Mobile Backend para entorno AWS
+# Usa imagen ECR con digest sha256 inmutable
+# Monta secretos desde AWS Secrets Manager via CSI Driver
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mobile-backend
+  namespace: rehabiapp-mobile
+spec:
+  template:
+    spec:
+      containers:
+        - name: mobile-backend
+          # Imagen ECR con digest inmutable (NUNCA usar :latest en produccion)
+          image: ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/mobile-backend@sha256:PLACEHOLDER
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+            - name: API_BASE_URL
+              value: "http://rehabiapp-api.rehabiapp-api.svc.cluster.local:8080"
+          # Montar secretos desde AWS Secrets Manager
+          volumeMounts:
+            - name: secrets-store
+              mountPath: "/mnt/secrets"
+              readOnly: true
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "mobile-backend-secrets"

@@ -1,0 +1,29 @@
+# Perfil AWS — EKS en producción (AWS Elastic Kubernetes Service).
+# Activa con: SPRING_PROFILES_ACTIVE=aws,production
+# Este perfil hereda de application-production.yml cuando ambos están activos.
+
+spring:
+  config:
+    # Lee secretos montados por AWS Secrets Manager CSI Driver.
+    # Cada archivo en /mnt/secrets/ se convierte en una propiedad Spring:
+    #   /mnt/secrets/spring.datasource.password -> spring.datasource.password
+    import: optional:configtree:file:/mnt/secrets/
+  datasource:
+    # La URL se obtiene de la variable de entorno o del configtree montado
+    url: ${SPRING_DATASOURCE_URL}
+    hikari:
+      # Pool de conexiones dimensionado para carga de producción en AWS RDS
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    # No mostrar SQL en producción — evita fugas de datos en logs
+    show-sql: false
+
+# Log en nivel INFO — reducir ruido en producción
+logging:
+  level:
+    root: INFO
+    com.rehabiapp: INFO

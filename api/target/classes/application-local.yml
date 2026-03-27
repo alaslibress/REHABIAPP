@@ -1,0 +1,24 @@
+# Perfil LOCAL — desarrollo en máquina local o K8s de desarrollo.
+# Activa con: SPRING_PROFILES_ACTIVE=local
+
+spring:
+  datasource:
+    # Credenciales de desarrollo; sobreescribibles vía variables de entorno
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/rehabiapp}
+    username: ${SPRING_DATASOURCE_USERNAME:rehabiapp_dev}
+    password: ${SPRING_DATASOURCE_PASSWORD:dev_password_change_me}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    # Muestra el SQL generado por Hibernate — útil en desarrollo para detectar N+1
+    show-sql: true
+    properties:
+      hibernate:
+        # Formatea el SQL para mayor legibilidad en los logs
+        format_sql: true
+
+# Nivel de log detallado para desarrollo
+logging:
+  level:
+    com.rehabiapp: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE

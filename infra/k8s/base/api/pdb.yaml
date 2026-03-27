@@ -1,0 +1,14 @@
+# PodDisruptionBudget para el servicio API
+# Garantiza disponibilidad minima durante mantenimiento de nodos y actualizaciones
+# Obligatorio por ENS Alto para servicios criticos (skill mandate)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rehabiapp-api-pdb
+  namespace: rehabiapp-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: rehabiapp-api
+      tier: backend

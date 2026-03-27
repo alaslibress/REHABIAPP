@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Configuracion de logging estructurado para RehabiAPP Data Pipeline.
+
+    Perfil local:      formato de texto legible para el desarrollador.
+    Perfiles aws/production: formato JSON (LogstashEncoder) para ingesta
+                              en CloudWatch Logs y procesamiento con herramientas ELK/OpenSearch.
+-->
+<configuration>
+
+    <!-- Perfil LOCAL: consola con patron legible para desarrollo -->
+    <springProfile name="local">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- Perfiles AWS/PRODUCTION: JSON estructurado para ingesta en sistemas de log centralizados -->
+    <springProfile name="aws,production">
+        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <!-- LogstashEncoder produce JSON compatible con ELK/OpenSearch/CloudWatch Logs Insights -->
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+
+</configuration>

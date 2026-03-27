@@ -1,0 +1,123 @@
+# StatefulSet de PostgreSQL para desarrollo local
+# NOTA: En produccion (AWS), se usa RDS — este StatefulSet se escala a 0 en el overlay AWS
+# Usa imagen Bitnami que soporta UIDs arbitrarios (compatible con runAsUser: 1000)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+  namespace: rehabiapp-api
+  labels:
+    app: postgresql
+    tier: database
+spec:
+  serviceName: postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+      tier: database
+  template:
+    metadata:
+      labels:
+        app: postgresql
+        tier: database
+    spec:
+      automountServiceAccountToken: false
+      # Contexto de seguridad a nivel de Pod (ENS Alto)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgresql
+          # Bitnami soporta UIDs arbitrarios — compatible con runAsUser: 1000
+          image: bitnami/postgresql:16
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          # Contexto de seguridad a nivel de contenedor (ENS Alto)
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          env:
+            # Credenciales desde Secret (nunca hardcodeadas — ENS Alto)
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: password
+            - name: POSTGRES_DB
+              value: "rehabiapp"
+            # Directorio de datos de PostgreSQL
+            - name: PGDATA
+              value: "/var/lib/postgresql/data/pgdata"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          # Probe de vida: verifica que PostgreSQL responde a conexiones
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - $(POSTGRES_USER)
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          # Probe de disponibilidad: evita trafico antes de que la BD este lista
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - $(POSTGRES_USER)
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            # Volumen persistente para datos de base de datos
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+            # Directorio temporal en memoria
+            - name: tmp
+              mountPath: /tmp
+            # Directorio de sockets de PostgreSQL (requerido por pg_isready)
+            - name: run
+              mountPath: /var/run/postgresql
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: "50Mi"
+        - name: run
+          emptyDir:
+            medium: Memory
+            sizeLimit: "10Mi"
+  # Plantilla de volumen persistente para los datos de PostgreSQL
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 5Gi

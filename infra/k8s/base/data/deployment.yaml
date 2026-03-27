@@ -1,0 +1,98 @@
+# Deployment del servicio Data Pipeline (Spring Boot)
+# Servicio interno: recibe telemetria de juegos desde la API y persiste en MongoDB
+# Cumple ENS Alto: securityContext completo, readOnlyRootFilesystem, no-root
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rehabiapp-data
+  namespace: rehabiapp-data
+  labels:
+    app: rehabiapp-data
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rehabiapp-data
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: rehabiapp-data
+        tier: backend
+    spec:
+      serviceAccountName: rehabiapp-data-sa
+      automountServiceAccountToken: false
+      # Contexto de seguridad a nivel de Pod (ENS Alto)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: data
+          # La imagen se sobreescribe en cada overlay
+          image: rehabiapp-data:latest
+          ports:
+            - containerPort: 8081
+              protocol: TCP
+          # Contexto de seguridad a nivel de contenedor
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "production"
+            - name: SERVER_PORT
+              value: "8081"
+          # Limites de recursos segun skill mandate para rehabiapp-data
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          # Probe de arranque
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+          # Probe de vida
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            periodSeconds: 10
+            failureThreshold: 3
+          # Probe de disponibilidad
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            periodSeconds: 5
+            failureThreshold: 3
+          # Volumenes de escritura temporales
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: app-cache
+              mountPath: /app/cache
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: "100Mi"
+        - name: app-cache
+          emptyDir:
+            sizeLimit: "200Mi"

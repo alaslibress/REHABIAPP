@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Configuración de logging de RehabiAPP API.
+
+    Perfil local   -> Salida de texto legible por humanos (consola de desarrollo).
+    Perfiles aws / production -> Salida JSON estructurado (LogstashEncoder) para ingestión
+                                 en ELK Stack o AWS CloudWatch Logs.
+-->
+<configuration>
+
+    <!-- ===================== PERFIL LOCAL ===================== -->
+    <springProfile name="local">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <!-- Formato legible para desarrollo: hora, hilo, nivel, logger, mensaje -->
+                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- ===================== PERFILES AWS / PRODUCTION ===================== -->
+    <springProfile name="aws,production">
+        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <!--
+                LogstashEncoder produce JSON estructurado por línea.
+                Cada entrada incluye: @timestamp, level, logger_name, message,
+                stack_trace (si aplica), y campos MDC personalizados.
+            -->
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+
+</configuration>

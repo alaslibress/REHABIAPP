@@ -1,0 +1,101 @@
+# Deployment del servicio API (Spring Boot)
+# Cumple ENS Alto: securityContext completo, readOnlyRootFilesystem, no-root, sin privilegios
+# Imagen sobreescrita por los overlays (local usa :dev, aws usa digest sha256)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rehabiapp-api
+  namespace: rehabiapp-api
+  labels:
+    app: rehabiapp-api
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rehabiapp-api
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: rehabiapp-api
+        tier: backend
+    spec:
+      serviceAccountName: rehabiapp-api-sa
+      # Deshabilitar montaje automatico del token de ServiceAccount
+      automountServiceAccountToken: false
+      # Contexto de seguridad a nivel de Pod (ENS Alto)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          # La imagen se sobreescribe en cada overlay
+          image: rehabiapp-api:latest
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          # Contexto de seguridad a nivel de contenedor
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "production"
+            - name: SERVER_PORT
+              value: "8080"
+          # Limites de recursos obligatorios (skill mandate)
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          # Probe de arranque: espera a que la JVM inicie completamente
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+          # Probe de vida: detecta procesos bloqueados
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 3
+          # Probe de disponibilidad: evita trafico a pods no listos
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 3
+          # Volumenes de escritura temporales (requeridos por readOnlyRootFilesystem)
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: app-cache
+              mountPath: /app/cache
+      volumes:
+        # Directorio temporal en memoria (limita uso de disco)
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: "100Mi"
+        # Cache de aplicacion
+        - name: app-cache
+          emptyDir:
+            sizeLimit: "200Mi"

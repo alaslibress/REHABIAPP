@@ -1,0 +1,28 @@
+# Patch de namespaces para entorno local
+# Las imagenes Bitnami de PostgreSQL y MongoDB pueden requerir permisos relajados
+# Se baja el nivel enforce a baseline para los namespaces de bases de datos locales
+# audit y warn se mantienen en restricted para detectar problemas
+
+---
+# Namespace API: relajar enforce para compatibilidad con Bitnami PostgreSQL
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rehabiapp-api
+  labels:
+    name: rehabiapp-api
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+
+---
+# Namespace Data: relajar enforce para compatibilidad con Bitnami MongoDB
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rehabiapp-data
+  labels:
+    name: rehabiapp-data
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

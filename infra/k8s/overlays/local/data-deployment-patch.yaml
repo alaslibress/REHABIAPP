@@ -1,0 +1,31 @@
+# Patch del Deployment del servicio Data para entorno local
+# Reduce recursos, usa imagen :dev, perfil Spring local, conecta a MongoDB local
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rehabiapp-data
+  namespace: rehabiapp-data
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: data
+          image: rehabiapp-data:dev
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "local"
+            - name: SERVER_PORT
+              value: "8081"
+            - name: SPRING_DATA_MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: uri

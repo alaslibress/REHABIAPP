@@ -1,0 +1,20 @@
+# Service ClusterIP para el servicio API
+# Solo accesible internamente — el acceso externo pasa por el Ingress Controller
+apiVersion: v1
+kind: Service
+metadata:
+  name: rehabiapp-api
+  namespace: rehabiapp-api
+  labels:
+    app: rehabiapp-api
+    tier: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: rehabiapp-api
+    tier: backend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080

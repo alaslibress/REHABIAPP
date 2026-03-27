@@ -1,0 +1,79 @@
+# Configuración base de la API REST de RehabiAPP.
+# Los perfiles (local, aws, production) sobreescriben o complementan estas propiedades.
+
+spring:
+  application:
+    name: rehabiapp-api
+
+  # JPA — configuración base; perfiles específicos añaden propiedades adicionales
+  jpa:
+    # Previene el anti-patrón Open Session in View en todos los entornos
+    open-in-view: false
+    hibernate:
+      # Flyway controla el esquema; Hibernate solo valida en tiempo de arranque
+      ddl-auto: none
+    properties:
+      hibernate:
+        # Dialecto PostgreSQL moderno
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # Envers — tablas de auditoría controladas por Flyway, no auto-generadas
+        envers:
+          audit_table_suffix: _audit
+          revision_field_name: rev
+          revision_type_field_name: rev_type
+          store_data_at_delete: true
+
+  # Flyway — migraciones versionadas; falla el arranque si la migración no es limpia
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    validate-on-migrate: true
+
+# ======================== SERVIDOR ========================
+server:
+  # Puerto configurable vía variable de entorno; K8s establece SERVER_PORT=8080
+  port: ${SERVER_PORT:8080}
+  tomcat:
+    # Directorio base de Tomcat en /tmp para compatibilidad con filesystem de solo lectura (K8s)
+    basedir: /tmp
+  error:
+    # El perfil production sobreescribe estos valores para mayor seguridad
+    include-stacktrace: always
+    include-message: always
+
+# ======================== ACTUATOR / OBSERVABILIDAD ========================
+management:
+  endpoints:
+    web:
+      exposure:
+        # Expone health (probes K8s), info y prometheus (scraping Prometheus)
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        # Habilita /actuator/health/liveness y /actuator/health/readiness para K8s
+        enabled: true
+      # No exponer detalles internos en las respuestas de salud
+      show-details: never
+  health:
+    livenessState:
+      # Prueba de vida: el pod está vivo si el contexto de Spring arrancó
+      enabled: true
+    readinessState:
+      # Prueba de disponibilidad: el pod acepta tráfico si la BD está lista
+      enabled: true
+
+# ======================== RECURSOS WEB ========================
+  web:
+    resources:
+      cache:
+        # Sin caché de recursos estáticos — evita conflictos con filesystem de solo lectura
+        period: 0
+
+# ======================== CONFIGURACIÓN ESPECÍFICA DE REHABIAPP ========================
+rehabiapp:
+  data-service:
+    # URL del servicio de datos (Node.js + MongoDB) para enrutar telemetría de juegos.
+    # K8s establece: REHABIAPP_DATA_SERVICE_URL=http://rehabiapp-data.rehabiapp-data.svc.cluster.local:8081
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8081}

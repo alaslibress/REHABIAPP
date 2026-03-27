@@ -1,0 +1,10 @@
+# Patch del ServiceAccount del Mobile Backend para IRSA en AWS
+# IRSA vincula el ServiceAccount de Kubernetes al IAM Role de AWS via OIDC
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mobile-backend-sa
+  namespace: rehabiapp-mobile
+  annotations:
+    # IRSA: vincula este ServiceAccount al IAM Role con permisos para Secrets Manager
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/rehabiapp-mobile-role

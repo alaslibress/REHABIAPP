@@ -1,0 +1,96 @@
+# Deployment del Mobile Backend BFF (Node.js)
+# Patron BFF: recibe peticiones del frontend movil y las redirige a la API central
+# Cumple ENS Alto: securityContext completo, readOnlyRootFilesystem, no-root
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mobile-backend
+  namespace: rehabiapp-mobile
+  labels:
+    app: mobile-backend
+    tier: bff
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mobile-backend
+      tier: bff
+  template:
+    metadata:
+      labels:
+        app: mobile-backend
+        tier: bff
+    spec:
+      serviceAccountName: mobile-backend-sa
+      automountServiceAccountToken: false
+      # Contexto de seguridad a nivel de Pod (ENS Alto)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mobile-backend
+          # La imagen se sobreescribe en cada overlay
+          image: mobile-backend:latest
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          # Contexto de seguridad a nivel de contenedor
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+            # URL del servicio API en el cluster (patron BFF)
+            - name: API_BASE_URL
+              value: "http://rehabiapp-api.rehabiapp-api.svc.cluster.local:8080"
+          # Limites de recursos segun skill mandate para mobile-bff
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          # Probe de arranque: Node.js arranca mas rapido que la JVM
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 10
+          # Probe de vida
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            periodSeconds: 10
+            failureThreshold: 3
+          # Probe de disponibilidad
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            periodSeconds: 5
+            failureThreshold: 3
+          # Volumen temporal para escritura (readOnlyRootFilesystem)
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: "50Mi"

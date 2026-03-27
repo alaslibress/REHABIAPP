@@ -1,0 +1,27 @@
+# HorizontalPodAutoscaler para el servicio API
+# Escala automaticamente entre 2 y 6 replicas segun carga de CPU y memoria
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rehabiapp-api-hpa
+  namespace: rehabiapp-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rehabiapp-api
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

@@ -1,0 +1,21 @@
+# Service headless para PostgreSQL (StatefulSet)
+# ClusterIP: None — permite conexion directa al pod por nombre DNS estable
+# Solo accesible desde el namespace rehabiapp-api (NetworkPolicy lo garantiza)
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: rehabiapp-api
+  labels:
+    app: postgresql
+    tier: database
+spec:
+  clusterIP: None
+  selector:
+    app: postgresql
+    tier: database
+  ports:
+    - name: postgresql
+      protocol: TCP
+      port: 5432
+      targetPort: 5432

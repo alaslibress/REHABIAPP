@@ -1,0 +1,10 @@
+# Kustomization del Mobile Backend BFF — incluye todos los manifests del servicio
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+  - networkpolicy.yaml
+  - hpa.yaml
+  - pdb.yaml

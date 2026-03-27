@@ -1,0 +1,13 @@
+# PodDisruptionBudget para el Mobile Backend BFF
+# Garantiza disponibilidad minima durante mantenimiento y actualizaciones
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mobile-backend-pdb
+  namespace: rehabiapp-mobile
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: mobile-backend
+      tier: bff

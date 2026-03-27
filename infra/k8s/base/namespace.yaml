@@ -1,0 +1,48 @@
+# =============================================================================
+# Definicion de namespaces para RehabiAPP en Kubernetes
+# Cada dominio del sistema tiene su propio namespace aislado
+# Pod Security Standards en nivel "restricted" (requerido por ENS Alto)
+# =============================================================================
+
+# Namespace para la API central (Spring Boot)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rehabiapp-api
+  labels:
+    # Etiqueta de nombre requerida para los selectores de NetworkPolicy entre namespaces
+    name: rehabiapp-api
+    # Politica de seguridad de pods: nivel mas restrictivo disponible (ENS Alto)
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+
+---
+
+# Namespace para el pipeline de datos (Node.js + MongoDB)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rehabiapp-data
+  labels:
+    # Etiqueta de nombre requerida para los selectores de NetworkPolicy entre namespaces
+    name: rehabiapp-data
+    # Politica de seguridad de pods: nivel mas restrictivo disponible (ENS Alto)
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+
+---
+
+# Namespace para el backend movil BFF (Node.js)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rehabiapp-mobile
+  labels:
+    # Etiqueta de nombre requerida para los selectores de NetworkPolicy entre namespaces
+    name: rehabiapp-mobile
+    # Politica de seguridad de pods: nivel mas restrictivo disponible (ENS Alto)
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

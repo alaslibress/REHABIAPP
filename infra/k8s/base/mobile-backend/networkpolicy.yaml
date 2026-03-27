@@ -1,0 +1,55 @@
+# NetworkPolicy allow-list para el Mobile Backend BFF
+# Zero Trust: el BFF solo acepta trafico del Ingress y solo habla con la API
+# mobile-backend NUNCA se comunica con data, postgresql ni mongodb
+# Topologia permitida (per skill):
+#   Ingress -> mobile-backend:3000
+#   mobile-backend -> rehabiapp-api:8080 (namespace rehabiapp-api)
+#   mobile-backend -> kube-dns:53
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mobile-backend-netpol
+  namespace: rehabiapp-mobile
+spec:
+  podSelector:
+    matchLabels:
+      app: mobile-backend
+      tier: bff
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Permitir trafico SOLO desde el ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+  egress:
+    # Permitir comunicacion SOLO con la API (patron BFF)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: rehabiapp-api
+          podSelector:
+            matchLabels:
+              app: rehabiapp-api
+              tier: backend
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Permitir resolucion DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

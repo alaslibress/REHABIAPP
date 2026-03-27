@@ -1,0 +1,39 @@
+# NetworkPolicy allow-list para MongoDB
+# Zero Trust: solo acepta conexiones desde el servicio de datos, nada mas
+# Topologia permitida:
+#   rehabiapp-data -> mongodb:27017 (mismo namespace)
+#   mongodb -> kube-dns:53
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mongodb-netpol
+  namespace: rehabiapp-data
+spec:
+  podSelector:
+    matchLabels:
+      app: mongodb
+      tier: database
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Permitir conexiones SOLO desde el servicio de datos (mismo namespace)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: rehabiapp-data
+              tier: backend
+      ports:
+        - protocol: TCP
+          port: 27017
+  egress:
+    # Permitir solo resolucion DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

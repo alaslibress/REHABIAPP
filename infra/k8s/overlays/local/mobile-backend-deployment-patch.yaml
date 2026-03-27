@@ -1,0 +1,28 @@
+# Patch del Deployment del Mobile Backend para entorno local
+# Reduce recursos, usa imagen :dev, modo Node.js development
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mobile-backend
+  namespace: rehabiapp-mobile
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: mobile-backend
+          image: mobile-backend:dev
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          env:
+            - name: NODE_ENV
+              value: "development"
+            - name: PORT
+              value: "3000"
+            - name: API_BASE_URL
+              value: "http://rehabiapp-api.rehabiapp-api.svc.cluster.local:8080"

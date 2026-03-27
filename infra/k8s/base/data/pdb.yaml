@@ -1,0 +1,13 @@
+# PodDisruptionBudget para el servicio Data Pipeline
+# Garantiza disponibilidad minima durante mantenimiento y actualizaciones
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rehabiapp-data-pdb
+  namespace: rehabiapp-data
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: rehabiapp-data
+      tier: backend

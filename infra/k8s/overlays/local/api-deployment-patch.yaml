@@ -1,0 +1,40 @@
+# Patch del Deployment de la API para entorno local
+# Reduce recursos para desarrollo, usa imagen :dev, perfil Spring local
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rehabiapp-api
+  namespace: rehabiapp-api
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: api
+          image: rehabiapp-api:dev
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "local"
+            - name: SERVER_PORT
+              value: "8080"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgresql.rehabiapp-api.svc.cluster.local:5432/rehabiapp"
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: password
+            - name: REHABIAPP_DATA_SERVICE_URL
+              value: "http://rehabiapp-data.rehabiapp-data.svc.cluster.local:8081"

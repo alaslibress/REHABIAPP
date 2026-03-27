@@ -1,0 +1,39 @@
+# Patch del Deployment de la API para entorno AWS
+# Usa imagen ECR con digest sha256 inmutable (per skill: mutable tags PROHIBIDOS)
+# Monta secretos desde AWS Secrets Manager via CSI Driver (per skill requirement)
+# IRSA: acceso a AWS via ServiceAccount anotado con IAM Role (no AWS keys en cluster)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rehabiapp-api
+  namespace: rehabiapp-api
+spec:
+  template:
+    spec:
+      containers:
+        - name: api
+          # Imagen ECR con digest inmutable (NUNCA usar :latest en produccion)
+          image: ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/rehabiapp-api@sha256:PLACEHOLDER
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "aws"
+            - name: SERVER_PORT
+              value: "8080"
+            # URL de RDS con SSL/TLS obligatorio (ENS Alto)
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://RDS_ENDPOINT:5432/rehabiapp?sslmode=verify-full"
+            - name: REHABIAPP_DATA_SERVICE_URL
+              value: "http://rehabiapp-data.rehabiapp-data.svc.cluster.local:8081"
+          # Montar secretos desde AWS Secrets Manager (no variables de entorno con credenciales)
+          volumeMounts:
+            - name: secrets-store
+              mountPath: "/mnt/secrets"
+              readOnly: true
+      volumes:
+        # Volumen CSI que obtiene secretos directamente de AWS Secrets Manager
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "rehabiapp-api-secrets"

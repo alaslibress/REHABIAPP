@@ -1,0 +1,113 @@
+# StatefulSet de MongoDB para desarrollo local
+# NOTA: En produccion (AWS), se usa DocumentDB — este StatefulSet se escala a 0 en el overlay AWS
+# Usa imagen Bitnami que soporta UIDs arbitrarios (compatible con runAsUser: 1000)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: rehabiapp-data
+  labels:
+    app: mongodb
+    tier: database
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+      tier: database
+  template:
+    metadata:
+      labels:
+        app: mongodb
+        tier: database
+    spec:
+      automountServiceAccountToken: false
+      # Contexto de seguridad a nivel de Pod (ENS Alto)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mongodb
+          # Bitnami soporta UIDs arbitrarios — compatible con runAsUser: 1000
+          image: bitnami/mongodb:7.0
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          # Contexto de seguridad a nivel de contenedor (ENS Alto)
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          env:
+            # Credenciales desde Secret (nunca hardcodeadas — ENS Alto)
+            - name: MONGODB_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: username
+            - name: MONGODB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: password
+            - name: MONGODB_DATABASE
+              value: "rehabiapp_telemetry"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          # Probe de vida: verifica que MongoDB responde al ping de administracion
+          livenessProbe:
+            exec:
+              command:
+                - mongosh
+                - --eval
+                - "db.adminCommand('ping')"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          # Probe de disponibilidad: evita trafico antes de que MongoDB este listo
+          readinessProbe:
+            exec:
+              command:
+                - mongosh
+                - --eval
+                - "db.adminCommand('ping')"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            # Volumen persistente para datos de MongoDB
+            - name: mongodb-data
+              mountPath: /bitnami/mongodb
+            # Directorio temporal en memoria
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: "50Mi"
+  # Plantilla de volumen persistente para los datos de MongoDB
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 5Gi

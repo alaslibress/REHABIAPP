@@ -1,0 +1,75 @@
+# Kustomization del overlay AWS — despliegue en EKS con servicios gestionados
+# Usa RDS para PostgreSQL y DocumentDB para MongoDB (StatefulSets locales escalados a 0)
+# Secretos via AWS Secrets Manager CSI Driver (NUNCA Kubernetes Secrets nativos)
+# IRSA para acceso a AWS sin almacenar credenciales en el cluster
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  # SecretProviderClass para mapeo de secretos desde AWS Secrets Manager
+  - secret-provider-class-api.yaml
+  - secret-provider-class-data.yaml
+  - secret-provider-class-mobile.yaml
+  # Ingress ALB para trafico publico (api + mobile)
+  - ingress.yaml
+patches:
+  # Patches de Deployments: imagenes ECR con digest inmutable + montaje de secretos CSI
+  - path: api-deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: rehabiapp-api
+      namespace: rehabiapp-api
+  - path: data-deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: rehabiapp-data
+      namespace: rehabiapp-data
+  - path: mobile-backend-deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: mobile-backend
+      namespace: rehabiapp-mobile
+  # Patches de ServiceAccounts: anotacion IRSA para acceso a AWS sin credenciales
+  - path: api-sa-patch.yaml
+    target:
+      kind: ServiceAccount
+      name: rehabiapp-api-sa
+      namespace: rehabiapp-api
+  - path: data-sa-patch.yaml
+    target:
+      kind: ServiceAccount
+      name: rehabiapp-data-sa
+      namespace: rehabiapp-data
+  - path: mobile-backend-sa-patch.yaml
+    target:
+      kind: ServiceAccount
+      name: mobile-backend-sa
+      namespace: rehabiapp-mobile
+  # Patches de NetworkPolicies: reemplazar selectores de pod por CIDR para servicios gestionados AWS
+  - path: api-networkpolicy-patch.yaml
+    target:
+      kind: NetworkPolicy
+      name: allow-api-traffic
+      namespace: rehabiapp-api
+  - path: data-networkpolicy-patch.yaml
+    target:
+      kind: NetworkPolicy
+      name: allow-data-traffic
+      namespace: rehabiapp-data
+  # Escalar StatefulSets de bases de datos locales a 0 en AWS (se usan RDS y DocumentDB)
+  - patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 0
+    target:
+      kind: StatefulSet
+      name: postgresql
+      namespace: rehabiapp-api
+  - patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 0
+    target:
+      kind: StatefulSet
+      name: mongodb
+      namespace: rehabiapp-data

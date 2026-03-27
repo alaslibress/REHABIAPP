@@ -1,0 +1,53 @@
+# NetworkPolicy allow-list para el servicio Data Pipeline
+# Zero Trust: el servicio de datos es EXCLUSIVAMENTE interno
+# Solo acepta trafico desde la API, nunca desde el Ingress ni desde mobile-backend
+# Topologia permitida (per skill):
+#   rehabiapp-api -> rehabiapp-data:8081
+#   rehabiapp-data -> mongodb:27017 (mismo namespace)
+#   rehabiapp-data -> kube-dns:53
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rehabiapp-data-netpol
+  namespace: rehabiapp-data
+spec:
+  podSelector:
+    matchLabels:
+      app: rehabiapp-data
+      tier: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Permitir trafico SOLO desde la API (no hay acceso externo a este servicio)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: rehabiapp-api
+          podSelector:
+            matchLabels:
+              app: rehabiapp-api
+              tier: backend
+      ports:
+        - protocol: TCP
+          port: 8081
+  egress:
+    # Permitir conexion a MongoDB (mismo namespace rehabiapp-data)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mongodb
+              tier: database
+      ports:
+        - protocol: TCP
+          port: 27017
+    # Permitir resolucion DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

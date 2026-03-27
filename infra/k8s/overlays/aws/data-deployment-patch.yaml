@@ -1,0 +1,32 @@
+# Patch del Deployment del servicio Data para entorno AWS
+# Usa imagen ECR con digest sha256 inmutable
+# Monta secretos desde AWS Secrets Manager via CSI Driver
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rehabiapp-data
+  namespace: rehabiapp-data
+spec:
+  template:
+    spec:
+      containers:
+        - name: data
+          # Imagen ECR con digest inmutable (NUNCA usar :latest en produccion)
+          image: ACCOUNT_ID.dkr.ecr.eu-west-1.amazonaws.com/rehabiapp-data@sha256:PLACEHOLDER
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "aws"
+            - name: SERVER_PORT
+              value: "8081"
+          # Montar secretos desde AWS Secrets Manager
+          volumeMounts:
+            - name: secrets-store
+              mountPath: "/mnt/secrets"
+              readOnly: true
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "rehabiapp-data-secrets"

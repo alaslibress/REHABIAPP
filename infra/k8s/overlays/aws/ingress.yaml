@@ -1,0 +1,76 @@
+# Ingress para entorno AWS con AWS ALB (Application Load Balancer)
+# Dos recursos Ingress con grupo compartido para consolidar en un unico ALB
+# TLS 1.3, WAFv2, certificado ACM
+# NOTA: Sustituir los ARNs de CERTIFICATE_ARN y WAF_ARN por los valores reales de AWS
+
+---
+# Ingress para la API central (namespace rehabiapp-api)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rehabiapp-api-ingress
+  namespace: rehabiapp-api
+  annotations:
+    # Tipo de ALB: internet-facing para trafico publico
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    # Agrupar ambos Ingress en un mismo ALB para reducir costes
+    alb.ingress.kubernetes.io/group.name: rehabiapp
+    # HTTPS en puerto 443 (redirige HTTP a HTTPS)
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # Certificado ACM para TLS (sustituir por ARN real)
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-west-1:ACCOUNT_ID:certificate/CERTIFICATE_ARN
+    # Protocolo TLS minimo: 1.3 (ENS Alto requiere TLS 1.3)
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-3-2021-06
+    # WAFv2 para proteccion contra ataques web (OWASP Top 10)
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:eu-west-1:ACCOUNT_ID:regional/webacl/rehabiapp-waf/WAF_ARN
+    # Health check del ALB
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health/readiness
+    alb.ingress.kubernetes.io/healthcheck-port: "8080"
+spec:
+  rules:
+    - host: api.rehabiapp.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rehabiapp-api
+                port:
+                  number: 8080
+
+---
+# Ingress para el Mobile Backend BFF (namespace rehabiapp-mobile)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mobile-backend-ingress
+  namespace: rehabiapp-mobile
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    # Mismo grupo ALB — se consolida en un unico ALB
+    alb.ingress.kubernetes.io/group.name: rehabiapp
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-west-1:ACCOUNT_ID:certificate/CERTIFICATE_ARN
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-3-2021-06
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:eu-west-1:ACCOUNT_ID:regional/webacl/rehabiapp-waf/WAF_ARN
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-port: "3000"
+spec:
+  rules:
+    - host: mobile.rehabiapp.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mobile-backend
+                port:
+                  number: 3000

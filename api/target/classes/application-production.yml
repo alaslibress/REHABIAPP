@@ -1,0 +1,16 @@
+# Perfil PRODUCTION — configuración de seguridad base para cualquier entorno productivo.
+# Normalmente se activa junto a "aws": SPRING_PROFILES_ACTIVE=aws,production
+
+server:
+  error:
+    # No exponer stack traces ni mensajes de error internos al cliente
+    include-stacktrace: never
+    include-message: never
+
+spring:
+  jpa:
+    # Previene el anti-patrón Open Session in View
+    open-in-view: false
+    hibernate:
+      # Hibernate solo valida el esquema; Flyway lo gestiona
+      ddl-auto: validate

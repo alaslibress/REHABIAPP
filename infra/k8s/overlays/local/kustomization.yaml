@@ -1,0 +1,44 @@
+# Kustomization del overlay local — desarrollo con cluster local (minikube/kind)
+# Reduce replicas y recursos, expone servicios via NodePort, incluye secretos de dev
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - secrets.yaml
+patches:
+  # Patches de Deployments: reduccion de recursos y configuracion local
+  - path: api-deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: rehabiapp-api
+      namespace: rehabiapp-api
+  - path: data-deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: rehabiapp-data
+      namespace: rehabiapp-data
+  - path: mobile-backend-deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: mobile-backend
+      namespace: rehabiapp-mobile
+  # Patches de Services: NodePort para acceso directo desde el host
+  - path: api-service-patch.yaml
+    target:
+      kind: Service
+      name: rehabiapp-api
+      namespace: rehabiapp-api
+  - path: mobile-backend-service-patch.yaml
+    target:
+      kind: Service
+      name: mobile-backend
+      namespace: rehabiapp-mobile
+  # Patch de Namespaces: relajar PSS para compatibilidad con imagenes Bitnami
+  - path: namespace-api-patch.yaml
+    target:
+      kind: Namespace
+      name: rehabiapp-api
+  - path: namespace-data-patch.yaml
+    target:
+      kind: Namespace
+      name: rehabiapp-data

@@ -1,0 +1,11 @@
+# Patch del ServiceAccount de la API para IRSA en AWS
+# IRSA vincula el ServiceAccount de Kubernetes al IAM Role de AWS via OIDC
+# Permite que el pod asuma el IAM Role sin almacenar AWS keys en el cluster
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rehabiapp-api-sa
+  namespace: rehabiapp-api
+  annotations:
+    # IRSA: vincula este ServiceAccount al IAM Role con permisos para RDS y Secrets Manager
+    eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/rehabiapp-api-role

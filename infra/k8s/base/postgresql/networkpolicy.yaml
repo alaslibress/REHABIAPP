@@ -1,0 +1,39 @@
+# NetworkPolicy allow-list para PostgreSQL
+# Zero Trust: solo acepta conexiones desde la API, nada mas
+# Topologia permitida:
+#   rehabiapp-api -> postgresql:5432 (mismo namespace)
+#   postgresql -> kube-dns:53
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgresql-netpol
+  namespace: rehabiapp-api
+spec:
+  podSelector:
+    matchLabels:
+      app: postgresql
+      tier: database
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Permitir conexiones SOLO desde la API (mismo namespace)
+    - from:
+        - podSelector:
+            matchLabels:
+              app: rehabiapp-api
+              tier: backend
+      ports:
+        - protocol: TCP
+          port: 5432
+  egress:
+    # Permitir solo resolucion DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

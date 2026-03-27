@@ -1,0 +1,20 @@
+# Service ClusterIP para el Mobile Backend BFF
+# El acceso externo pasa por el Ingress Controller (nunca acceso directo)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mobile-backend
+  namespace: rehabiapp-mobile
+  labels:
+    app: mobile-backend
+    tier: bff
+spec:
+  type: ClusterIP
+  selector:
+    app: mobile-backend
+    tier: bff
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3000
+      targetPort: 3000

@@ -104,3 +104,9 @@ All API calls go through the services/ layer. Screens never call fetch/axios dir
 ---
 
 *This file is the single source of truth for the mobile domain. Update it as tasks are completed.*
+
+## Memory
+
+You have access to Engram persistent memory via MCP tools (mem_save, mem_search, mem_session_summary, etc.).
+- Save proactively after significant work — don't wait to be asked.
+- After any compaction or context reset, call `mem_context` to recover session state before continuing.

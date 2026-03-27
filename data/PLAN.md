@@ -209,12 +209,12 @@ The Dockerfile at `infra/docker/data/Dockerfile` copies `data/target/*.jar`.
 
 ## Checklist
 
-- [ ] Step 1: Spring Boot 4 project initialized (Maven, Java 24)
-- [ ] Step 2: Server port configured to 8081
-- [ ] Step 3: Actuator health probes enabled
-- [ ] Step 4: Spring profiles configured (local + aws)
-- [ ] Step 5: Structured JSON logging configured
-- [ ] Step 6: Prometheus metrics endpoint enabled
-- [ ] Step 7: CSFLE configuration structure created
-- [ ] Step 8: /health endpoint created for Dockerfile HEALTHCHECK
-- [ ] Step 9: Maven produces single fat JAR
+- [x] Step 1: Spring Boot 4 project initialized (Maven, Java 24)
+- [x] Step 2: Server port configured to 8081
+- [x] Step 3: Actuator health probes enabled
+- [x] Step 4: Spring profiles configured (local + aws)
+- [x] Step 5: Structured JSON logging configured
+- [x] Step 6: Prometheus metrics endpoint enabled
+- [x] Step 7: CSFLE configuration structure created
+- [x] Step 8: /health endpoint created for Dockerfile HEALTHCHECK
+- [x] Step 9: Maven produces single fat JAR

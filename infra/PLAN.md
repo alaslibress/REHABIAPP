@@ -294,15 +294,15 @@ kubectl kustomize infra/k8s/overlays/aws/ | kubeconform -strict -kubernetes-vers
 
 ## Checklist
 
-- [ ] Step 1: Directory scaffold created
-- [ ] Step 2: 3 Dockerfiles created (api, data, mobile-backend)
-- [ ] Step 3: namespace.yaml + default-deny.yaml created
-- [ ] Step 4.1: api/ — 7 manifests created
-- [ ] Step 4.2: data/ — 7 manifests created
-- [ ] Step 4.3: mobile-backend/ — 7 manifests created
-- [ ] Step 5.1: postgresql/ — 4 manifests created
-- [ ] Step 5.2: mongodb/ — 4 manifests created
-- [ ] Step 6: Root base kustomization.yaml created
-- [ ] Step 7: Local overlay — 8 files created
-- [ ] Step 8: AWS overlay — 13 files created
-- [ ] Step 9: Both overlays pass `kubectl kustomize` and `kubeconform`
+- [x] Step 1: Directory scaffold created
+- [x] Step 2: 3 Dockerfiles created (api, data, mobile-backend)
+- [x] Step 3: namespace.yaml + default-deny.yaml created
+- [x] Step 4.1: api/ — 7 manifests created
+- [x] Step 4.2: data/ — 7 manifests created
+- [x] Step 4.3: mobile-backend/ — 7 manifests created
+- [x] Step 5.1: postgresql/ — 4 manifests created
+- [x] Step 5.2: mongodb/ — 4 manifests created
+- [x] Step 6: Root base kustomization.yaml created
+- [x] Step 7: Local overlay — 8 files created
+- [x] Step 8: AWS overlay — 13 files created
+- [x] Step 9: Both overlays pass `kubectl kustomize` and `kubeconform` (local: 33/33 valid; aws: 32/32 native valid + 3 SecretProviderClass CRDs skipped — expected, require CSI Driver CRD installed in cluster)

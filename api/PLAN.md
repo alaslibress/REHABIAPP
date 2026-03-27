@@ -239,11 +239,11 @@ The Dockerfile at `infra/docker/api/Dockerfile` copies `api/target/*.jar` — th
 
 ## Checklist
 
-- [ ] Step 1: Spring Boot 4 project skeleton exists with Maven
-- [ ] Step 2: Actuator health probes enabled (liveness + readiness endpoints work)
-- [ ] Step 3: Spring profiles configured (local, aws, production)
-- [ ] Step 4: Structured JSON logging configured (logback-spring.xml)
-- [ ] Step 5: Prometheus metrics endpoint enabled
-- [ ] Step 6: Tomcat basedir set to /tmp for read-only filesystem
-- [ ] Step 7: Data service URL configurable via environment variable
-- [ ] Step 8: Maven produces single fat JAR compatible with Dockerfile
+- [x] Step 1: Spring Boot 4 project skeleton exists with Maven
+- [x] Step 2: Actuator health probes enabled (liveness + readiness endpoints work)
+- [x] Step 3: Spring profiles configured (local, aws, production)
+- [x] Step 4: Structured JSON logging configured (logback-spring.xml)
+- [x] Step 5: Prometheus metrics endpoint enabled
+- [x] Step 6: Tomcat basedir set to /tmp for read-only filesystem
+- [x] Step 7: Data service URL configurable via environment variable
+- [x] Step 8: Maven produces single fat JAR compatible with Dockerfile

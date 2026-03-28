@@ -9,7 +9,7 @@ import org.springframework.test.context.ActiveProfiles;
  * Verifica que la configuración base es válida y el contexto se carga correctamente.
  */
 @SpringBootTest
-@ActiveProfiles("local")
+@ActiveProfiles("test")
 class ApiApplicationTests {
 
     @Test

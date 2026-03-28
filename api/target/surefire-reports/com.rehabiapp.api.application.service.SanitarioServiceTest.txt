@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.rehabiapp.api.application.service.SanitarioServiceTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.322 s -- in com.rehabiapp.api.application.service.SanitarioServiceTest

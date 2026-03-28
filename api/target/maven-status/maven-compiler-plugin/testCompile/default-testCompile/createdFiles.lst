@@ -1,0 +1,6 @@
+com/rehabiapp/api/infrastructure/encryption/CampoClinicoConverterTest.class
+com/rehabiapp/api/infrastructure/security/JwtServiceTest.class
+com/rehabiapp/api/application/service/SanitarioServiceTest.class
+com/rehabiapp/api/ApiApplicationTests.class
+com/rehabiapp/api/infrastructure/security/PasswordServiceTest.class
+com/rehabiapp/api/presentation/controller/AuthControllerIT.class

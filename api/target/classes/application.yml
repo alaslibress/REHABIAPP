@@ -27,7 +27,10 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: false
+    # baseline-on-migrate permite aplicar migraciones sobre una BD ya existente
+    # (compatibilidad con el esquema del ERP de escritorio)
+    baseline-on-migrate: true
+    baseline-version: 0
     validate-on-migrate: true
 
 # ======================== SERVIDOR ========================
@@ -77,3 +80,14 @@ rehabiapp:
     # URL del servicio de datos (Node.js + MongoDB) para enrutar telemetría de juegos.
     # K8s establece: REHABIAPP_DATA_SERVICE_URL=http://rehabiapp-data.rehabiapp-data.svc.cluster.local:8081
     url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8081}
+  security:
+    # Clave HMAC-SHA para firma JWT — mínimo 32 bytes.
+    # PRODUCCIÓN: inyectada como secreto K8s vía JWT_SIGNING_KEY.
+    jwt-signing-key: ${JWT_SIGNING_KEY:dev-jwt-signing-key-placeholder-change-in-production-32chars}
+    # Tiempo de vida del access token: 15 minutos (900 000 ms)
+    jwt-expiration-ms: 900000
+    # Tiempo de vida del refresh token: 7 días (604 800 000 ms)
+    jwt-refresh-expiration-ms: 604800000
+    # Clave AES-256-GCM para cifrado de campos clínicos — exactamente 32 bytes.
+    # PRODUCCIÓN: inyectada como secreto K8s vía ENCRYPTION_KEY.
+    encryption-key: ${ENCRYPTION_KEY:dev-encryption-key-placeholder-change-in-production-32c}

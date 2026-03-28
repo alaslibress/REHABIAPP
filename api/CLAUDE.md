@@ -70,30 +70,30 @@ No circular dependencies between layers. Domain has zero framework imports.
 
 ### Phase 1: Project setup
 
-- [ ] Initialize Spring Boot 3 skeleton with Maven.
-- [ ] Configure PostgreSQL connection (application.yml).
-- [ ] Configure Flyway and create initial migration scripts mirroring the existing desktop DB schema.
-- [ ] Set up project layer structure (domain, application, infrastructure, presentation).
+- [x] Initialize Spring Boot 3 skeleton with Maven.
+- [x] Configure PostgreSQL connection (application.yml).
+- [x] Configure Flyway and create initial migration scripts mirroring the existing desktop DB schema.
+- [x] Set up project layer structure (domain, application, infrastructure, presentation).
 - [ ] Configure MapStruct for DTO mapping.
 
 ### Phase 2: Security
 
-- [ ] Implement JWT authentication (login endpoint, token generation, token validation filter).
-- [ ] Implement BCrypt password hashing utility (compatible with desktop legacy hashes).
-- [ ] Implement AES-256-GCM encryption utility for clinical fields (compatible with desktop CifradoService).
-- [ ] Configure role-based authorization (SPECIALIST full access, NURSE restricted).
-- [ ] Implement audit logging interceptor for all data operations.
+- [x] Implement JWT authentication (login endpoint, token generation, token validation filter).
+- [x] Implement BCrypt password hashing utility (compatible with desktop legacy hashes).
+- [x] Implement AES-256-GCM encryption utility for clinical fields (compatible with desktop CifradoService).
+- [x] Configure role-based authorization (SPECIALIST full access, NURSE restricted).
+- [x] Implement audit logging interceptor for all data operations.
 
 ### Phase 3: Core CRUD endpoints
 
-- [ ] Patient endpoints (GET list, GET by DNI, POST create, PUT update, DELETE soft-delete).
-- [ ] Practitioner endpoints (GET list, GET by DNI, POST create, PUT update, DELETE soft-delete).
-- [ ] Appointment endpoints (GET by date, GET by practitioner, POST create, PUT update, DELETE).
-- [ ] Disability catalog endpoints (GET list, GET by code).
-- [ ] Treatment catalog endpoints (GET list, GET by code, GET by disability and progression level).
-- [ ] Progression level endpoints (GET list).
-- [ ] Patient-disability assignment endpoints (GET, POST assign, PUT update level).
-- [ ] Patient-treatment visibility endpoints (GET, PUT toggle visibility).
+- [x] Patient endpoints (GET list, GET by DNI, POST create, PUT update, DELETE soft-delete).
+- [x] Practitioner endpoints (GET list, GET by DNI, POST create, PUT update, DELETE soft-delete).
+- [x] Appointment endpoints (GET by date, GET by practitioner, POST create, PUT update, DELETE).
+- [x] Disability catalog endpoints (GET list, GET by code).
+- [x] Treatment catalog endpoints (GET list, GET by code, GET by disability and progression level).
+- [x] Progression level endpoints (GET list).
+- [x] Patient-disability assignment endpoints (GET, POST assign, PUT update level).
+- [x] Patient-treatment visibility endpoints (GET, PUT toggle visibility).
 
 ### Phase 4: Ecosystem integration
 

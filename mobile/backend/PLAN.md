@@ -203,3 +203,134 @@ This prevents copying `node_modules` into the Docker build context (they are ins
 - [ ] Step 6: No writes outside /tmp (read-only filesystem compatible)
 - [ ] Step 7: package-lock.json exists, src/index.js is entry point
 - [ ] Step 8: .dockerignore created
+
+---
+
+## Step 9: Containerization and Kubernetes Deployment
+
+This step establishes the Docker containerization and Kubernetes deployment strategy for the Mobile Backend BFF. Base K8s manifests exist at `/infra/k8s/base/mobile-backend/`.
+
+### 9.1: Create Dockerfile at `/mobile/backend/Dockerfile`
+
+Create a multi-stage Node.js Dockerfile at the service root:
+
+**Stage 1 - Dependencies:**
+```dockerfile
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
+```
+
+**Stage 2 - Runtime:**
+```dockerfile
+FROM node:20-alpine AS runtime
+RUN addgroup -g 1000 appgroup && adduser -u 1000 -G appgroup -D -h /app appuser
+WORKDIR /app
+RUN mkdir -p /app/tmp && chown -R 1000:1000 /app
+COPY --from=deps --chown=1000:1000 /app/node_modules ./node_modules
+COPY --chown=1000:1000 package.json .
+COPY --chown=1000:1000 src ./src
+USER 1000:1000
+EXPOSE 3000
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:3000/health || exit 1
+ENTRYPOINT ["node", "src/index.js"]
+```
+
+**Prerequisite**: The `.dockerignore` from Step 8 must exist. Verify it contains:
+```
+node_modules
+npm-debug.log
+.env
+.env.*
+```
+
+**Note**: This Dockerfile replaces the one at `/infra/docker/mobile-backend/Dockerfile`. Build context is `/mobile/backend/`: `docker build -t mobile-backend:dev -f mobile/backend/Dockerfile mobile/backend/`
+
+### 9.2: Update Deployment to 3 replicas
+
+Modify existing K8s manifests for high availability:
+
+- `/infra/k8s/base/mobile-backend/deployment.yaml`: change `replicas: 2` to `replicas: 3`
+- `/infra/k8s/base/mobile-backend/hpa.yaml`: change `minReplicas: 2` to `minReplicas: 3`
+
+### 9.3: Create ConfigMap `mobile-backend-config`
+
+Create `/infra/k8s/base/mobile-backend/configmap.yaml`:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mobile-backend-config
+  namespace: rehabiapp-mobile
+  labels:
+    app: mobile-backend
+    tier: bff
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  API_BASE_URL: "http://rehabiapp-api.rehabiapp-api.svc.cluster.local:8080"
+  LOG_LEVEL: "info"
+```
+
+Update `/infra/k8s/base/mobile-backend/kustomization.yaml` to include `- configmap.yaml` in resources list.
+
+### 9.4: Refactor Deployment environment variables
+
+Modify the Deployment container spec to use ConfigMap:
+
+```yaml
+envFrom:
+  - configMapRef:
+      name: mobile-backend-config
+```
+
+Remove hardcoded env entries (`NODE_ENV`, `PORT`, `API_BASE_URL`) now provided by ConfigMap.
+
+No Secrets needed in base manifests — the Mobile Backend BFF has no database credentials. In the AWS overlay, the session secret is mounted via CSI SecretProviderClass at `/mnt/secrets/`.
+
+### 9.5: Mobile Backend K8s topology
+
+Complete Kubernetes architecture reference for the implementer:
+
+| Resource | Name | Specification |
+|----------|------|---------------|
+| Deployment | `mobile-backend` | 3 replicas, port 3000 |
+| Service | `mobile-backend` | ClusterIP, port 3000 |
+| ConfigMap | `mobile-backend-config` | 4 configuration keys |
+| HPA | `mobile-backend` | min 3, max 6 replicas, CPU 70%, memory 80% |
+| PDB | `mobile-backend` | minAvailable: 1 |
+| NetworkPolicy | `allow-mobile-traffic` | Ingress: ONLY from ingress-nginx on TCP:3000; Egress: ONLY to rehabiapp-api:8080 + kube-dns |
+| ServiceAccount | `mobile-backend-sa` | IRSA in AWS overlay |
+
+**CRITICAL**: Mobile-backend NEVER communicates with data service, PostgreSQL, or MongoDB. All traffic routes exclusively to the API service via `API_BASE_URL`.
+
+**Probes:**
+- Startup: `GET /health:3000` (initialDelaySeconds: 5, failureThreshold: 10)
+- Liveness: `GET /health:3000` (periodSeconds: 10)
+- Readiness: `GET /health:3000` (periodSeconds: 5)
+
+**Resources per pod:**
+- Requests: 100m CPU, 256Mi memory
+- Limits: 500m CPU, 512Mi memory
+
+**Security (ENS Alto):**
+- Non-root user UID 1000:1000
+- `readOnlyRootFilesystem: true` (emptyDir volume at `/tmp`, 50Mi Memory)
+- `allowPrivilegeEscalation: false`
+- Drop ALL capabilities
+- seccomp profile: RuntimeDefault
+
+### Checklist Step 9
+
+- [ ] Step 9.1: Dockerfile created at `/mobile/backend/Dockerfile` (multi-stage, Node.js 20 Alpine, UID 1000)
+- [ ] Step 9.1: `.dockerignore` verified (from Step 8)
+- [ ] Step 9.2: Deployment replicas updated from 2 to 3
+- [ ] Step 9.2: HPA minReplicas updated from 2 to 3
+- [ ] Step 9.3: ConfigMap `mobile-backend-config` created at `/infra/k8s/base/mobile-backend/configmap.yaml`
+- [ ] Step 9.3: Kustomization updated to include configmap.yaml
+- [ ] Step 9.4: Deployment env refactored with `envFrom` ConfigMap
+- [ ] Verification: `docker build -t mobile-backend:dev -f mobile/backend/Dockerfile mobile/backend/` succeeds
+- [ ] Verification: `kubectl kustomize infra/k8s/overlays/local/` valid

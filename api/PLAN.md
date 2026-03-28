@@ -838,3 +838,158 @@ Fase 1 (Flyway) ───> Fase 2 (Entidades) ───> Fase 4 (Servicios) ─�
 6. **Campos `@Lob` / BYTEA (foto):** Para el campo `foto` del paciente, considerar servir via endpoint dedicado en lugar de incluir en el DTO principal (rendimiento).
 7. **Compatibilidad desktop:** El desktop tiene conexion JDBC directa a la misma BD. Las migraciones Flyway NO deben romper las queries existentes del desktop.
 8. **Hibernate Envers `store_data_at_delete: true`** ya configurado en application.yml — en un DELETE, Envers almacena los datos completos del registro eliminado.
+
+---
+
+## Fase 6: Contenerizacion y Despliegue en Kubernetes
+
+Esta fase establece la estrategia de contenerizacion Docker y el despliegue en Kubernetes para el servicio API. Los manifiestos base ya existen en `/infra/k8s/base/api/` y deben actualizarse segun esta especificacion.
+
+### Paso 6.1: Crear Dockerfile en `/api/Dockerfile`
+
+Crear un Dockerfile multi-stage en el directorio raiz del servicio API:
+
+**Stage 1 - Builder:**
+```dockerfile
+FROM eclipse-temurin:24-jdk-alpine AS builder
+WORKDIR /build
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+RUN ./mvnw dependency:go-offline -B
+COPY src src
+RUN ./mvnw clean package -DskipTests -B
+```
+
+**Stage 2 - Runtime:**
+```dockerfile
+FROM eclipse-temurin:24-jre-alpine AS runtime
+RUN addgroup -g 1000 appgroup && adduser -u 1000 -G appgroup -D -h /app appuser
+WORKDIR /app
+RUN mkdir -p /app/tmp /app/cache && chown -R 1000:1000 /app
+COPY --from=builder --chown=1000:1000 /build/target/*.jar /app/app.jar
+USER 1000:1000
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
+  CMD wget -qO- http://localhost:8080/actuator/health/liveness || exit 1
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Djava.io.tmpdir=/app/tmp", "-jar", "app.jar"]
+```
+
+Crear `/api/.dockerignore`:
+```
+target/
+.mvn/repository/
+.git
+.idea
+*.iml
+.env
+.env.*
+```
+
+**Nota:** Este Dockerfile reemplaza al existente en `/infra/docker/api/Dockerfile`. El contexto de build es el directorio `/api/` (no la raiz del monorepo).
+
+### Paso 6.2: Actualizar Deployment a 3 replicas
+
+Modificar los manifiestos K8s existentes para garantizar alta disponibilidad:
+
+- `/infra/k8s/base/api/deployment.yaml`: cambiar `replicas: 2` a `replicas: 3`
+- `/infra/k8s/base/api/hpa.yaml`: cambiar `minReplicas: 2` a `minReplicas: 3`
+
+### Paso 6.3: Crear ConfigMap `rehabiapp-api-config`
+
+Crear `/infra/k8s/base/api/configmap.yaml`:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rehabiapp-api-config
+  namespace: rehabiapp-api
+  labels:
+    app: rehabiapp-api
+    tier: backend
+data:
+  SPRING_PROFILES_ACTIVE: "production"
+  SERVER_PORT: "8080"
+  JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+  REHABIAPP_DATA_SERVICE_URL: "http://rehabiapp-data.rehabiapp-data.svc.cluster.local:8081"
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus"
+```
+
+Actualizar `/infra/k8s/base/api/kustomization.yaml` para incluir `- configmap.yaml` en la lista de resources.
+
+### Paso 6.4: Refactorizar variables de entorno del Deployment
+
+Modificar la seccion `containers[0]` del Deployment para separar configuracion general (ConfigMap) de credenciales (Secrets):
+
+```yaml
+envFrom:
+  - configMapRef:
+      name: rehabiapp-api-config
+env:
+  - name: SPRING_DATASOURCE_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: postgresql-credentials
+        key: username
+  - name: SPRING_DATASOURCE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: postgresql-credentials
+        key: password
+  - name: JWT_SIGNING_KEY
+    valueFrom:
+      secretKeyRef:
+        name: api-secrets
+        key: jwt-signing-key
+  - name: ENCRYPTION_KEY
+    valueFrom:
+      secretKeyRef:
+        name: api-secrets
+        key: encryption-key
+```
+
+Eliminar las variables hardcodeadas (`SPRING_PROFILES_ACTIVE`, `SERVER_PORT`) que ahora provienen del ConfigMap.
+
+### Paso 6.5: Topologia K8s del servicio API
+
+Resumen completo de la arquitectura Kubernetes para referencia del implementador:
+
+| Recurso | Nombre | Especificacion |
+|---------|--------|----------------|
+| Deployment | `rehabiapp-api` | 3 replicas, puerto 8080 |
+| Service | `rehabiapp-api` | ClusterIP, puerto 8080 |
+| ConfigMap | `rehabiapp-api-config` | 5 claves de configuracion general |
+| Secrets | `postgresql-credentials`, `api-secrets` | Credenciales BD + JWT + AES key |
+| HPA | `rehabiapp-api` | min 3, max 6 replicas, CPU 70%, mem 80% |
+| PDB | `rehabiapp-api` | minAvailable: 1 |
+| NetworkPolicy | `allow-api-traffic` | Ingress: ingress-nginx + mobile-backend; Egress: PostgreSQL:5432 + data:8081 + kube-dns |
+| ServiceAccount | `rehabiapp-api-sa` | IRSA en overlay AWS |
+
+**Probes:**
+- Startup: `GET /actuator/health/liveness` (initialDelaySeconds: 10, failureThreshold: 30)
+- Liveness: `GET /actuator/health/liveness` (periodSeconds: 10)
+- Readiness: `GET /actuator/health/readiness` (periodSeconds: 5)
+
+**Recursos por pod:**
+- Requests: 250m CPU, 512Mi memoria
+- Limits: 1000m CPU, 1Gi memoria
+
+**Seguridad (ENS Alto):**
+- Usuario no-root UID 1000:1000
+- `readOnlyRootFilesystem: true` (volumenes emptyDir en `/tmp` y `/app/cache`)
+- `allowPrivilegeEscalation: false`
+- Drop ALL capabilities
+- seccomp profile: RuntimeDefault
+
+### Checklist Fase 6
+
+- [ ] Paso 6.1: Dockerfile creado en `/api/Dockerfile` (multi-stage, Eclipse Temurin 24, UID 1000)
+- [ ] Paso 6.1: `.dockerignore` creado en `/api/.dockerignore`
+- [ ] Paso 6.2: Deployment replicas actualizado de 2 a 3
+- [ ] Paso 6.2: HPA minReplicas actualizado de 2 a 3
+- [ ] Paso 6.3: ConfigMap `rehabiapp-api-config` creado en `/infra/k8s/base/api/configmap.yaml`
+- [ ] Paso 6.3: Kustomization actualizado para incluir configmap.yaml
+- [ ] Paso 6.4: Deployment refactorizado con `envFrom` ConfigMap + `env` Secret refs
+- [ ] Verificacion: `docker build -t rehabiapp-api:dev -f api/Dockerfile api/` ejecutado con exito
+- [ ] Verificacion: `kubectl kustomize infra/k8s/overlays/local/` valida sin errores

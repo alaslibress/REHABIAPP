@@ -218,3 +218,186 @@ The Dockerfile at `infra/docker/data/Dockerfile` copies `data/target/*.jar`.
 - [x] Step 7: CSFLE configuration structure created
 - [x] Step 8: /health endpoint created for Dockerfile HEALTHCHECK
 - [x] Step 9: Maven produces single fat JAR
+
+---
+
+## Step 10: Containerization and Kubernetes Deployment
+
+This step establishes the Docker containerization and Kubernetes deployment strategy for the Data pipeline service. Base K8s manifests exist at `/infra/k8s/base/data/`. Database StatefulSets exist at `/infra/k8s/base/postgresql/` and `/infra/k8s/base/mongodb/`.
+
+### 10.1: Create Java Dockerfile at `/data/Dockerfile` (CRITICAL FIX)
+
+**WARNING**: The existing Dockerfile at `/infra/docker/data/Dockerfile` uses `node:20-alpine` with `npm ci` and `node src/index.js`. This is WRONG — the Data service is now Spring Boot 4.0.0 + Java 24 (see `/data/pom.xml`). A new Java-based Dockerfile must be created.
+
+Create multi-stage Dockerfile at `/data/Dockerfile`:
+
+**Stage 1 - Builder:**
+```dockerfile
+FROM eclipse-temurin:24-jdk-alpine AS builder
+WORKDIR /build
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
+COPY src src
+RUN ./mvnw clean package -DskipTests -B
+```
+
+**Stage 2 - Runtime:**
+```dockerfile
+FROM eclipse-temurin:24-jre-alpine AS runtime
+RUN addgroup -g 1000 appgroup && adduser -u 1000 -G appgroup -D -h /app appuser
+WORKDIR /app
+RUN mkdir -p /app/tmp /app/cache && chown -R 1000:1000 /app
+COPY --from=builder --chown=1000:1000 /build/target/*.jar /app/app.jar
+USER 1000:1000
+EXPOSE 8081
+HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
+  CMD wget -qO- http://localhost:8081/actuator/health/liveness || exit 1
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Djava.io.tmpdir=/app/tmp", "-jar", "app.jar"]
+```
+
+Create `/data/.dockerignore`:
+```
+target/
+.mvn/repository/
+.git
+.idea
+*.iml
+.env
+.env.*
+```
+
+**Action on old Dockerfile**: Delete `/infra/docker/data/Dockerfile` (Node.js — obsolete and incorrect).
+
+**Note**: Build context is `/data/` directory (not monorepo root): `docker build -t rehabiapp-data:dev -f data/Dockerfile data/`
+
+### 10.2: Update Deployment to 3 replicas
+
+Modify existing K8s manifests for high availability:
+
+- `/infra/k8s/base/data/deployment.yaml`: change `replicas: 2` to `replicas: 3`
+- `/infra/k8s/base/data/hpa.yaml`: change `minReplicas: 2` to `minReplicas: 3`
+
+### 10.3: Create ConfigMap `rehabiapp-data-config`
+
+Create `/infra/k8s/base/data/configmap.yaml`:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rehabiapp-data-config
+  namespace: rehabiapp-data
+  labels:
+    app: rehabiapp-data
+    tier: backend
+data:
+  SPRING_PROFILES_ACTIVE: "production"
+  SERVER_PORT: "8081"
+  JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+  CSFLE_ENABLED: "false"
+  CSFLE_KMS_PROVIDER: "local"
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus"
+```
+
+Update `/infra/k8s/base/data/kustomization.yaml` to include `- configmap.yaml` in resources list.
+
+### 10.4: Refactor Deployment environment variables
+
+Modify the Deployment container spec to separate general config (ConfigMap) from credentials (Secrets):
+
+```yaml
+envFrom:
+  - configMapRef:
+      name: rehabiapp-data-config
+env:
+  - name: SPRING_DATA_MONGODB_URI
+    valueFrom:
+      secretKeyRef:
+        name: mongodb-credentials
+        key: uri
+```
+
+Remove hardcoded env entries (`SPRING_PROFILES_ACTIVE`, `SERVER_PORT`) now provided by ConfigMap.
+
+### 10.5: Verify MongoDB StatefulSet (no changes needed)
+
+Already exists at `/infra/k8s/base/mongodb/statefulset.yaml`:
+
+| Property | Value |
+|----------|-------|
+| Image | `bitnami/mongodb:7.0` |
+| Replicas | 1 (databases are NOT scaled to 3) |
+| PVC | 5Gi ReadWriteOnce via `volumeClaimTemplates` |
+| Mount | `/bitnami/mongodb` |
+| Credentials | Secret `mongodb-credentials` |
+| Probes | `mongosh --eval "db.adminCommand('ping')"` |
+| NetworkPolicy | Ingress ONLY from pod `rehabiapp-data`; Egress ONLY to kube-dns |
+
+The PVC ensures total data persistence (all collections, indexes) across pod restarts and rescheduling. **No modifications needed.**
+
+### 10.6: Verify PostgreSQL StatefulSet (no changes needed)
+
+Already exists at `/infra/k8s/base/postgresql/statefulset.yaml`:
+
+| Property | Value |
+|----------|-------|
+| Image | `bitnami/postgresql:16` |
+| Replicas | 1 |
+| PVC | 5Gi ReadWriteOnce via `volumeClaimTemplates` |
+| Mount | `/var/lib/postgresql/data` |
+| DB Name | `rehabiapp` |
+| Credentials | Secret `postgresql-credentials` |
+| Probes | `pg_isready` |
+| NetworkPolicy | Ingress ONLY from pod `rehabiapp-api`; Egress ONLY to kube-dns |
+
+The PVC guarantees persistence of ALL tables (including `audit_log`) and data across pod restarts. **Note**: PostgreSQL is consumed by the API service, not by Data directly. Included here for completeness of the data layer architecture. **No modifications needed.**
+
+### 10.7: Data service K8s topology
+
+Complete Kubernetes architecture reference for the implementer:
+
+| Resource | Name | Specification |
+|----------|------|---------------|
+| Deployment | `rehabiapp-data` | 3 replicas, port 8081 (INTERNAL — no Ingress exposure) |
+| Service | `rehabiapp-data` | ClusterIP, port 8081 |
+| ConfigMap | `rehabiapp-data-config` | 6 configuration keys |
+| Secret | `mongodb-credentials` | MongoDB connection URI |
+| StatefulSet | `mongodb` | 1 replica, 5Gi PVC, bitnami/mongodb:7.0 |
+| StatefulSet | `postgresql` | 1 replica, 5Gi PVC, bitnami/postgresql:16 |
+| HPA | `rehabiapp-data` | min 3, max 4 replicas, CPU 70% |
+| PDB | `rehabiapp-data` | minAvailable: 1 |
+| NetworkPolicy | `allow-data-traffic` | Ingress: ONLY from namespace `rehabiapp-api`; Egress: MongoDB:27017 + kube-dns |
+| ServiceAccount | `rehabiapp-data-sa` | IRSA in AWS overlay |
+
+**Probes:**
+- Startup: `GET /actuator/health/liveness:8081` (initialDelaySeconds: 10, failureThreshold: 30)
+- Liveness: `GET /actuator/health/liveness:8081` (periodSeconds: 10)
+- Readiness: `GET /actuator/health/readiness:8081` (periodSeconds: 5)
+
+**Resources per pod:**
+- Requests: 200m CPU, 512Mi memory
+- Limits: 1000m CPU, 1Gi memory
+
+**Security (ENS Alto):**
+- Non-root user UID 1000:1000
+- `readOnlyRootFilesystem: true` (emptyDir volumes at `/tmp` and `/app/cache`)
+- `allowPrivilegeEscalation: false`
+- Drop ALL capabilities
+- seccomp profile: RuntimeDefault
+
+### Checklist Step 10
+
+- [ ] Step 10.1: Java Dockerfile created at `/data/Dockerfile` (multi-stage, Eclipse Temurin 24, NOT Node.js)
+- [ ] Step 10.1: `.dockerignore` created at `/data/.dockerignore`
+- [ ] Step 10.1: Obsolete Node.js Dockerfile at `/infra/docker/data/Dockerfile` deleted
+- [ ] Step 10.2: Deployment replicas updated from 2 to 3
+- [ ] Step 10.2: HPA minReplicas updated from 2 to 3
+- [ ] Step 10.3: ConfigMap `rehabiapp-data-config` created at `/infra/k8s/base/data/configmap.yaml`
+- [ ] Step 10.3: Kustomization updated to include configmap.yaml
+- [ ] Step 10.4: Deployment env refactored with `envFrom` ConfigMap + `env` Secret ref for MongoDB
+- [ ] Step 10.5: MongoDB StatefulSet verified (5Gi PVC, bitnami/mongodb:7.0)
+- [ ] Step 10.6: PostgreSQL StatefulSet verified (5Gi PVC, bitnami/postgresql:16)
+- [ ] Verification: `docker build -t rehabiapp-data:dev -f data/Dockerfile data/` succeeds
+- [ ] Verification: `kubectl kustomize infra/k8s/overlays/local/` valid

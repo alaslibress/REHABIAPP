@@ -1,0 +1,18 @@
+# ConfigMap con variables de configuracion general del servicio Data Pipeline
+# Las credenciales de MongoDB se definen en el Secret mongodb-credentials
+# y se montan en el Deployment via env[].valueFrom.secretKeyRef
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rehabiapp-data-config
+  namespace: rehabiapp-data
+  labels:
+    app: rehabiapp-data
+    tier: backend
+data:
+  SPRING_PROFILES_ACTIVE: "production"
+  SERVER_PORT: "8081"
+  JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+  CSFLE_ENABLED: "false"
+  CSFLE_KMS_PROVIDER: "local"
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus"

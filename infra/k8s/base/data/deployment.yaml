@@ -10,7 +10,7 @@ metadata:
     app: rehabiapp-data
     tier: backend
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: rehabiapp-data
@@ -47,11 +47,17 @@ spec:
             capabilities:
               drop:
                 - ALL
+          # Configuracion general proveniente del ConfigMap (no sensible)
+          envFrom:
+            - configMapRef:
+                name: rehabiapp-data-config
+          # Credencial de MongoDB montada desde Secret K8s
           env:
-            - name: SPRING_PROFILES_ACTIVE
-              value: "production"
-            - name: SERVER_PORT
-              value: "8081"
+            - name: SPRING_DATA_MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: uri
           # Limites de recursos segun skill mandate para rehabiapp-data
           resources:
             requests:

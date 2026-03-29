@@ -10,7 +10,7 @@ metadata:
     app: mobile-backend
     tier: bff
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: mobile-backend
@@ -47,14 +47,10 @@ spec:
             capabilities:
               drop:
                 - ALL
-          env:
-            - name: NODE_ENV
-              value: "production"
-            - name: PORT
-              value: "3000"
-            # URL del servicio API en el cluster (patron BFF)
-            - name: API_BASE_URL
-              value: "http://rehabiapp-api.rehabiapp-api.svc.cluster.local:8080"
+          # Variables de entorno inyectadas desde ConfigMap (NODE_ENV, PORT, API_BASE_URL, LOG_LEVEL)
+          envFrom:
+            - configMapRef:
+                name: mobile-backend-config
           # Limites de recursos segun skill mandate para mobile-bff
           resources:
             requests:

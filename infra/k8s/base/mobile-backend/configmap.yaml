@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mobile-backend-config
+  namespace: rehabiapp-mobile
+  labels:
+    app: mobile-backend
+    tier: bff
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  API_BASE_URL: "http://rehabiapp-api.rehabiapp-api.svc.cluster.local:8080"
+  LOG_LEVEL: "info"

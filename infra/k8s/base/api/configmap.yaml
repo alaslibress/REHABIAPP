@@ -1,0 +1,17 @@
+# ConfigMap con variables de configuracion general de la API
+# Las credenciales sensibles (BD, JWT, AES) se definen en Secrets separados
+# y se montan en el Deployment via env[].valueFrom.secretKeyRef
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rehabiapp-api-config
+  namespace: rehabiapp-api
+  labels:
+    app: rehabiapp-api
+    tier: backend
+data:
+  SPRING_PROFILES_ACTIVE: "production"
+  SERVER_PORT: "8080"
+  JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+  REHABIAPP_DATA_SERVICE_URL: "http://rehabiapp-data.rehabiapp-data.svc.cluster.local:8081"
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus"

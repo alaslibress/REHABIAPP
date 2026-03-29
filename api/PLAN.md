@@ -984,12 +984,12 @@ Resumen completo de la arquitectura Kubernetes para referencia del implementador
 
 ### Checklist Fase 6
 
-- [ ] Paso 6.1: Dockerfile creado en `/api/Dockerfile` (multi-stage, Eclipse Temurin 24, UID 1000)
-- [ ] Paso 6.1: `.dockerignore` creado en `/api/.dockerignore`
-- [ ] Paso 6.2: Deployment replicas actualizado de 2 a 3
-- [ ] Paso 6.2: HPA minReplicas actualizado de 2 a 3
-- [ ] Paso 6.3: ConfigMap `rehabiapp-api-config` creado en `/infra/k8s/base/api/configmap.yaml`
-- [ ] Paso 6.3: Kustomization actualizado para incluir configmap.yaml
-- [ ] Paso 6.4: Deployment refactorizado con `envFrom` ConfigMap + `env` Secret refs
-- [ ] Verificacion: `docker build -t rehabiapp-api:dev -f api/Dockerfile api/` ejecutado con exito
-- [ ] Verificacion: `kubectl kustomize infra/k8s/overlays/local/` valida sin errores
+- [x] Paso 6.1: Dockerfile creado en `/api/Dockerfile` (multi-stage, Eclipse Temurin 24, UID 1000)
+- [x] Paso 6.1: `.dockerignore` creado en `/api/.dockerignore`
+- [x] Paso 6.2: Deployment replicas actualizado de 2 a 3
+- [x] Paso 6.2: HPA minReplicas actualizado de 2 a 3
+- [x] Paso 6.3: ConfigMap `rehabiapp-api-config` creado en `/infra/k8s/base/api/configmap.yaml`
+- [x] Paso 6.3: Kustomization actualizado para incluir configmap.yaml
+- [x] Paso 6.4: Deployment refactorizado con `envFrom` ConfigMap + `env` Secret refs
+- [x] Verificacion: `docker build -t rehabiapp-api:dev -f api/Dockerfile api/` ejecutado con exito
+- [x] Verificacion: `kubectl kustomize infra/k8s/overlays/local/` valida sin errores

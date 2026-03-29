@@ -306,3 +306,79 @@ kubectl kustomize infra/k8s/overlays/aws/ | kubeconform -strict -kubernetes-vers
 - [x] Step 7: Local overlay — 8 files created
 - [x] Step 8: AWS overlay — 13 files created
 - [x] Step 9: Both overlays pass `kubectl kustomize` and `kubeconform` (local: 33/33 valid; aws: 32/32 native valid + 3 SecretProviderClass CRDs skipped — expected, require CSI Driver CRD installed in cluster)
+
+---
+
+## Step 10: Reconciliacion con los planes de los servicios backend
+
+Aplica los cambios de infraestructura K8s dictados por los 3 planes de servicio:
+- `api/PLAN.md` Fase 6 (Contenerizacion y Despliegue en Kubernetes)
+- `data/PLAN.md` Step 10 (Containerization and Kubernetes Deployment)
+- `mobile/backend/PLAN.md` Step 9 (Containerization and Kubernetes Deployment)
+
+Cada servicio requiere: 3 replicas base, ConfigMap para configuracion general, `envFrom` para inyectar ConfigMap, Secret refs para credenciales, y eliminacion de Dockerfiles obsoletos en `infra/docker/`.
+
+### 10.1: Cambios del servicio API
+
+- `infra/k8s/base/api/configmap.yaml` — CREADO con 5 claves: SPRING_PROFILES_ACTIVE, SERVER_PORT, JAVA_TOOL_OPTIONS, REHABIAPP_DATA_SERVICE_URL, MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+- `infra/k8s/base/api/deployment.yaml` — replicas 2->3, envFrom configMapRef + env secretKeyRef (postgresql-credentials, api-secrets)
+- `infra/k8s/base/api/hpa.yaml` — minReplicas 2->3
+- `infra/k8s/base/api/kustomization.yaml` — incluye configmap.yaml
+
+### 10.2: Cambios del servicio Data
+
+- `infra/k8s/base/data/configmap.yaml` — CREADO con 6 claves: SPRING_PROFILES_ACTIVE, SERVER_PORT, JAVA_TOOL_OPTIONS, CSFLE_ENABLED, CSFLE_KMS_PROVIDER, MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+- `infra/k8s/base/data/deployment.yaml` — replicas 2->3, envFrom configMapRef + env secretKeyRef (mongodb-credentials)
+- `infra/k8s/base/data/hpa.yaml` — minReplicas 2->3
+- `infra/k8s/base/data/kustomization.yaml` — incluye configmap.yaml
+
+### 10.3: Cambios del servicio Mobile Backend
+
+- `infra/k8s/base/mobile-backend/configmap.yaml` — CREADO con 4 claves: NODE_ENV, PORT, API_BASE_URL, LOG_LEVEL
+- `infra/k8s/base/mobile-backend/deployment.yaml` — replicas 3, envFrom configMapRef
+- `infra/k8s/base/mobile-backend/hpa.yaml` — minReplicas 3
+- `infra/k8s/base/mobile-backend/kustomization.yaml` — incluye configmap.yaml
+
+### 10.4: Limpieza de Dockerfiles obsoletos
+
+Eliminados los 3 Dockerfiles de `infra/docker/` y el directorio completo. Los Dockerfiles ahora viven en el directorio raiz de cada servicio:
+- `/api/Dockerfile` — Spring Boot multi-stage (Eclipse Temurin 24)
+- `/data/Dockerfile` — Spring Boot multi-stage (Eclipse Temurin 24)
+- `/mobile/backend/Dockerfile` — Node.js 20 Alpine multi-stage
+
+**CRITICO:** El Dockerfile anterior de data (`infra/docker/data/Dockerfile`) usaba `node:20-alpine` pero el servicio es Spring Boot Java 24.
+
+### 10.5: Verificacion de StatefulSets
+
+Sin cambios necesarios:
+- MongoDB (`infra/k8s/base/mongodb/statefulset.yaml`): bitnami/mongodb:7.0, 1 replica, 5Gi PVC
+- PostgreSQL (`infra/k8s/base/postgresql/statefulset.yaml`): bitnami/postgresql:16, 1 replica, 5Gi PVC
+
+### Checklist Step 10
+
+**API (10.1):**
+- [x] ConfigMap `rehabiapp-api-config` creado
+- [x] Kustomization actualizado
+- [x] Deployment: replicas 3, envFrom + secretKeyRef
+- [x] HPA: minReplicas 3
+
+**Data (10.2):**
+- [x] ConfigMap `rehabiapp-data-config` creado (6 claves)
+- [x] Kustomization actualizado
+- [x] Deployment: replicas 3, envFrom + secretKeyRef
+- [x] HPA: minReplicas 3
+
+**Mobile Backend (10.3):**
+- [x] ConfigMap `mobile-backend-config` creado
+- [x] Kustomization actualizado
+- [x] Deployment: replicas 3, envFrom
+- [x] HPA: minReplicas 3
+
+**Limpieza (10.4):**
+- [x] `infra/docker/` eliminado completamente
+
+**Verificacion (10.5):**
+- [x] MongoDB StatefulSet verificado (5Gi PVC)
+- [x] PostgreSQL StatefulSet verificado (5Gi PVC)
+- [x] `kubectl kustomize infra/k8s/overlays/local/` renderiza sin errores
+- [x] `kubectl kustomize infra/k8s/overlays/aws/` renderiza sin errores

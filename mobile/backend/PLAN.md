@@ -195,14 +195,14 @@ This prevents copying `node_modules` into the Docker build context (they are ins
 
 ## Checklist
 
-- [ ] Step 1: Node.js project initialized with Express
-- [ ] Step 2: /health endpoint returns 200 OK with `{ "status": "UP" }`
-- [ ] Step 3: Structured JSON logging with pino configured
-- [ ] Step 4: /metrics endpoint for Prometheus enabled
-- [ ] Step 5: Secret reading utility for CSI-mounted files created
-- [ ] Step 6: No writes outside /tmp (read-only filesystem compatible)
-- [ ] Step 7: package-lock.json exists, src/index.js is entry point
-- [ ] Step 8: .dockerignore created
+- [x] Step 1: Node.js project initialized with Express
+- [x] Step 2: /health endpoint returns 200 OK with `{ "status": "UP" }`
+- [x] Step 3: Structured JSON logging with pino configured
+- [x] Step 4: /metrics endpoint for Prometheus enabled
+- [x] Step 5: Secret reading utility for CSI-mounted files created
+- [x] Step 6: No writes outside /tmp (read-only filesystem compatible)
+- [x] Step 7: package-lock.json exists, src/index.js is entry point
+- [x] Step 8: .dockerignore created
 
 ---
 
@@ -325,12 +325,12 @@ Complete Kubernetes architecture reference for the implementer:
 
 ### Checklist Step 9
 
-- [ ] Step 9.1: Dockerfile created at `/mobile/backend/Dockerfile` (multi-stage, Node.js 20 Alpine, UID 1000)
-- [ ] Step 9.1: `.dockerignore` verified (from Step 8)
-- [ ] Step 9.2: Deployment replicas updated from 2 to 3
-- [ ] Step 9.2: HPA minReplicas updated from 2 to 3
-- [ ] Step 9.3: ConfigMap `mobile-backend-config` created at `/infra/k8s/base/mobile-backend/configmap.yaml`
-- [ ] Step 9.3: Kustomization updated to include configmap.yaml
-- [ ] Step 9.4: Deployment env refactored with `envFrom` ConfigMap
+- [x] Step 9.1: Dockerfile created at `/mobile/backend/Dockerfile` (multi-stage, Node.js 20 Alpine, UID 1000)
+- [x] Step 9.1: `.dockerignore` verified (from Step 8)
+- [x] Step 9.2: Deployment replicas updated from 2 to 3
+- [x] Step 9.2: HPA minReplicas updated from 2 to 3
+- [x] Step 9.3: ConfigMap `mobile-backend-config` created at `/infra/k8s/base/mobile-backend/configmap.yaml`
+- [x] Step 9.3: Kustomization updated to include configmap.yaml
+- [x] Step 9.4: Deployment env refactored with `envFrom` ConfigMap
 - [ ] Verification: `docker build -t mobile-backend:dev -f mobile/backend/Dockerfile mobile/backend/` succeeds
 - [ ] Verification: `kubectl kustomize infra/k8s/overlays/local/` valid

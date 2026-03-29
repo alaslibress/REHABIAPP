@@ -389,8 +389,8 @@ Complete Kubernetes architecture reference for the implementer:
 
 ### Checklist Step 10
 
-- [ ] Step 10.1: Java Dockerfile created at `/data/Dockerfile` (multi-stage, Eclipse Temurin 24, NOT Node.js)
-- [ ] Step 10.1: `.dockerignore` created at `/data/.dockerignore`
+- [x] Step 10.1: Java Dockerfile created at `/data/Dockerfile` (multi-stage, Eclipse Temurin 24, NOT Node.js)
+- [x] Step 10.1: `.dockerignore` created at `/data/.dockerignore`
 - [ ] Step 10.1: Obsolete Node.js Dockerfile at `/infra/docker/data/Dockerfile` deleted
 - [ ] Step 10.2: Deployment replicas updated from 2 to 3
 - [ ] Step 10.2: HPA minReplicas updated from 2 to 3

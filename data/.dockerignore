@@ -1,0 +1,7 @@
+target/
+.mvn/repository/
+.git
+.idea
+*.iml
+.env
+.env.*

@@ -1,0 +1,19 @@
+# Archivos excluidos del contexto de build de Docker
+# Evita copiar binarios compilados, datos sensibles y metadatos del IDE
+
+# Directorio de artefactos compilados (se generan en el stage builder)
+target/
+
+# Cache local del repositorio Maven
+.mvn/repository/
+
+# Metadatos de control de versiones
+.git
+
+# Archivos de configuracion del IDE IntelliJ IDEA
+.idea
+*.iml
+
+# Variables de entorno locales (nunca incluir en imagenes)
+.env
+.env.*

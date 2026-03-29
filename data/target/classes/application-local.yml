@@ -1,0 +1,15 @@
+# Perfil LOCAL: desarrollo en maquina del desarrollador
+# MongoDB local sin TLS, logging verbose para depuracion
+
+spring:
+  data:
+    mongodb:
+      # URI de MongoDB local con fallback al valor por defecto de desarrollo
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/rehabiapp_telemetry}
+
+logging:
+  level:
+    # Nivel DEBUG para el codigo de la aplicacion en desarrollo
+    com.rehabiapp: DEBUG
+    # Debug de Spring Data MongoDB para ver queries y operaciones del driver
+    org.springframework.data.mongodb: DEBUG

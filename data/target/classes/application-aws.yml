@@ -1,0 +1,20 @@
+# Perfil AWS: entorno de produccion en EKS
+# La URI de MongoDB (DocumentDB con TLS) se inyecta via CSI-mounted secrets
+# montados en /mnt/secrets/ por el SecretsStore CSI Driver
+
+spring:
+  config:
+    # Importar configuracion desde ficheros montados por CSI secrets en K8s
+    # "optional:" evita fallo de arranque si el directorio no existe (ej. tests)
+    import: optional:configtree:file:/mnt/secrets/
+  data:
+    mongodb:
+      # URI inyectada via variable de entorno procedente del secret CSI
+      uri: ${SPRING_DATA_MONGODB_URI}
+      # Indices gestionados explicitamente (no auto-creacion) segun el skill
+      auto-index-creation: false
+
+logging:
+  level:
+    # Nivel INFO en produccion para reducir volumen de logs
+    root: INFO

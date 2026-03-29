@@ -1,0 +1,43 @@
+# Configuracion principal del pipeline de datos de RehabiAPP
+# Puerto 8081 obligatorio para evitar colision con el API Core en 8080
+
+server:
+  port: ${SERVER_PORT:8081}
+  tomcat:
+    # Directorio base de Tomcat en /tmp para compatibilidad con filesystem de solo lectura en K8s
+    basedir: /tmp
+
+# Configuracion de Spring Boot Actuator para health probes de Kubernetes
+management:
+  endpoints:
+    web:
+      exposure:
+        # Exponer health (probes K8s), info y prometheus (scraping de metricas)
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        # Habilita /actuator/health/liveness y /actuator/health/readiness
+        enabled: true
+      # No exponer detalles de health para evitar fuga de informacion
+      show-details: never
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      # readiness incluye comprobacion de conectividad con MongoDB
+      enabled: true
+
+# Configuracion de CSFLE (Client-Side Field Level Encryption)
+# Obligatorio segun el skill springboot4-mongodb para datos de pacientes
+# La configuracion real del MongoClient con auto-encryption se implementa
+# cuando se crean los modelos de datos (fuera del alcance de esta fase K8s)
+rehabiapp:
+  csfle:
+    enabled: ${CSFLE_ENABLED:false}
+    # Namespace del key vault en MongoDB para las claves de cifrado
+    key-vault-namespace: "encryption.__keyVault"
+    # Proveedor KMS: "local" en desarrollo, "aws" en produccion via IRSA
+    kms-provider: ${CSFLE_KMS_PROVIDER:local}
+    # Ruta a la clave maestra montada via CSI secrets en K8s
+    master-key-path: ${CSFLE_MASTER_KEY_PATH:/mnt/secrets/csfle-master-key}

@@ -1,0 +1,13 @@
+# Perfil TEST: excluye MongoDB para tests unitarios sin infraestructura real
+# Se activa con @ActiveProfiles("test") en los tests de contexto completo
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.metrics.mongo.MongoMetricsAutoConfiguration
+
+logging:
+  level:
+    com.rehabiapp: WARN

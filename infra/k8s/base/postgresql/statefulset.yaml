@@ -1,6 +1,6 @@
 # StatefulSet de PostgreSQL para desarrollo local
 # NOTA: En produccion (AWS), se usa RDS — este StatefulSet se escala a 0 en el overlay AWS
-# Usa imagen Bitnami que soporta UIDs arbitrarios (compatible con runAsUser: 1000)
+# Usa imagen oficial de PostgreSQL (ejecuta como UID 999)
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -26,15 +26,15 @@ spec:
       # Contexto de seguridad a nivel de Pod (ENS Alto)
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: postgresql
-          # Bitnami soporta UIDs arbitrarios — compatible con runAsUser: 1000
-          image: bitnami/postgresql:16
+          # Imagen oficial de PostgreSQL (ejecuta como UID 999)
+          image: postgres:18
           ports:
             - containerPort: 5432
               protocol: TCP
@@ -43,7 +43,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
-            runAsUser: 1000
+            runAsUser: 999
             capabilities:
               drop:
                 - ALL
@@ -63,7 +63,7 @@ spec:
               value: "rehabiapp"
             # Directorio de datos de PostgreSQL
             - name: PGDATA
-              value: "/var/lib/postgresql/data/pgdata"
+              value: "/var/lib/postgresql/18/docker"
           resources:
             requests:
               cpu: "100m"
@@ -77,7 +77,9 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - $(POSTGRES_USER)
+                - admin
+                - -d
+                - rehabiapp
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 3
@@ -87,14 +89,16 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - $(POSTGRES_USER)
+                - admin
+                - -d
+                - rehabiapp
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 3
           volumeMounts:
             # Volumen persistente para datos de base de datos
             - name: postgres-data
-              mountPath: /var/lib/postgresql/data
+              mountPath: /var/lib/postgresql
             # Directorio temporal en memoria
             - name: tmp
               mountPath: /tmp

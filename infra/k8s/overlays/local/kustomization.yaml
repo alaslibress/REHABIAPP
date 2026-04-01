@@ -33,7 +33,7 @@ patches:
       kind: Service
       name: mobile-backend
       namespace: rehabiapp-mobile
-  # Patch de Namespaces: relajar PSS para compatibilidad con imagenes Bitnami
+  # Patch de Namespaces: relajar PSS para compatibilidad con imagenes oficiales
   - path: namespace-api-patch.yaml
     target:
       kind: Namespace

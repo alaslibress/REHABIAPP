@@ -1,5 +1,5 @@
 # Patch del namespace rehabiapp-api para entorno local
-# Relaja PSS enforce a baseline para compatibilidad con imagen Bitnami PostgreSQL
+# Relaja PSS enforce a baseline para compatibilidad con imagen oficial PostgreSQL
 apiVersion: v1
 kind: Namespace
 metadata:

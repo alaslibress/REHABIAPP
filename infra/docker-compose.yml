@@ -1,0 +1,54 @@
+# Docker Compose para RehabiAPP - Desarrollo local
+# Todos los servicios de infraestructura del proyecto en una sola red.
+
+services:
+  # Base de datos relacional principal (PostgreSQL)
+  postgresql:
+    image: postgres:18
+    container_name: rehabiapp-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: rehabiapp
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    volumes:
+      # Volumen persistente para los datos de la base de datos
+      - rehabiapp-pg-data:/var/lib/postgresql
+    networks:
+      - rehabiapp-net
+    # Comprobacion de salud para verificar que PostgreSQL esta listo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d rehabiapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Interfaz web de administracion de PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: rehabiapp-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@rehabiapp.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - rehabiapp-pgadmin-data:/var/lib/pgadmin
+    networks:
+      - rehabiapp-net
+    depends_on:
+      postgresql:
+        condition: service_healthy
+
+# Volumenes persistentes con nombre
+volumes:
+  rehabiapp-pg-data:
+  rehabiapp-pgadmin-data:
+
+# Red interna del proyecto
+networks:
+  rehabiapp-net:

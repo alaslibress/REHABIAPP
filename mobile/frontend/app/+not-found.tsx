@@ -1,26 +1,22 @@
 import { Link, Stack } from 'expo-router';
+import { View, Text } from 'react-native';
 
-import { Text, View } from 'react-native';
-
-import { Container } from '@/components/Container';
-
+// Pantalla de ruta no encontrada
 export default function NotFoundScreen() {
   return (
-    <View className={styles.container}>
-      <Stack.Screen options={{ title: 'Oops!' }} />
-      <Container>
-        <Text className={styles.title}>{"This screen doesn't exist."}</Text>
-        <Link href="/" className={styles.link}>
-          <Text className={styles.linkText}>Go to home screen!</Text>
+    <>
+      <Stack.Screen options={{ title: 'Pagina no encontrada' }} />
+      <View className="flex-1 bg-background justify-center items-center px-6">
+        <Text className="text-2xl font-bold text-text-primary mb-2">
+          Pagina no encontrada
+        </Text>
+        <Text className="text-base text-text-secondary mb-8 text-center">
+          La ruta que buscas no existe.
+        </Text>
+        <Link href="/" className="text-primary-600 text-base font-medium">
+          Volver al inicio
         </Link>
-      </Container>
-    </View>
+      </View>
+    </>
   );
 }
-
-const styles = {
-  container: `flex flex-1 bg-white`,
-  title: `text-xl font-bold`,
-  link: `mt-4 pt-4`,
-  linkText: `text-base text-[#2e78b7]`,
-};

@@ -12,15 +12,18 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@apollo/client": "^4.1.6",
     "@expo/vector-icons": "^15.0.2",
     "@react-navigation/native": "^7.1.6",
     "expo": "^54.0.0",
     "expo-constants": "~18.0.9",
     "expo-linking": "~8.0.8",
     "expo-router": "~6.0.10",
+    "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~3.0.8",
     "expo-system-ui": "~6.0.7",
     "expo-web-browser": "~15.0.7",
+    "graphql": "^16.13.2",
     "nativewind": "latest",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -40,8 +43,8 @@
     "eslint-config-expo": "~10.0.0",
     "eslint-config-prettier": "^10.1.2",
     "prettier": "^3.2.5",
-    "tailwindcss": "^3.4.0",
     "prettier-plugin-tailwindcss": "^0.5.11",
+    "tailwindcss": "^3.4.0",
     "typescript": "~5.9.2"
   },
   "private": true

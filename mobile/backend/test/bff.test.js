@@ -25,24 +25,20 @@ before(async () => {
   process.env.PORT = '3099';
   process.env.API_BASE_URL = 'http://localhost:8080';
   process.env.NODE_ENV = 'test';
+  process.env.MOCK_API = 'true';
   // Necesario para que pino no intente escribir a stdout durante los tests
   process.env.LOG_LEVEL = 'silent';
 
-  // Importar el modulo despues de configurar las variables de entorno
-  const mod = require('../src/index.js');
+  // El modulo exporta una Promise — ya resuelve con el servidor escuchando
+  const mod = await require('../src/index.js');
   app = mod.app;
   server = mod.server;
-
-  // Esperar a que el servidor este listo
-  await new Promise((resolve) => {
-    if (server.listening) return resolve();
-    server.once('listening', resolve);
-  });
 });
 
 after(() => {
   return new Promise((resolve) => {
-    server.close(() => resolve());
+    if (server) server.close(() => resolve());
+    else resolve();
   });
 });
 

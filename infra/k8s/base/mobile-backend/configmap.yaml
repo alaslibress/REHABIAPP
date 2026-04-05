@@ -11,3 +11,11 @@ data:
   PORT: "3000"
   API_BASE_URL: "http://rehabiapp-api.rehabiapp-api.svc.cluster.local:8080"
   LOG_LEVEL: "info"
+  GRAPHQL_PATH: "/graphql"
+  # 30 minutos en milisegundos
+  JWT_EXPIRATION_MS: "1800000"
+  # 7 dias en milisegundos
+  JWT_REFRESH_MS: "604800000"
+  # Nunca activar mock en produccion
+  MOCK_API: "false"
+  # JWT_SECRET se monta via CSI SecretProviderClass desde AWS Secrets Manager

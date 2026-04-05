@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUserStore } from '../../src/store/userStore';
+import { useErrorStore } from '../../src/store/errorStore';
 import { FloatingBalloon } from '../../src/components/FloatingBalloon';
 import { getGreeting } from '../../src/utils/greeting';
 
@@ -76,7 +78,22 @@ const BALLOON_CONFIG: BalloonConfig[] = [
 export default function HomeScreen() {
   const router = useRouter();
   const patient = useUserStore(function (s) { return s.patient; });
+  const fetchProfile = useUserStore(function (s) { return s.fetchProfile; });
+  const showError = useErrorStore(function (s) { return s.showError; });
   const patientName = patient?.name ?? 'Paciente';
+
+  // Cargar el perfil del paciente al montar la pantalla de inicio.
+  // Se ejecuta una sola vez despues de que AuthGuard haya navegado aqui
+  // (lo que garantiza que el token JWT ya esta almacenado en SecureStore).
+  useEffect(function () {
+    // Solo cargar si no tenemos el perfil aun (evita llamadas duplicadas)
+    if (!patient) {
+      fetchProfile().catch(function (err) {
+        // fetchProfile ya parsea el error a AppError (via parseGraphQLError)
+        showError(err);
+      });
+    }
+  }, []);
 
   function handleBalloonPress(route: string) {
     router.push(route as any);

@@ -7,6 +7,8 @@ type AppError = {
 
 type ErrorCode =
   | 'INVALID_CREDENTIALS'
+  | 'INVALID_IDENTIFIER'
+  | 'WRONG_PASSWORD'
   | 'ACCOUNT_DEACTIVATED'
   | 'TOKEN_EXPIRED'
   | 'TOKEN_INVALID'

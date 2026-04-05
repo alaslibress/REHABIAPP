@@ -1,4 +1,4 @@
-# CLAUDE.md - RehabiAPP Mobile (Patient App)
+# CLAUDE.md - RehabiAPP Mobile Domain
 
 > **File:** `/mobile/CLAUDE.md`
 > **Agent:** Agent 2 (Mobile Developer)
@@ -8,38 +8,101 @@
 
 ## 1. PROJECT DEFINITION
 
-This directory contains the patient-facing mobile application for rehabilitation tracking and appointment management. Built with React Native and Expo for cross-platform deployment (Android and iOS).
+This directory contains the complete mobile domain for RehabiAPP, split into two strictly isolated subdirectories:
 
-Patients use this app to view their clinical profile, assigned treatments filtered by progression level, game session history, and to schedule appointments. The app also integrates an AI-powered WhatsApp chatbot for automated appointment booking.
+| Subdirectory | Description | Stack | Local CLAUDE.md |
+|-------------|-------------|-------|-----------------|
+| `/mobile/frontend` | Patient-facing React Native app | TypeScript, Expo, Apollo Client, Zustand | `/mobile/frontend/CLAUDE.md` (if exists) |
+| `/mobile/backend` | Backend-For-Frontend (BFF) | Node.js 20, Express 5, Apollo Server 4 | `/mobile/backend/CLAUDE.md` |
+
+Patients use the mobile app to view their clinical profile, assigned treatments filtered by progression level, game session history, and to schedule appointments. The app also integrates an AI-powered WhatsApp chatbot for automated appointment booking.
 
 The UI must be highly accessible for all age groups, including elderly patients with reduced mobility or vision.
 
 ---
 
-## 2. OPERATING RULES
+## 2. DOMAIN ARCHITECTURE
 
-1. **Global context:** Read and respect the root `/CLAUDE.md` before any cross-domain decision. This local file takes precedence for mobile-specific decisions only.
+```
+/mobile/
+|
+|-- CLAUDE.md                   <-- THIS FILE (domain-level context)
+|
+|-- /frontend                   <-- Patient mobile app (React Native + Expo)
+|   |-- app/                    # Expo Router pages (auth, tabs)
+|   |-- src/
+|   |   |-- components/         # Reusable UI components
+|   |   |-- services/graphql/   # Apollo Client queries and mutations
+|   |   |-- store/              # Zustand stores (auth, user, error)
+|   |   |-- types/              # TypeScript type definitions
+|   |   |-- utils/              # Helpers (error handler, greeting)
+|   |-- PLAN.md                 # Frontend implementation plan
+|
+|-- /backend                    <-- BFF (Node.js + Express + Apollo Server)
+|   |-- src/
+|   |   |-- graphql/            # TypeDefs + Resolvers
+|   |   |-- services/           # API client + domain services
+|   |   |-- middleware/         # Auth, greeting, error formatter
+|   |   |-- utils/              # Error codes, timezone utilities
+|   |   |-- index.js            # Entry point
+|   |   |-- config.js           # Configuration + secrets
+|   |-- test/                   # Tests
+|   |-- CLAUDE.md               # Backend-specific context
+|   |-- PLAN.md                 # Backend implementation plan
+|   |-- Dockerfile              # Multi-stage container image
+```
 
-2. **Skills are mandatory:** Before any architectural change or implementation, read and follow the manuals in `.claude/skills/` of this directory. Skills override default behavior.
+### Communication Flow (BFF Pattern)
 
-3. **Maintain this file:** When you complete a task, change `[ ]` to `[x]`. Remove resolved items that no longer provide useful context.
+```
+Mobile App (frontend)
+    |
+    | GraphQL (Apollo Client -> Apollo Server)
+    | Port 3000 (BFF)
+    | JWT BFF token in Authorization header
+    | X-Timezone header for greeting context
+    v
+BFF Node.js (backend)
+    |
+    | REST / HTTP (fetch native)
+    | Internal K8s network
+    | JWT Java token in Authorization header
+    v
+Java API (Spring Boot, /api)
+    |
+    v
+PostgreSQL / MongoDB (via /data)
+```
 
-4. **No direct database access:** This app NEVER connects to PostgreSQL or MongoDB directly. All data is fetched from and sent to the Spring Boot REST API (/api). No exceptions.
-
-5. **Accessibility first:** Large touch targets (minimum 48x48dp), clear color contrast (WCAG AA minimum), readable font sizes, simple navigation. The interface must be usable by patients of all ages without training.
-
-6. **State management:** Use Context API or Zustand. Avoid Redux unless strictly necessary for a specific complex flow.
+**CRITICAL RULE:** The frontend NEVER communicates with the Java API (`/api`) directly. ALL traffic routes through the BFF (`/mobile/backend`). This is enforced by K8s NetworkPolicy.
 
 ---
 
-## 3. LOCAL STACK
+## 3. OPERATING RULES
 
-- React Native, Expo, TypeScript.
-- Axios or Fetch (API communication).
-- Context API or Zustand (state management).
-- Expo Router or React Navigation (navigation).
+1. **Global context:** Read and respect the root `/CLAUDE.md` before any cross-domain decision. This file takes precedence for mobile-domain decisions. Subdirectory CLAUDE.md files take precedence for their specific scope.
 
-### Build commands
+2. **Read local CLAUDE.md first:** Before working in `/mobile/frontend` or `/mobile/backend`, read the corresponding local CLAUDE.md and PLAN.md.
+
+3. **Maintain this file:** When you complete a task, change `[ ]` to `[x]`. Remove resolved items that no longer provide useful context.
+
+4. **No direct database access:** Neither the frontend nor the backend connects to PostgreSQL or MongoDB directly. All data flows through the Java API.
+
+5. **Strict directory isolation:** Frontend code NEVER imports from backend. Backend code NEVER imports from frontend. They communicate exclusively through the GraphQL API.
+
+6. **Accessibility first:** Large touch targets (minimum 48x48dp), clear color contrast (WCAG AA minimum), readable font sizes, simple navigation. The interface must be usable by patients of all ages without training.
+
+---
+
+## 4. SUBDOMAIN STACKS
+
+### Frontend (`/mobile/frontend`)
+
+- React Native, Expo, TypeScript
+- Apollo Client (GraphQL communication with BFF)
+- Zustand (state management)
+- Expo Router (navigation)
+- NativeWind (styling)
 
 ```
 npx expo start            # Start development server
@@ -48,53 +111,58 @@ npx expo start --ios      # Start on iOS
 npm test                  # Run tests
 ```
 
----
+### Backend (`/mobile/backend`)
 
-## 4. ARCHITECTURE
+- Node.js 20, Express 5, JavaScript (CommonJS)
+- Apollo Server 4 (GraphQL API)
+- jsonwebtoken (JWT generation/validation)
+- fetch native (HTTP client for Java API)
+- pino (structured JSON logging)
 
 ```
-src/
-    |-- components/     Reusable UI components (buttons, cards, inputs)
-    |-- screens/        Screen components (Login, Dashboard, Profile, Appointments)
-    |-- hooks/          Custom React hooks
-    |-- services/       API service layer (all fetch/axios calls)
-    |-- context/        Global state (auth, user session, theme)
-    |-- utils/          Helpers, formatters, validators
-    |-- types/          TypeScript type definitions
-    |-- assets/         Images, fonts, icons
+npm start                 # Start production server
+npm run dev               # Start with watch mode
+npm test                  # Run tests
 ```
-
-All API calls go through the services/ layer. Screens never call fetch/axios directly.
 
 ---
 
 ## 5. IMPLEMENTATION CHECKLIST
 
-### Phase 1: Project setup
+### Phase 1: Frontend project setup
 
 - [ ] Initialize Expo project with TypeScript.
-- [ ] Define folder structure (components, screens, hooks, services, context, utils, types).
+- [ ] Define folder structure (components, services, store, types, utils).
 - [ ] Configure navigation (tab-based with bottom navigation).
 - [ ] Set up theming (light/dark mode, accessible color palette).
-- [ ] Configure Axios instance with base URL and JWT interceptor.
+- [ ] Configure Apollo Client with BFF GraphQL endpoint.
 
-### Phase 2: Authentication and shell
+### Phase 2: Backend BFF (GraphQL layer)
 
-- [ ] Login screen (DNI + password, connecting to /api JWT endpoint).
+- [x] Node.js project initialized with Express and infrastructure endpoints.
+- [ ] GraphQL API with Apollo Server 4 integrated.
+- [ ] Authentication service with BFF JWT.
+- [ ] All GraphQL queries and mutations implemented.
+- [ ] Error standardization and greeting middleware.
+- [ ] Tests passing.
+
+### Phase 3: Authentication and shell
+
+- [ ] Login screen (DNI/email + password via GraphQL mutation).
 - [ ] Secure token storage (Expo SecureStore).
 - [ ] Auto-logout on token expiration.
-- [ ] Main navigation shell (Dashboard, Treatments, Appointments, Profile tabs).
+- [ ] Main navigation shell (Dashboard, Treatments, Appointments, Profile, Games, Settings tabs).
 - [ ] Pull-to-refresh and loading states across all screens.
 
-### Phase 3: Patient dashboard
+### Phase 4: Patient features
 
-- [ ] Patient profile screen (personal data, clinical summary).
-- [ ] Assigned disabilities with current progression level display.
-- [ ] Treatment list filtered by matching progression level and visibility flag.
+- [ ] Patient profile screen (personal data from `me` query).
+- [ ] Assigned disabilities with current progression level.
+- [ ] Treatment list filtered by disability and level.
 - [ ] Game session history with progress charts.
 - [ ] Appointment list (upcoming and past).
 
-### Phase 4: Advanced features
+### Phase 5: Advanced features
 
 - [ ] Appointment booking screen (date/time picker, practitioner selection).
 - [ ] AI WhatsApp chatbot integration for automated appointment booking.
@@ -103,7 +171,7 @@ All API calls go through the services/ layer. Screens never call fetch/axios dir
 
 ---
 
-*This file is the single source of truth for the mobile domain. Update it as tasks are completed.*
+*This file is the single source of truth for the mobile domain. Each subdomain has its own CLAUDE.md with specific implementation details. Update this file for cross-cutting concerns.*
 
 ## Memory
 

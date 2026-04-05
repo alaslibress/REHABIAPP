@@ -14,12 +14,12 @@ type TabConfig = {
 
 const TAB_CONFIG: TabConfig[] = [
   { name: 'index', title: 'Inicio', icon: 'home-outline', iconFocused: 'home' },
+  { name: 'appointments', title: 'Citas', icon: 'calendar-outline', iconFocused: 'calendar' },
+  { name: 'games', title: 'Juegos', icon: 'game-controller-outline', iconFocused: 'game-controller' },
+  { name: 'treatments', title: 'Tratamiento', icon: 'medkit-outline', iconFocused: 'medkit' },
+  { name: 'progress', title: 'Progreso', icon: 'bar-chart-outline', iconFocused: 'bar-chart' },
   { name: 'profile', title: 'Perfil', icon: 'person-outline', iconFocused: 'person' },
   { name: 'settings', title: 'Ajustes', icon: 'settings-outline', iconFocused: 'settings' },
-  { name: 'appointments', title: 'Citas', icon: 'calendar-outline', iconFocused: 'calendar' },
-  { name: 'progress', title: 'Progreso', icon: 'bar-chart-outline', iconFocused: 'bar-chart' },
-  { name: 'games', title: 'Juegos', icon: 'game-controller-outline', iconFocused: 'game-controller' },
-  { name: 'treatments', title: 'Tratamientos', icon: 'medkit-outline', iconFocused: 'medkit' },
 ];
 
 export default function TabsLayout() {

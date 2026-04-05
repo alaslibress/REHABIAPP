@@ -2,12 +2,56 @@ import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/clien
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import type { AuthToken } from '../../types/auth';
 
 const TOKEN_KEY = 'auth_token';
 
-// URL base del backend BFF — cambiar segun entorno
-const GRAPHQL_URI = 'http://localhost:4000/graphql';
+// Puerto del BFF (debe coincidir con PORT en /mobile/backend/src/config.js)
+const BFF_PORT = 3000;
+
+/**
+ * Resuelve la URL del BFF automaticamente segun el entorno:
+ * - Produccion: variable de entorno EXPO_PUBLIC_API_URL
+ * - Desarrollo con Expo: extrae la IP del servidor de desarrollo desde hostUri
+ * - Android emulador fallback: 10.0.2.2 (IP especial del host en el emulador de Android)
+ * - iOS simulador fallback: localhost (comparte red con el host)
+ */
+function resolverUrlGraphQL(): string {
+  // En produccion, usar la URL configurada por variable de entorno
+  const urlProduccion = Constants.expoConfig?.extra?.apiUrl
+    || process.env.EXPO_PUBLIC_API_URL;
+  if (urlProduccion) {
+    return `${urlProduccion}/graphql`;
+  }
+
+  // En desarrollo: extraer la IP del servidor Expo desde hostUri
+  // hostUri tiene formato "192.168.1.100:8081" (IP:puerto_expo)
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    if (ip) {
+      return `http://${ip}:${BFF_PORT}/graphql`;
+    }
+  }
+
+  // Fallback segun plataforma
+  if (Platform.OS === 'android') {
+    // 10.0.2.2 es la IP especial para acceder al host desde el emulador de Android
+    return `http://10.0.2.2:${BFF_PORT}/graphql`;
+  }
+
+  // iOS simulador o web: localhost funciona porque comparten red con el host
+  return `http://localhost:${BFF_PORT}/graphql`;
+}
+
+const GRAPHQL_URI = resolverUrlGraphQL();
+
+// Registrar la URL resuelta en desarrollo para facilitar la depuracion
+if (__DEV__) {
+  console.log(`[Apollo] URL del BFF resuelta: ${GRAPHQL_URI}`);
+}
 
 const httpLink = createHttpLink({
   uri: GRAPHQL_URI,
@@ -29,15 +73,42 @@ const authLink = setContext(async function (_request, previousContext) {
   };
 });
 
-// Link de errores globales
-const errorLink = onError(function ({ graphQLErrors, networkError }) {
+// Sanitizar variables de la operacion para los logs (ocultar contrasenas)
+function sanitizarVariables(variables: Record<string, any> | undefined): Record<string, any> | undefined {
+  if (!variables) return undefined;
+  const copia = { ...variables };
+  if (copia.password) copia.password = '***';
+  if (copia.contrasena) copia.contrasena = '***';
+  if (copia.refreshToken) copia.refreshToken = '***TOKEN***';
+  return copia;
+}
+
+// Link de errores globales — logging estructurado para depuracion en Metro
+const errorLink = onError(function ({ graphQLErrors, networkError, operation }) {
+  const operacion = operation.operationName || 'operacion_anonima';
+  const variables = sanitizarVariables(operation.variables);
+
   if (graphQLErrors) {
     for (const err of graphQLErrors) {
-      console.error(`[GraphQL Error]: ${err.message}`);
+      const code = err.extensions?.code ?? 'SIN_CODIGO';
+      // Errores de negocio (credenciales, validacion) son warn, no error
+      console.warn(
+        `[GraphQL] ${code} | operacion="${operacion}" | mensaje="${err.message}" | ` +
+        `subtitulo="${err.extensions?.subtitulo ?? '-'}" | ` +
+        `texto="${err.extensions?.texto ?? '-'}" | ` +
+        `variables=${JSON.stringify(variables)}`
+      );
     }
   }
+
   if (networkError) {
-    console.error(`[Network Error]: ${networkError.message}`);
+    // Extraer statusCode si existe (errores HTTP devuelven statusCode)
+    const statusCode = 'statusCode' in networkError ? (networkError as any).statusCode : 'N/A';
+    console.error(
+      `[Red] Error de conexion | operacion="${operacion}" | ` +
+      `status=${statusCode} | mensaje="${networkError.message}" | ` +
+      `variables=${JSON.stringify(variables)}`
+    );
   }
 });
 

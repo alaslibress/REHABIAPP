@@ -11,8 +11,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuthStore } from '../../src/store/authStore';
-import { useUserStore } from '../../src/store/userStore';
-import { useErrorStore } from '../../src/store/errorStore';
 import type { LoginCredentials } from '../../src/types/auth';
 
 // Pantalla de inicio de sesion
@@ -22,8 +20,6 @@ export default function LoginScreen() {
 
   const login = useAuthStore(function (s) { return s.login; });
   const isLoading = useAuthStore(function (s) { return s.isLoading; });
-  const fetchProfile = useUserStore(function (s) { return s.fetchProfile; });
-  const showError = useErrorStore(function (s) { return s.showError; });
 
   async function handleLogin() {
     if (!identifier.trim() || !password.trim()) return;
@@ -35,10 +31,13 @@ export default function LoginScreen() {
 
     try {
       await login(credentials);
-      await fetchProfile();
-      // La navegacion se gestiona automaticamente por el AuthGuard en el root layout
-    } catch (err: any) {
-      showError(err);
+      // Si login() tiene exito, authStore pone isAuthenticated=true.
+      // AuthGuard (en _layout.tsx) detecta el cambio y navega a /(tabs) automaticamente.
+      // Si login() falla, lanza un AppError y el catch lo gestiona abajo.
+    } catch (_err) {
+      // authStore.login() ya mostro el popup de error via useErrorStore.
+      // No necesitamos hacer nada aqui — el popup ya es visible.
+      // El catch existe solo para evitar un "unhandled promise rejection".
     }
   }
 

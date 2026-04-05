@@ -5,6 +5,7 @@ import type { AppError } from '../types/errors';
 import { client } from '../services/graphql/client';
 import { LOGIN_MUTATION } from '../services/graphql/mutations/auth';
 import { parseGraphQLError } from '../utils/errorHandler';
+import { useErrorStore } from './errorStore';
 
 // Clave para almacenamiento seguro de tokens
 const TOKEN_KEY = 'auth_token';
@@ -28,9 +29,14 @@ export const useAuthStore = create<AuthState>(function (set) {
         });
         const token: AuthToken = data.login;
         await SecureStore.setItemAsync(TOKEN_KEY, JSON.stringify(token));
-        set({ token, isAuthenticated: true, isLoading: false });
+        // Limpiar cualquier error previo del error store global
+        useErrorStore.getState().hideError();
+        set({ token, isAuthenticated: true, isLoading: false, error: null });
       } catch (err) {
         const appError: AppError = parseGraphQLError(err);
+        // Mostrar el popup de error directamente desde el store
+        // para garantizar que siempre aparece independientemente del flujo del componente
+        useErrorStore.getState().showError(appError);
         set({ error: appError, isLoading: false });
         throw appError;
       }

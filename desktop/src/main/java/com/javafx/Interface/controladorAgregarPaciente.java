@@ -79,16 +79,7 @@ public class controladorAgregarPaciente {
     private TextField txtApellidos;
 
     @FXML
-    private TextArea txtAreaEstado;
-
-    @FXML
-    private TextArea txtAreaTratamiento;
-
-    @FXML
     private TextField txtDNI;
-
-    @FXML
-    private TextField txtDiscapacidad;
 
     @FXML
     private TextField txtEmail;
@@ -187,10 +178,6 @@ public class controladorAgregarPaciente {
 
         //Configurar ComboBox de sexo
         cmbSexo.setItems(FXCollections.observableArrayList("M", "F", "O"));
-
-        //Campos legacy: la gestion de discapacidades y tratamientos se realiza desde la ficha del paciente
-        txtDiscapacidad.setPromptText("Campo legacy - usar ficha de paciente");
-        txtAreaTratamiento.setPromptText("Campo legacy - usar ficha de paciente");
 
         //Inicializar soporte de validacion
         validationSupport = new ValidationSupport();
@@ -334,21 +321,12 @@ public class controladorAgregarPaciente {
         spinnerEdad.getValueFactory().setValue(paciente.getEdad());
         txtEmail.setText(paciente.getEmail() != null ? paciente.getEmail() : "");
         txtNSS.setText(paciente.getNumSS() != null ? paciente.getNumSS() : "");
-        txtDiscapacidad.setText(paciente.getDiscapacidad() != null ? paciente.getDiscapacidad() : "");
-        txtAreaTratamiento.setText(paciente.getTratamiento() != null ? paciente.getTratamiento() : "");
-        txtAreaEstado.setText(paciente.getEstadoTratamiento() != null ? paciente.getEstadoTratamiento() : "");
+        // Los campos legacy de discapacidad/tratamiento/estado han sido eliminados del modelo.
+        // Se gestionan ahora en la ficha del paciente (controladorVentanaPacienteListar).
 
         //Telefonos
         txtTelefono1.setText(paciente.getTelefono1() != null ? paciente.getTelefono1() : "");
         txtTelefono2.setText(paciente.getTelefono2() != null ? paciente.getTelefono2() : "");
-
-        //Direccion
-        txtCalle.setText(paciente.getCalle() != null ? paciente.getCalle() : "");
-        txtNumero.setText(paciente.getNumero() != null ? paciente.getNumero() : "");
-        txtPiso.setText(paciente.getPiso() != null ? paciente.getPiso() : "");
-        txtCodigoPostal.setText(paciente.getCodigoPostal() != null ? paciente.getCodigoPostal() : "");
-        txtLocalidad.setText(paciente.getLocalidad() != null ? paciente.getLocalidad() : "");
-        txtProvincia.setText(paciente.getProvincia() != null ? paciente.getProvincia() : "");
 
         //Protesis
         if (paciente.tieneProtesis()) {
@@ -398,7 +376,7 @@ public class controladorAgregarPaciente {
         String dniSanitario = sanitarioSeleccionado.getDni();
 
         String[] apellidosSeparados = separarApellidos(txtApellidos.getText().trim());
-        int numProtesis = radioProtesisSi.isSelected() ? 1 : 0;
+        boolean protesis = radioProtesisSi.isSelected();
 
         //Crear objeto Paciente
         Paciente paciente = new Paciente(
@@ -409,24 +387,13 @@ public class controladorAgregarPaciente {
                 spinnerEdad.getValue(),
                 txtEmail.getText().trim(),
                 txtNSS.getText().trim(),
-                txtDiscapacidad.getText().trim(),
-                txtAreaTratamiento.getText().trim(),
-                txtAreaEstado.getText().trim(),
-                numProtesis,
+                protesis,
                 dniSanitario
         );
 
         //Configurar telefonos
         paciente.setTelefono1(txtTelefono1.getText().trim());
         paciente.setTelefono2(txtTelefono2.getText().trim());
-
-        //Configurar direccion
-        paciente.setCalle(txtCalle.getText().trim());
-        paciente.setNumero(txtNumero.getText().trim());
-        paciente.setPiso(txtPiso.getText().trim());
-        paciente.setCodigoPostal(txtCodigoPostal.getText().trim());
-        paciente.setLocalidad(txtLocalidad.getText().trim());
-        paciente.setProvincia(txtProvincia.getText().trim());
 
         //Configurar campos clinicos v2
         paciente.setSexo(cmbSexo.getValue() != null ? cmbSexo.getValue() : "");

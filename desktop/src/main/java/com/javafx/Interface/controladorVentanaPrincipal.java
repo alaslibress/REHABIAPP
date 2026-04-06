@@ -255,10 +255,6 @@ public class controladorVentanaPrincipal {
                 ((controladorVentanaSanitarios) controlador).configurarPermisos();
             } else if (controlador instanceof controladorVentanaPacientes) {
                 ((controladorVentanaPacientes) controlador).configurarPermisos();
-            } else if (controlador instanceof controladorVentanaDiscapacidades) {
-                ((controladorVentanaDiscapacidades) controlador).configurarPermisos();
-            } else if (controlador instanceof controladorVentanaTratamientos) {
-                ((controladorVentanaTratamientos) controlador).configurarPermisos();
             }
 
             // Cargar contenido en el centro del BorderPane

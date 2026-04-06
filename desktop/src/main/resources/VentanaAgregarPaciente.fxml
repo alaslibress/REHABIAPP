@@ -160,9 +160,7 @@
 
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
-                                        <Label prefWidth="140.0" text="Discapacidad:" />
-                                        <TextField fx:id="txtDiscapacidad" prefWidth="150.0" promptText="Tipo" />
-                                        <Label prefWidth="60.0" text="Protesis:" />
+                                        <Label prefWidth="140.0" text="Protesis:" />
                                         <RadioButton fx:id="radioProtesisSi" text="Si">
                                             <toggleGroup>
                                                 <ToggleGroup fx:id="grupoProtesis" />
@@ -172,19 +170,7 @@
                                     </children>
                                 </HBox>
 
-                                <VBox spacing="3.0">
-                                    <children>
-                                        <Label text="Estado del paciente:" />
-                                        <TextArea fx:id="txtAreaEstado" prefHeight="50.0" prefWidth="480.0" promptText="Describe el estado actual del paciente" wrapText="true" />
-                                    </children>
-                                </VBox>
-
-                                <VBox spacing="3.0">
-                                    <children>
-                                        <Label text="Tratamiento:" />
-                                        <TextArea fx:id="txtAreaTratamiento" prefHeight="50.0" prefWidth="480.0" promptText="Describe el tratamiento del paciente" wrapText="true" />
-                                    </children>
-                                </VBox>
+                                <Label styleClass="label-info" text="Las discapacidades y tratamientos se gestionan desde la ficha del paciente." />
 
                             </children>
                         </VBox>

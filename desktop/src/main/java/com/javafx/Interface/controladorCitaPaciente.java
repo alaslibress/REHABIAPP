@@ -1,5 +1,6 @@
 package com.javafx.Interface;
 
+import com.javafx.Clases.Cita;
 import com.javafx.Clases.InformeService;
 import com.javafx.Clases.Paciente;
 import com.javafx.Clases.VentanaUtil;
@@ -253,13 +254,13 @@ public class controladorCitaPaciente {
 
         //Actualizar la cita
         try {
+            Cita nuevaCita = new Cita(dniPacienteActual, dniSanitarioActual, nuevaFecha, nuevoTiempo);
             citaDAO.actualizar(
                     dniPacienteActual,
                     dniSanitarioActual,
                     fechaOriginal,
                     horaOriginal,
-                    nuevaFecha,
-                    nuevoTiempo
+                    nuevaCita
             );
 
             VentanaUtil.mostrarVentanaInformativa(

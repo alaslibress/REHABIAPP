@@ -7,7 +7,6 @@ import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.SanitarioDAO;
 import com.javafx.excepcion.ConexionException;
 import com.javafx.excepcion.RehabiAppException;
-import com.javafx.service.AuditService;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -278,7 +277,6 @@ public class controladorPerfil {
             //Cambiar contraseña
             try {
                 sanitarioDAO.cambiarContrasena(sesion.getDniUsuario(), nueva);
-                AuditService.cambioContrasena(sesion.getDniUsuario());
                 dialog.close();
                 VentanaUtil.mostrarVentanaInformativa(
                         "Contraseña cambiada correctamente.",

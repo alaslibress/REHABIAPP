@@ -12,7 +12,6 @@ import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.PacienteDAO;
 import com.javafx.excepcion.ConexionException;
 import com.javafx.excepcion.ValidacionException;
-import com.javafx.service.AuditService;
 import com.javafx.service.CatalogoService;
 import com.javafx.service.PacienteClinicoService;
 import javafx.collections.FXCollections;
@@ -269,8 +268,7 @@ public class controladorVentanaPacienteListar {
             cargarFotoPaciente();
             cargarDiscapacidadesPaciente();
 
-            //Registrar acceso a datos clinicos sensibles (Ley 41/2002, ENS)
-            AuditService.consultaSensible(dni);
+            // La API registra automaticamente el acceso a datos clinicos (AuditReadInterceptor)
         } else {
             VentanaUtil.mostrarVentanaInformativa(
                     "No se encontro el paciente con DNI: " + dni,
@@ -296,8 +294,8 @@ public class controladorVentanaPacienteListar {
         String direccionCompleta = construirDireccionCompleta();
         lblDireccionValor.setText(direccionCompleta.isEmpty() ? "-" : direccionCompleta);
 
-        //Estado del paciente (campo legacy)
-        txtAreaEstado.setText(valorOGuion(pacienteActual.getEstadoTratamiento()));
+        // Campo estado (legacy eliminado — se muestra vacio)
+        txtAreaEstado.setText("-");
 
         //Datos clinicos
         String sexoBD = pacienteActual.getSexo();
@@ -558,7 +556,7 @@ public class controladorVentanaPacienteListar {
             Optional<Tratamiento> resultado = dialogo.showAndWait();
             if (resultado.isPresent()) {
                 pacienteClinicoService.asignarTratamiento(
-                        dniPacienteActual, resultado.get().getCodTrat(), disSeleccionada.getCodDis());
+                        dniPacienteActual, resultado.get().getCodTrat());
                 VentanaUtil.mostrarVentanaInformativa(
                         "Tratamiento asignado correctamente.", TipoMensaje.EXITO);
                 cargarTratamientosPorDiscapacidad(disSeleccionada.getCodDis());
@@ -589,7 +587,7 @@ public class controladorVentanaPacienteListar {
         if (confirmado) {
             try {
                 pacienteClinicoService.desasignarTratamiento(
-                        dniPacienteActual, tratSeleccionado.getCodTrat(), disSeleccionada.getCodDis());
+                        dniPacienteActual, tratSeleccionado.getCodTrat());
                 VentanaUtil.mostrarVentanaInformativa(
                         "Tratamiento desasignado correctamente.", TipoMensaje.EXITO);
                 cargarTratamientosPorDiscapacidad(disSeleccionada.getCodDis());
@@ -613,13 +611,10 @@ public class controladorVentanaPacienteListar {
         }
 
         try {
-            boolean nuevoEstado = !tratSeleccionado.isVisible();
-            pacienteClinicoService.cambiarVisibilidad(
-                    dniPacienteActual, tratSeleccionado.getCodTrat(),
-                    disSeleccionada.getCodDis(), nuevoEstado);
+            pacienteClinicoService.toggleVisibilidad(
+                    dniPacienteActual, tratSeleccionado.getCodTrat());
 
-            String mensaje = nuevoEstado ? "Tratamiento ahora visible para el paciente."
-                    : "Tratamiento oculto para el paciente.";
+            String mensaje = "Visibilidad del tratamiento actualizada.";
             VentanaUtil.mostrarVentanaInformativa(mensaje, TipoMensaje.EXITO);
 
             cargarTratamientosPorDiscapacidad(disSeleccionada.getCodDis());
@@ -637,49 +632,9 @@ public class controladorVentanaPacienteListar {
     }
 
     private String construirDireccionCompleta() {
-        if (pacienteActual == null) {
-            return "";
-        }
-
-        StringBuilder direccion = new StringBuilder();
-
-        String calle = pacienteActual.getCalle();
-        String numero = pacienteActual.getNumero();
-        if (calle != null && !calle.trim().isEmpty()) {
-            direccion.append(calle.trim());
-            if (numero != null && !numero.trim().isEmpty() && !numero.equals("0")) {
-                direccion.append(" ").append(numero.trim());
-            }
-        }
-
-        String piso = pacienteActual.getPiso();
-        if (piso != null && !piso.trim().isEmpty()) {
-            if (direccion.length() > 0) {
-                direccion.append(", ");
-            }
-            direccion.append(piso.trim());
-        }
-
-        String cp = pacienteActual.getCodigoPostal();
-        String localidad = pacienteActual.getLocalidad();
-        if ((cp != null && !cp.trim().isEmpty()) || (localidad != null && !localidad.trim().isEmpty())) {
-            if (direccion.length() > 0) {
-                direccion.append(" - ");
-            }
-            if (cp != null && !cp.trim().isEmpty()) {
-                direccion.append(cp.trim()).append(" ");
-            }
-            if (localidad != null && !localidad.trim().isEmpty()) {
-                direccion.append(localidad.trim());
-            }
-        }
-
-        String provincia = pacienteActual.getProvincia();
-        if (provincia != null && !provincia.trim().isEmpty()) {
-            direccion.append(" (").append(provincia.trim()).append(")");
-        }
-
-        return direccion.toString().trim();
+        // La direccion se gestionaba via JDBC directo y no esta disponible via API.
+        // La API no expone la direccion en PacienteResponse por ahora.
+        return "";
     }
 
     // ==================== FOTO ====================

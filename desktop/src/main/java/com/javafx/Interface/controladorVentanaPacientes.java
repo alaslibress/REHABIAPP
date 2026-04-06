@@ -439,9 +439,8 @@ public class controladorVentanaPacientes {
                             resultado = Integer.compare(p1.getEdad(), p2.getEdad());
                             break;
                         case "Discapacidad":
-                            String disc1 = p1.getDiscapacidad() != null ? p1.getDiscapacidad() : "";
-                            String disc2 = p2.getDiscapacidad() != null ? p2.getDiscapacidad() : "";
-                            resultado = disc1.compareToIgnoreCase(disc2);
+                            // Campo legacy eliminado - sin ordenacion por discapacidad
+                            resultado = 0;
                             break;
                     }
                     return filtros.isOrdenAscendente() ? resultado : -resultado;

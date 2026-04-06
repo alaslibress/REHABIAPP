@@ -8,66 +8,72 @@ import java.time.LocalTime;
 import java.util.List;
 
 /**
- * Capa de servicio para operaciones de Cita
- * Actua como wrapper del CitaDAO proporcionando una interfaz simplificada
+ * Capa de servicio para operaciones de Cita.
+ * Delega directamente al CitaDAO que consume la API REST.
  */
 public class CitaService {
 
-    private final CitaDAO citaDAO;
+    private final CitaDAO citaDAO = new CitaDAO();
 
     /**
-     * Query base reutilizable para consultas de citas
-     * Incluye JOIN con paciente y sanitario para obtener nombres completos
-     */
-    public static final String QUERY_BASE_CITA =
-        "SELECT c.dni_pac, c.dni_san, c.fecha_cita, c.hora_cita, " +
-        "CONCAT(p.nombre_pac, ' ', p.apellido1_pac, ' ', COALESCE(p.apellido2_pac, '')) AS nombre_paciente, " +
-        "CONCAT(s.nombre_san, ' ', s.apellido1_san, ' ', COALESCE(s.apellido2_san, '')) AS nombre_sanitario " +
-        "FROM cita c " +
-        "JOIN paciente p ON c.dni_pac = p.dni_pac " +
-        "JOIN sanitario s ON c.dni_san = s.dni_san";
-
-    /**
-     * Constructor que inicializa el DAO
-     */
-    public CitaService() {
-        this.citaDAO = new CitaDAO();
-    }
-
-    /**
-     * Lista todas las citas
-     * @return Lista de todas las citas ordenadas por fecha y hora
+     * Lista todas las citas del sistema.
      */
     public List<Cita> listarTodas() {
         return citaDAO.listarTodas();
     }
 
     /**
-     * Lista las citas de una fecha especifica
-     * @param fecha Fecha a buscar
-     * @return Lista de citas de esa fecha
+     * Lista las citas de una fecha concreta.
      */
     public List<Cita> listarPorFecha(LocalDate fecha) {
         return citaDAO.listarPorFecha(fecha);
     }
 
     /**
-     * Inserta una nueva cita
-     * @param cita Cita a insertar
-     * @throws com.javafx.excepcion.DuplicadoException si ya existe una cita en ese horario
-     * @throws com.javafx.excepcion.ConexionException si hay error de BD
+     * Lista las citas de un sanitario concreto.
+     */
+    public List<Cita> listarPorSanitario(String dniSan) {
+        return citaDAO.listarPorSanitario(dniSan);
+    }
+
+    /**
+     * Lista las citas de un sanitario en una fecha concreta.
+     */
+    public List<Cita> obtenerCitasPorSanitarioYFecha(String dniSan, LocalDate fecha) {
+        return citaDAO.obtenerCitasPorSanitarioYFecha(dniSan, fecha);
+    }
+
+    /**
+     * Lista las citas de un paciente concreto.
+     */
+    public List<Cita> listarPorPaciente(String dniPac) {
+        return citaDAO.listarPorPaciente(dniPac);
+    }
+
+    /**
+     * Comprueba si ya existe una cita en ese horario para el sanitario.
+     */
+    public boolean existeCitaEnHorario(String dniSan, LocalDate fecha, LocalTime hora) {
+        return citaDAO.existeCitaEnHorario(dniSan, fecha, hora);
+    }
+
+    /**
+     * Inserta una nueva cita.
      */
     public void insertar(Cita cita) {
         citaDAO.insertar(cita);
     }
 
     /**
-     * Elimina una cita
-     * @param dniPac DNI del paciente
-     * @param dniSan DNI del sanitario
-     * @param fecha Fecha de la cita
-     * @param hora Hora de la cita
-     * @throws com.javafx.excepcion.ConexionException si hay error de BD
+     * Actualiza una cita (delete + insert en la API).
+     */
+    public void actualizar(String dniPac, String dniSan, LocalDate fechaAntigua, LocalTime horaAntigua,
+                           Cita nuevaCita) {
+        citaDAO.actualizar(dniPac, dniSan, fechaAntigua, horaAntigua, nuevaCita);
+    }
+
+    /**
+     * Elimina una cita.
      */
     public void eliminar(String dniPac, String dniSan, LocalDate fecha, LocalTime hora) {
         citaDAO.eliminar(dniPac, dniSan, fecha, hora);

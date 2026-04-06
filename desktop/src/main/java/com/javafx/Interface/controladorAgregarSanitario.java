@@ -233,11 +233,7 @@ public class controladorAgregarSanitario {
         }
 
         try {
-            sanitarioService.insertar(
-                    sanitario,
-                    sanitario.getTelefono1(),
-                    sanitario.getTelefono2()
-            );
+            sanitarioService.insertar(sanitario, sanitario.getContrasena());
 
             VentanaUtil.mostrarVentanaInformativa(
                     "El sanitario se ha registrado correctamente.",
@@ -284,7 +280,7 @@ public class controladorAgregarSanitario {
                 }
             }
 
-            if (sanitarioDAO.existeEmailExcluyendoDni(sanitario.getEmail(), dniOriginal)) {
+            if (sanitarioDAO.existeEmail(sanitario.getEmail())) {
                 VentanaUtil.mostrarVentanaInformativa(
                         "Ya existe otro sanitario con ese email.",
                         TipoMensaje.ERROR
@@ -301,12 +297,7 @@ public class controladorAgregarSanitario {
         }
 
         try {
-            sanitarioService.actualizar(
-                    sanitario,
-                    dniOriginal,
-                    sanitario.getTelefono1(),
-                    sanitario.getTelefono2()
-            );
+            sanitarioService.actualizar(sanitario, dniOriginal);
 
             VentanaUtil.mostrarVentanaInformativa(
                     "Los datos del sanitario se han actualizado correctamente.",

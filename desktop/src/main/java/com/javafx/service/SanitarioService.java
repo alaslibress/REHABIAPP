@@ -1,145 +1,106 @@
 package com.javafx.service;
 
-import com.javafx.Clases.ConexionBD;
 import com.javafx.Clases.Sanitario;
 import com.javafx.DAO.SanitarioDAO;
-import com.javafx.excepcion.ConexionException;
-import com.javafx.excepcion.DuplicadoException;
-import com.javafx.excepcion.ValidacionException;
+import com.javafx.dto.LoginResponse;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
 /**
  * Capa de servicio para operaciones de Sanitario.
- * Gestiona transacciones atomicas (sanitario + cargo + telefonos) y auditoria.
- *
- * Con HikariCP, cada operacion obtiene su propia conexion del pool via
- * try-with-resources. Al cerrar la conexion se devuelve al pool automaticamente.
- *
- * Todos los metodos de escritura son void y lanzan excepciones tipadas:
- * - DuplicadoException: DNI o email duplicado
- * - ValidacionException: datos invalidos
- * - ConexionException: error de base de datos
+ * Delega directamente al SanitarioDAO que consume la API REST.
+ * La auditoria, el BCrypt y las transacciones son responsabilidad de la API.
  */
 public class SanitarioService {
 
-    private final SanitarioDAO sanitarioDAO;
-
-    public SanitarioService() {
-        this.sanitarioDAO = new SanitarioDAO();
-    }
+    private final SanitarioDAO sanitarioDAO = new SanitarioDAO();
 
     /**
-     * Lista todos los sanitarios activos
+     * Lista todos los sanitarios activos.
      */
     public List<Sanitario> listarTodos() {
         return sanitarioDAO.listarTodos();
     }
 
     /**
-     * Busca un sanitario por su DNI
+     * Busca sanitarios por texto libre.
+     */
+    public List<Sanitario> buscarPorTexto(String texto) {
+        return sanitarioDAO.buscarPorTexto(texto);
+    }
+
+    /**
+     * Busca un sanitario por su DNI.
      */
     public Optional<Sanitario> buscarPorDni(String dni) {
         return Optional.ofNullable(sanitarioDAO.buscarPorDni(dni));
     }
 
     /**
-     * Inserta un nuevo sanitario con sus telefonos de forma atomica.
-     * La operacion completa (sanitario + cargo + telefonos) se ejecuta en una sola transaccion.
-     *
-     * @param sanitario Sanitario a insertar
-     * @param tel1 Primer telefono
-     * @param tel2 Segundo telefono (opcional)
-     * @throws DuplicadoException si ya existe un sanitario con ese DNI o email
-     * @throws ConexionException si hay error de base de datos
+     * Autentica al sanitario contra la API. Almacena los tokens JWT en ApiClient.
      */
-    public void insertar(Sanitario sanitario, String tel1, String tel2) {
-        try (Connection conn = ConexionBD.getConexion()) {
-            conn.setAutoCommit(false);
-
-            try {
-                //Insertar sanitario + cargo en la misma transaccion
-                sanitarioDAO.insertar(conn, sanitario);
-
-                //Insertar telefonos en la misma transaccion
-                sanitarioDAO.insertarTelefonos(conn, sanitario.getDni(), tel1, tel2);
-
-                conn.commit();
-
-            } catch (RuntimeException e) {
-                rollback(conn);
-                throw e;
-            }
-
-        } catch (SQLException e) {
-            throw new ConexionException("Error al insertar sanitario", e);
-        }
-
-        //Auditoria (fire-and-forget, fuera de la transaccion)
-        AuditService.insertSanitario(sanitario.getDni());
+    public LoginResponse autenticar(String dni, String contrasena) {
+        return sanitarioDAO.autenticar(dni, contrasena);
     }
 
     /**
-     * Actualiza un sanitario existente con sus telefonos de forma atomica.
-     *
-     * @param sanitario Sanitario con los nuevos datos
-     * @param dniOriginal DNI original del sanitario
-     * @param tel1 Primer telefono
-     * @param tel2 Segundo telefono (opcional)
-     * @throws DuplicadoException si el nuevo DNI o email ya existe
-     * @throws ValidacionException si el sanitario no existe
-     * @throws ConexionException si hay error de base de datos
+     * Inserta un nuevo sanitario.
+     */
+    public void insertar(Sanitario sanitario, String contrasena) {
+        sanitarioDAO.insertar(sanitario, contrasena);
+    }
+
+    /**
+     * Inserta un nuevo sanitario con telefonos explicitamente.
+     */
+    public void insertar(Sanitario sanitario, String contrasena, String tel1, String tel2) {
+        sanitario.setTelefono1(tel1 != null ? tel1 : "");
+        sanitario.setTelefono2(tel2 != null ? tel2 : "");
+        sanitarioDAO.insertar(sanitario, contrasena);
+    }
+
+    /**
+     * Actualiza un sanitario existente.
+     */
+    public void actualizar(Sanitario sanitario, String dniOriginal) {
+        sanitarioDAO.actualizar(sanitario, dniOriginal);
+    }
+
+    /**
+     * Actualiza un sanitario con telefonos explicitamente.
      */
     public void actualizar(Sanitario sanitario, String dniOriginal, String tel1, String tel2) {
-        try (Connection conn = ConexionBD.getConexion()) {
-            conn.setAutoCommit(false);
-
-            try {
-                //Actualizar sanitario + cargo
-                sanitarioDAO.actualizar(conn, sanitario, dniOriginal);
-
-                //Actualizar telefonos en la misma transaccion
-                sanitarioDAO.actualizarTelefonos(conn, sanitario.getDni(), tel1, tel2);
-
-                conn.commit();
-
-            } catch (RuntimeException e) {
-                rollback(conn);
-                throw e;
-            }
-
-        } catch (SQLException e) {
-            throw new ConexionException("Error al actualizar sanitario", e);
-        }
-
-        //Auditoria
-        AuditService.updateSanitario(sanitario.getDni());
+        sanitario.setTelefono1(tel1 != null ? tel1 : "");
+        sanitario.setTelefono2(tel2 != null ? tel2 : "");
+        sanitarioDAO.actualizar(sanitario, dniOriginal);
     }
 
     /**
-     * Desactiva un sanitario (soft delete)
-     *
-     * @param dni DNI del sanitario a desactivar
-     * @throws ValidacionException si el sanitario no existe
-     * @throws ConexionException si hay error de base de datos
+     * Cambia la contrasena de un sanitario.
+     */
+    public void cambiarContrasena(String dni, String nuevaContrasena) {
+        sanitarioDAO.cambiarContrasena(dni, nuevaContrasena);
+    }
+
+    /**
+     * Desactiva un sanitario (soft delete).
      */
     public void eliminar(String dni) {
         sanitarioDAO.eliminar(dni);
-        AuditService.deleteSanitario(dni);
     }
 
-    // ==================== UTILIDADES ====================
+    /**
+     * Comprueba si existe un sanitario con el DNI dado.
+     */
+    public boolean existeDni(String dni) {
+        return sanitarioDAO.existeDni(dni);
+    }
 
-    private void rollback(Connection conn) {
-        if (conn != null) {
-            try {
-                conn.rollback();
-            } catch (SQLException ex) {
-                //Rollback fallido
-            }
-        }
+    /**
+     * Verifica la contrasena de un sanitario.
+     */
+    public boolean verificarContrasena(String dni, String contrasena) {
+        return sanitarioDAO.verificarContrasena(dni, contrasena);
     }
 }

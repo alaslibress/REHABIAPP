@@ -209,6 +209,61 @@ public class PacienteService {
     }
 
     /**
+     * Guarda o reemplaza la fotografía de un paciente activo.
+     *
+     * <p>Los bytes de la imagen se persisten directamente en la columna BYTEA.
+     * No se aplica cifrado AES-256-GCM a la foto (no es campo clínico sensible).
+     * La operación queda registrada en audit_log.</p>
+     *
+     * @param dni   DNI del paciente.
+     * @param bytes Bytes de la imagen (image/png o image/jpeg).
+     * @throws RecursoNoEncontradoException si el paciente no existe o está inactivo.
+     */
+    public void guardarFoto(String dni, byte[] bytes) {
+        Paciente paciente = pacienteRepository.findByDniPacAndActivoTrue(dni)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado: " + dni));
+        paciente.setFoto(bytes);
+        pacienteRepository.save(paciente);
+        auditService.registrar(AccionAuditoria.ACTUALIZAR, "paciente", dni, "Foto de paciente actualizada");
+    }
+
+    /**
+     * Devuelve los bytes de la fotografía de un paciente activo.
+     *
+     * <p>Si el paciente no tiene foto, devuelve null.
+     * El acceso queda registrado en audit_log (acceso a datos del paciente).</p>
+     *
+     * @param dni DNI del paciente.
+     * @return Bytes de la imagen, o null si no tiene foto.
+     * @throws RecursoNoEncontradoException si el paciente no existe o está inactivo.
+     */
+    @Transactional(readOnly = true)
+    public byte[] obtenerFoto(String dni) {
+        Paciente paciente = pacienteRepository.findByDniPacAndActivoTrue(dni)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado: " + dni));
+        auditService.registrar(AccionAuditoria.LEER, "paciente", dni, "Foto de paciente consultada");
+        return paciente.getFoto();
+    }
+
+    /**
+     * Busca pacientes activos por texto libre en DNI, nombre, apellidos, email y NSS.
+     *
+     * <p>La búsqueda es case-insensitive gracias al LOWER + LIKE de la query JPQL.
+     * Útil para el buscador del desktop ERP y del BFF mobile.</p>
+     *
+     * @param texto    Término de búsqueda libre (mínimo 1 carácter).
+     * @param pageable Configuración de paginación y ordenación.
+     * @return Página de pacientes activos que coinciden con el texto.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<PacienteResponse> buscar(String texto, Pageable pageable) {
+        auditService.registrar(AccionAuditoria.LEER, "paciente", texto, "Busqueda de pacientes por texto");
+        return PageResponse.de(
+                pacienteRepository.buscarPorTexto(texto, pageable).map(pacienteMapper::toResponse)
+        );
+    }
+
+    /**
      * Da de baja lógica a un paciente (soft delete).
      *
      * <p>NUNCA se elimina el registro físicamente. Retención mínima 5 años

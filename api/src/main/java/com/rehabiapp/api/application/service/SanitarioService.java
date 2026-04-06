@@ -79,6 +79,24 @@ public class SanitarioService {
     }
 
     /**
+     * Busca sanitarios activos por texto libre en DNI, nombre, apellidos y email.
+     *
+     * <p>La búsqueda es case-insensitive gracias al LOWER + LIKE de la query JPQL.
+     * Útil para el buscador del desktop ERP y del BFF mobile.</p>
+     *
+     * @param texto    Término de búsqueda libre (mínimo 1 carácter).
+     * @param pageable Configuración de paginación y ordenación.
+     * @return Página de sanitarios activos que coinciden con el texto.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<SanitarioResponse> buscar(String texto, Pageable pageable) {
+        auditService.registrar(AccionAuditoria.LEER, "sanitario", texto, "Busqueda de sanitarios por texto");
+        return PageResponse.de(
+                sanitarioRepository.buscarPorTexto(texto, pageable).map(sanitarioMapper::toResponse)
+        );
+    }
+
+    /**
      * Crea un nuevo sanitario en el sistema.
      *
      * <p>La contraseña se hashea con BCrypt (factor 12) antes de persistir.

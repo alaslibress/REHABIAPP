@@ -7,7 +7,8 @@ import jakarta.persistence.*;
  *
  * <p>Tabla: tratamiento</p>
  * <p>Catálogo maestro de tratamientos disponibles. Se relaciona con
- * discapacidades a través de la tabla DiscapacidadTratamiento (N:M).</p>
+ * discapacidades a través de la tabla DiscapacidadTratamiento (N:M).
+ * Opcionalmente vinculado a un nivel de progresión clínica (nullable).</p>
  */
 @Entity
 @Table(name = "tratamiento")
@@ -31,6 +32,15 @@ public class Tratamiento {
      */
     @Column(name = "definicion_trat", columnDefinition = "TEXT")
     private String definicionTrat;
+
+    /**
+     * Nivel de progresión clínica al que pertenece este tratamiento (opcional).
+     * Nullable para compatibilidad con tratamientos existentes sin nivel asignado.
+     * Agregado en V4__tratamiento_nivel_progresion.sql.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_nivel")
+    private NivelProgresion nivel;
 
     // --- Getters y setters ---
 
@@ -56,5 +66,13 @@ public class Tratamiento {
 
     public void setDefinicionTrat(String definicionTrat) {
         this.definicionTrat = definicionTrat;
+    }
+
+    public NivelProgresion getNivel() {
+        return nivel;
+    }
+
+    public void setNivel(NivelProgresion nivel) {
+        this.nivel = nivel;
     }
 }

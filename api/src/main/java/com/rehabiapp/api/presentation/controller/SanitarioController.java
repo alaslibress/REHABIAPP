@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -115,5 +116,23 @@ public class SanitarioController {
     public ResponseEntity<Void> eliminar(@PathVariable String dni) {
         sanitarioService.eliminar(dni);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Busca sanitarios activos por texto libre (case-insensitive).
+     * Busca en DNI, nombre, apellidos y email.
+     *
+     * <p>GET /api/sanitarios/buscar?texto=lopez&page=0&size=20&sort=apellido1San,asc</p>
+     *
+     * @param texto    Término de búsqueda libre.
+     * @param pageable Parámetros de paginación y ordenación desde la query string.
+     * @return 200 OK con página de sanitarios activos que coinciden.
+     */
+    @GetMapping("/buscar")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PageResponse<SanitarioResponse>> buscar(
+            @RequestParam String texto,
+            Pageable pageable) {
+        return ResponseEntity.ok(sanitarioService.buscar(texto, pageable));
     }
 }

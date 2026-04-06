@@ -32,8 +32,8 @@ com/rehabiapp/api/domain/enums/Rol.class
 com/rehabiapp/api/application/service/CitaService.class
 com/rehabiapp/api/application/mapper/DiscapacidadMapperImpl.class
 com/rehabiapp/api/presentation/controller/CatalogoController.class
-com/rehabiapp/api/ApiApplication.class
 com/rehabiapp/api/application/mapper/PacienteTratamientoMapper.class
+com/rehabiapp/api/ApiApplication.class
 com/rehabiapp/api/application/service/CatalogoService.class
 com/rehabiapp/api/application/mapper/PacienteDiscapacidadMapper.class
 com/rehabiapp/api/application/dto/NivelProgresionResponse.class

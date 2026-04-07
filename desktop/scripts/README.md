@@ -16,7 +16,7 @@ docker exec -i rehabiapp-db psql -U admin -d rehabiapp \
 
 | DNI | Contrasena | Rol | Tipo |
 |-----|------------|-----|------|
-| admin0000 | admin | SPECIALIST | Sanitario administrador |
+| ADMIN0000 | admin | SPECIALIST | Sanitario administrador |
 | 00000001R | medico1234 | SPECIALIST | Sanitario medico ejemplo (Carlos Garcia Lopez) |
 | 00000002W | enfermero1234 | NURSE | Sanitario enfermero ejemplo (Lucia Martinez Ruiz) |
 | 00000003A | n/a (no hace login) | n/a | Paciente ejemplo (Pedro Sanchez Gomez) |

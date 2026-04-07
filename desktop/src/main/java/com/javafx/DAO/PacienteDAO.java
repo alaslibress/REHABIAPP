@@ -160,9 +160,11 @@ public class PacienteDAO {
             System.arraycopy(bytes, 0, cuerpo, inicioBytes.length, bytes.length);
             System.arraycopy(finBytes, 0, cuerpo, inicioBytes.length + bytes.length, finBytes.length);
 
+            // HttpClient propio necesario para multipart/form-data (ApiClient no soporta este tipo de cuerpo).
+            // La URL se obtiene de ApiClient para evitar hardcodear localhost:8080.
             HttpClient cliente = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:8080/api/pacientes/" + dni + "/foto"))
+                .uri(URI.create(api.getBaseUrl() + "/api/pacientes/" + dni + "/foto"))
                 .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                 .header("Authorization", "Bearer " + api.getAccessToken())
                 .POST(HttpRequest.BodyPublishers.ofByteArray(cuerpo))
@@ -179,9 +181,11 @@ public class PacienteDAO {
      */
     public Image obtenerFoto(String dni) {
         try {
+            // HttpClient propio necesario para recibir bytes en bruto; ApiClient devuelve String.
+            // La URL se obtiene de ApiClient para evitar hardcodear localhost:8080.
             HttpClient cliente = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:8080/api/pacientes/" + dni + "/foto"))
+                .uri(URI.create(api.getBaseUrl() + "/api/pacientes/" + dni + "/foto"))
                 .header("Authorization", "Bearer " + api.getAccessToken())
                 .GET()
                 .build();

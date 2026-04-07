@@ -10,7 +10,7 @@
 
 This directory contains the Desktop ERP (SGE - Sistema de Gestion de Expedientes) of RehabiAPP. It is a JavaFX client application used by healthcare practitioners (specialists and nurses) to manage patients, practitioners, appointments, disability-linked treatments organized by clinical progression levels, and to visualize patient rehabilitation progress.
 
-The SGE has direct JDBC connection to PostgreSQL. This is a legacy architecture that will progressively migrate to consume the ecosystem REST API (/api) in a future phase.
+El SGE consume la REST API central (`/api`) sin acceso directo a la base de datos. La conexion JDBC legacy fue eliminada en la migracion completada en marzo-abril de 2026.
 
 ---
 
@@ -29,9 +29,8 @@ The SGE has direct JDBC connection to PostgreSQL. This is a legacy architecture 
 ## 3. LOCAL STACK
 
 - Java 24, JavaFX 23 (FXML via SceneBuilder), CSS (light/dark themes).
-- PostgreSQL 15+ (direct JDBC connection, temporary until API migration).
-- jBCrypt 0.4 (password hashing, cost factor 12, lazy migration of plain-text passwords).
-- AES-256-GCM (authenticated encryption of clinical fields: allergies, medical history, current medication).
+- Conexion via REST API central (`/api` en `localhost:8080` por defecto, configurable via `api.properties` o variable `REHABIAPP_API_URL`).
+- AES-256-GCM y BCrypt delegados a la API (ya no se ejecutan en el desktop).
 - ControlsFX 11.x (visual field validation).
 - CalendarFX 11.12+ (monthly calendar view for appointments).
 - JasperReports 6.20+ (PDF and HTML report generation).
@@ -52,7 +51,7 @@ The SGE has direct JDBC connection to PostgreSQL. This is a legacy architecture 
 
 ```
 src/main/java/com/javafx/
-    |-- Clases/        Main, ConexionBD (Singleton), Paciente, Sanitario, Cita, SesionUsuario
+    |-- Clases/        Main, ApiClient (HTTP singleton), Paciente, Sanitario, Cita, SesionUsuario
     |-- Interface/     All JavaFX controllers (controladorSesion, controladorMenuPrincipal, etc.)
     |-- DAO/           PacienteDAO, SanitarioDAO, CitaDAO, DireccionDAO, AuditLogDAO
     |-- service/       PacienteService, SanitarioService, AuditService, CifradoService
@@ -62,7 +61,7 @@ src/main/java/com/javafx/
 src/main/resources/
     |-- fxml/          All FXML files (designed in SceneBuilder)
     |-- css/           tema-claro.css, tema-oscuro.css
-    |-- config/        database.properties, preferencias.properties, cifrado.properties (excluded from Git)
+    |-- config/        api.properties (url base + timeout), preferencias.properties
     |-- imagenes/      Icons and images
 ```
 
@@ -86,7 +85,7 @@ Two user types, both healthcare practitioners:
 - Clinical fields (allergies, medical history, current medication): AES-256-GCM with random 96-bit IV per operation. Key stored in cifrado.properties (excluded from Git via .gitignore).
 - Audit: Every CRUD operation and every READ access to patient records logged in audit_log (immutable, INSERT only).
 - Deletion: Soft delete only (active=FALSE, deactivation_date). Physical deletion prohibited. 5-year retention (Ley 41/2002).
-- SSL/TLS: Code prepared in ConexionBD, disabled for local development, activatable for production.
+- SSL/TLS: Responsabilidad de la API en produccion. El desktop usa HTTPS hacia la API cuando la variable `REHABIAPP_API_URL` apunta a un endpoint seguro.
 
 ---
 
@@ -116,10 +115,9 @@ Completed items provide context of what already exists. Uncompleted items are th
 - [x] Fallback mode: app functions without encryption for development if key is missing.
 - [x] Audit logging for all CRUD operations via AuditService (fire-and-forget pattern).
 - [x] READ audit logging when opening patient records (consultaSensible).
-- [x] SSL/TLS support prepared in ConexionBD (disabled for local, configurable for production).
+- [x] SSL/TLS delegado a la API. El desktop usa HTTPS apuntando a URL segura via REHABIAPP_API_URL.
 - [x] Custom exception hierarchy created (RehabiAppException, ConexionException, ValidacionException, AutenticacionException, PermisoException).
-- [ ] Refactor all DAOs to throw custom exceptions instead of returning boolean.
-- [ ] Migrate ConexionBD from single-connection Singleton to HikariCP connection pool.
+- [x] DAOs ya lanzan excepciones custom (migracion a REST API completada).
 
 ### CRUD operations
 
@@ -160,8 +158,8 @@ Completed items provide context of what already exists. Uncompleted items are th
 
 - [ ] OpenAI API integration for automated clinical text processing and chart interpretation.
 - [ ] NFC scanner integration for Spanish health card reading (auto-fill patient forms).
-- [ ] Activate and test SSL/TLS connection with production database (AWS RDS).
-- [ ] Architectural migration: replace direct JDBC calls with REST API consumption from /api.
+- [ ] Activar y probar HTTPS hacia la API en produccion (AWS).
+- [x] Architectural migration: JDBC eliminado, desktop consume REST API de /api.
 
 ---
 
@@ -204,6 +202,71 @@ Tables pending creation: nivel_progresion, paciente_discapacidad, paciente_trata
 ---
 
 *This file is the single source of truth for the desktop SGE domain. Update it as tasks are completed. Remove resolved items that no longer provide useful context.*
+
+---
+
+## RUNBOOK LOCAL
+
+### Levantar el stack completo (orden obligatorio)
+
+1. **PostgreSQL** (terminal 1):
+   ```
+   docker compose -f /home/alaslibres/DAM/RehabiAPP/infra/docker-compose.yml up postgres
+   ```
+
+2. **API Spring Boot** (terminal 2):
+   ```
+   cd /home/alaslibres/DAM/RehabiAPP/api
+   set -a && source .env.local && set +a
+   ./mvnw spring-boot:run
+   ```
+   Esperar a `Started ApiApplication`.
+
+3. **Desktop JavaFX** (terminal 3):
+   ```
+   cd /home/alaslibres/DAM/RehabiAPP/desktop
+   ./gradlew run
+   ```
+
+### Variables de entorno necesarias (`api/.env.local`, NO commitear)
+
+```
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/rehabiapp
+SPRING_DATASOURCE_USERNAME=admin
+SPRING_DATASOURCE_PASSWORD=admin
+SPRING_PROFILES_ACTIVE=local
+```
+
+### Credenciales de prueba (seed en `desktop/scripts/reseed-dev.sql`)
+
+| DNI | Contrasena | Rol |
+|-----|------------|-----|
+| ADMIN0000 | admin | SPECIALIST |
+| 00000001R | medico1234 | SPECIALIST |
+| 00000002W | enfermero1234 | NURSE |
+
+### Health checks
+
+```bash
+# PG
+docker exec rehabiapp-db psql -U admin -d rehabiapp -c "SELECT 1;"
+# API
+curl http://localhost:8080/actuator/health
+# Desktop: pulsar el indicador del login -> debe pintarse verde
+```
+
+### Errores comunes
+
+| Sintoma | Causa | Solucion |
+|---------|-------|----------|
+| `"JavaFX runtime components are missing"` | JVM sin JavaFX | Ver skill `javafx-java24` |
+| `"password authentication failed"` en logs API | `.env.local` mal configurado | Revisar credenciales; deben coincidir con docker-compose.yml |
+| Indicador de login en rojo | API no arrancada o inaccesible | Ver trazas SLF4J `Conexion API fallida` en terminal 3 |
+| 403 al login con credenciales correctas | DNI en minusculas en BD | El DNI se envia en mayusculas; BD debe tenerlo en mayusculas |
+| 500 en GET /api/pacientes | Mismatch de columna o enum en API | Revisar logs de la API con DEBUG habilitado |
+| 401 en GET /api/pacientes despues de login OK | JWT no se envia | Revisar `ApiClient.get()` y header Authorization |
+
+---
 
 ## Memory
 

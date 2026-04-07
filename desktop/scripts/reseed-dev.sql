@@ -51,7 +51,7 @@ INSERT INTO sanitario (
     email_san, num_de_pacientes, contrasena_san, activo
 ) VALUES
     (
-        'admin0000',
+        'ADMIN0000',
         'Admin', 'Sistema', NULL,
         'admin@rehabiapp.local',
         0,
@@ -79,7 +79,7 @@ INSERT INTO sanitario (
 -- 5. Roles de los sanitarios
 -- -------------------------------------------------------------------------
 INSERT INTO sanitario_agrega_sanitario (dni_san, cargo) VALUES
-    ('admin0000',  'SPECIALIST'),
+    ('ADMIN0000',  'SPECIALIST'),
     ('00000001R',  'SPECIALIST'),
     ('00000002W',  'NURSE');
 
@@ -87,7 +87,7 @@ INSERT INTO sanitario_agrega_sanitario (dni_san, cargo) VALUES
 -- 6. Telefonos de los sanitarios (datos de prueba)
 -- -------------------------------------------------------------------------
 INSERT INTO telefono_sanitario (dni_san, telefono) VALUES
-    ('admin0000',  '600000000'),
+    ('ADMIN0000',  '600000000'),
     ('00000001R',  '600111111'),
     ('00000002W',  '600222222');
 
@@ -111,7 +111,7 @@ INSERT INTO paciente (
     discapacidad_pac, tratamiento_pac, estado_tratamiento,
     protesis,
     fecha_nacimiento, sexo,
-    alergias, antecedentes, medicacion,
+    alergias, antecedentes, medicacion_actual,
     consentimiento_rgpd, fecha_consentimiento,
     activo
 ) VALUES (
@@ -121,7 +121,7 @@ INSERT INTO paciente (
     (SELECT MAX(id_direccion) FROM direccion),
     NULL, NULL, NULL,
     0,
-    '1980-05-15', 'M',
+    '1980-05-15', 'MASCULINO',
     NULL, NULL, NULL,
     TRUE, '2026-04-07',
     TRUE

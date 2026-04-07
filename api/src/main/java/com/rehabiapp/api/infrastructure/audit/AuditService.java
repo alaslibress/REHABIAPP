@@ -75,4 +75,48 @@ public class AuditService {
 
         auditLogRepository.save(log);
     }
+
+    /**
+     * Registra una entrada de auditoría con DNI y nombre de usuario proporcionados explicitamente.
+     *
+     * <p>Util para operaciones previas a la autenticacion (ej: login) donde
+     * el SecurityContext todavia no tiene al usuario. En esos casos el llamador
+     * conoce el DNI y puede pasarlo directamente.</p>
+     *
+     * @param accion         Tipo de operacion realizada.
+     * @param entidad        Nombre de la entidad afectada.
+     * @param idEntidad      Identificador del registro afectado.
+     * @param detalle        Descripcion adicional de la operacion.
+     * @param dniUsuario     DNI del usuario que realiza la accion.
+     * @param nombreUsuario  Nombre completo del usuario (puede ser null).
+     */
+    public void registrar(AccionAuditoria accion, String entidad, String idEntidad,
+                          String detalle, String dniUsuario, String nombreUsuario) {
+        AuditLog log = new AuditLog();
+        log.setFechaHora(LocalDateTime.now());
+        log.setAccion(accion);
+        log.setEntidad(entidad);
+        log.setIdEntidad(idEntidad);
+        log.setDetalle(detalle);
+        log.setDniUsuario(dniUsuario);
+        log.setNombreUsuario(nombreUsuario);
+
+        try {
+            ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                HttpServletRequest request = attrs.getRequest();
+                String xForwardedFor = request.getHeader("X-Forwarded-For");
+                log.setIpOrigen(
+                        xForwardedFor != null
+                                ? xForwardedFor.split(",")[0].trim()
+                                : request.getRemoteAddr()
+                );
+            }
+        } catch (Exception e) {
+            // Contexto de request no disponible
+        }
+
+        auditLogRepository.save(log);
+    }
 }

@@ -44,7 +44,7 @@ public class AuditReadInterceptor implements HandlerInterceptor {
         // Solo auditar GET a endpoints de datos clínicos de pacientes (Ley 41/2002)
         if ("GET".equals(request.getMethod()) && request.getRequestURI().startsWith("/api/pacientes")) {
             auditService.registrar(
-                    AccionAuditoria.LEER,
+                    AccionAuditoria.READ,
                     "paciente",
                     extraerIdDesdePath(request.getRequestURI()),
                     "Lectura via HTTP: " + request.getRequestURI()

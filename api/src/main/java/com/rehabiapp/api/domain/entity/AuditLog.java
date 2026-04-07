@@ -4,6 +4,7 @@ import com.rehabiapp.api.domain.enums.AccionAuditoria;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Entidad JPA que representa una entrada en el registro de auditoría del sistema.
@@ -29,13 +30,13 @@ import java.time.LocalDateTime;
 public class AuditLog {
 
     /**
-     * Identificador técnico generado por la secuencia de la BD (BIGSERIAL).
+     * Identificador UUID generado por Hibernate al persistir.
+     * La BD acepta uuid generado en Java (compatible con el DEFAULT uuidv7() de PG).
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "audit_log_seq")
-    @SequenceGenerator(name = "audit_log_seq", sequenceName = "audit_log_id_audit_seq", allocationSize = 1)
-    @Column(name = "id_audit")
-    private Long idAudit;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id_audit", columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID idAudit;
 
     /**
      * Fecha y hora exacta en que se registró la operación.
@@ -89,11 +90,11 @@ public class AuditLog {
 
     // --- Getters y setters ---
 
-    public Long getIdAudit() {
+    public UUID getIdAudit() {
         return idAudit;
     }
 
-    public void setIdAudit(Long idAudit) {
+    public void setIdAudit(UUID idAudit) {
         this.idAudit = idAudit;
     }
 

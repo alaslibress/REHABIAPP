@@ -14,6 +14,9 @@ import com.javafx.excepcion.DuplicadoException;
 import com.javafx.excepcion.PermisoException;
 import com.javafx.excepcion.ValidacionException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -31,6 +34,8 @@ import java.util.Properties;
  */
 public class ApiClient {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ApiClient.class);
+
     private static volatile ApiClient instancia;
 
     private final HttpClient httpClient;
@@ -45,13 +50,25 @@ public class ApiClient {
     private ApiClient() {
         // Cargar configuracion desde api.properties
         Properties props = new Properties();
-        try (InputStream in = getClass().getResourceAsStream("/config/api.properties")) {
+        String rutaProps = "/config/api.properties";
+        try (InputStream in = getClass().getResourceAsStream(rutaProps)) {
             if (in != null) {
                 props.load(in);
+                LOG.info("api.properties cargado correctamente desde classpath:{}", rutaProps);
+            } else {
+                LOG.error("No se encontro api.properties en classpath:{} — usando valores hardcoded", rutaProps);
             }
         } catch (IOException e) {
-            // Usar valores por defecto si no se puede cargar el archivo
+            LOG.error("Error al leer api.properties: {} — usando valores hardcoded", e.getMessage());
         }
+
+        // Permitir override por variable de entorno
+        String envUrl = System.getenv("REHABIAPP_API_URL");
+        if (envUrl != null && !envUrl.isBlank()) {
+            props.setProperty("api.base-url", envUrl);
+            LOG.info("baseUrl override desde REHABIAPP_API_URL = {}", envUrl);
+        }
+
         this.baseUrl = props.getProperty("api.base-url", "http://localhost:8080");
         long timeoutMs = Long.parseLong(props.getProperty("api.timeout-ms", "30000"));
         this.timeout = Duration.ofMillis(timeoutMs);
@@ -63,6 +80,8 @@ public class ApiClient {
         this.objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        LOG.info("ApiClient inicializado: baseUrl={}, timeoutMs={}", this.baseUrl, timeoutMs);
     }
 
     /**
@@ -99,15 +118,24 @@ public class ApiClient {
      * @return true si la API responde correctamente
      */
     public boolean probarConexion() {
+        String url = baseUrl + "/actuator/health";
+        LOG.debug("Probando conexion a {}", url);
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + "/actuator/health"))
+                .uri(URI.create(url))
                 .timeout(Duration.ofSeconds(5))
                 .GET()
                 .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.statusCode() == 200;
+            if (response.statusCode() == 200) {
+                LOG.info("Conexion API verificada: {} -> {}", url, response.statusCode());
+                return true;
+            } else {
+                LOG.warn("Conexion API responde pero con estado inesperado: {} -> {}", url, response.statusCode());
+                return false;
+            }
         } catch (Exception e) {
+            LOG.error("Conexion API fallida: {} -> {}: {}", url, e.getClass().getSimpleName(), e.getMessage());
             return false;
         }
     }
@@ -119,11 +147,13 @@ public class ApiClient {
      * @return LoginResponse con tokens y rol
      */
     public LoginResponse login(String dni, String contrasena) {
+        String url = baseUrl + "/api/auth/login";
+        LOG.info("Login: POST {} (dni={})", url, dni);
         LoginRequest body = new LoginRequest(dni, contrasena);
         try {
             String json = objectMapper.writeValueAsString(body);
             HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + "/api/auth/login"))
+                .uri(URI.create(url))
                 .timeout(timeout)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json))
@@ -135,15 +165,20 @@ public class ApiClient {
                 LoginResponse loginResponse = objectMapper.readValue(response.body(), LoginResponse.class);
                 this.accessToken = loginResponse.accessToken();
                 this.refreshToken = loginResponse.refreshToken();
+                LOG.info("Login OK para {}, rol={}", dni, loginResponse.rol());
                 return loginResponse;
             }
 
+            String bodyRecortado = response.body() != null && response.body().length() > 500
+                    ? response.body().substring(0, 500) : response.body();
+            LOG.warn("Login fallido para {}: status={} body={}", dni, response.statusCode(), bodyRecortado);
             manejarErrorHttp(response.statusCode(), response.body());
             return null; // No alcanzable, manejarErrorHttp siempre lanza excepcion
         } catch (ConexionException | AutenticacionException | PermisoException |
                  ValidacionException | DuplicadoException e) {
             throw e;
         } catch (Exception e) {
+            LOG.error("Login network error para {}: {}: {}", dni, e.getClass().getSimpleName(), e.getMessage());
             throw new ConexionException("Error al conectar con la API: " + e.getMessage(), e);
         }
     }
@@ -168,6 +203,13 @@ public class ApiClient {
      */
     public String getAccessToken() {
         return accessToken;
+    }
+
+    /**
+     * Devuelve la URL base de la API configurada.
+     */
+    public String getBaseUrl() {
+        return baseUrl;
     }
 
     // ==================== HTTP GENERICOS ====================
@@ -226,9 +268,11 @@ public class ApiClient {
     // ==================== IMPLEMENTACIONES INTERNAS ====================
 
     private <T> T ejecutarGet(String path, Class<T> responseType) {
+        LOG.debug("GET {}{}", baseUrl, path);
         try {
             HttpRequest request = buildGetRequest(path);
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            LOG.debug("GET {}{} -> {}", baseUrl, path, response.statusCode());
             if (response.statusCode() == 200) {
                 return objectMapper.readValue(response.body(), responseType);
             }
@@ -243,9 +287,11 @@ public class ApiClient {
     }
 
     private <T> T ejecutarGetGenerico(String path, TypeReference<T> responseType) {
+        LOG.debug("GET {}{}", baseUrl, path);
         try {
             HttpRequest request = buildGetRequest(path);
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            LOG.debug("GET {}{} -> {}", baseUrl, path, response.statusCode());
             if (response.statusCode() == 200) {
                 return objectMapper.readValue(response.body(), responseType);
             }
@@ -260,6 +306,7 @@ public class ApiClient {
     }
 
     private <T> T ejecutarPost(String path, Object body, Class<T> responseType) {
+        LOG.debug("POST {}{}", baseUrl, path);
         try {
             String json = objectMapper.writeValueAsString(body);
             HttpRequest request = HttpRequest.newBuilder()
@@ -270,6 +317,7 @@ public class ApiClient {
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            LOG.debug("POST {}{} -> {}", baseUrl, path, response.statusCode());
             if (response.statusCode() == 200 || response.statusCode() == 201) {
                 if (responseType == Void.class || response.body() == null || response.body().isEmpty()) {
                     return null;
@@ -287,6 +335,7 @@ public class ApiClient {
     }
 
     private <T> T ejecutarPut(String path, Object body, Class<T> responseType) {
+        LOG.debug("PUT {}{}", baseUrl, path);
         try {
             String json = objectMapper.writeValueAsString(body);
             HttpRequest request = HttpRequest.newBuilder()
@@ -297,6 +346,7 @@ public class ApiClient {
                 .PUT(HttpRequest.BodyPublishers.ofString(json))
                 .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            LOG.debug("PUT {}{} -> {}", baseUrl, path, response.statusCode());
             if (response.statusCode() == 200) {
                 if (responseType == Void.class || response.body() == null || response.body().isEmpty()) {
                     return null;
@@ -314,6 +364,7 @@ public class ApiClient {
     }
 
     private void ejecutarDelete(String path) {
+        LOG.debug("DELETE {}{}", baseUrl, path);
         try {
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + path))
@@ -322,6 +373,7 @@ public class ApiClient {
                 .DELETE()
                 .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            LOG.debug("DELETE {}{} -> {}", baseUrl, path, response.statusCode());
             if (response.statusCode() == 200 || response.statusCode() == 204) {
                 return;
             }
@@ -400,6 +452,9 @@ public class ApiClient {
      */
     private void manejarErrorHttp(int statusCode, String responseBody) {
         String mensaje = extraerMensajeError(responseBody);
+        String bodyRecortado = responseBody != null && responseBody.length() > 500
+                ? responseBody.substring(0, 500) : responseBody;
+        LOG.warn("Error HTTP {}: body={}", statusCode, bodyRecortado);
         switch (statusCode) {
             case 400 -> throw new ValidacionException(mensaje, "peticion");
             case 401 -> throw new AutenticacionException(mensaje);

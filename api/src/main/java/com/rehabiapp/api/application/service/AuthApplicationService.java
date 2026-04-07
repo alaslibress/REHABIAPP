@@ -75,7 +75,11 @@ public class AuthApplicationService {
         String refreshToken = jwtService.generarRefreshToken(request.dni());
 
         // Registrar acceso en audit_log (Ley 41/2002, ENS Alto)
-        auditService.registrar(AccionAuditoria.LEER, "sanitario", request.dni(), "Login exitoso");
+        // Se usa la sobrecarga con dniUsuario explicito porque en el momento del login
+        // el SecurityContext todavia no tiene al usuario autenticado.
+        String nombreCompleto = sanitario.getNombreSan() + " " + sanitario.getApellido1San();
+        auditService.registrar(AccionAuditoria.LOGIN, "sanitario", request.dni(), "Login exitoso",
+                request.dni(), nombreCompleto);
 
         return new LoginResponse(accessToken, refreshToken, rol.name());
     }

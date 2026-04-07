@@ -64,7 +64,7 @@ public class CitaService {
      */
     @Transactional(readOnly = true)
     public PageResponse<CitaResponse> listarPorFecha(LocalDate fecha, Pageable pageable) {
-        auditService.registrar(AccionAuditoria.LEER, "cita", fecha.toString(), "Agenda diaria del centro");
+        auditService.registrar(AccionAuditoria.READ, "cita", fecha.toString(), "Agenda diaria del centro");
         return PageResponse.de(
                 citaRepository.findByIdFechaCita(fecha, pageable).map(citaMapper::toResponse)
         );
@@ -80,7 +80,7 @@ public class CitaService {
      */
     @Transactional(readOnly = true)
     public PageResponse<CitaResponse> listarPorSanitario(String dniSan, Pageable pageable) {
-        auditService.registrar(AccionAuditoria.LEER, "cita", dniSan, "Agenda del sanitario");
+        auditService.registrar(AccionAuditoria.READ, "cita", dniSan, "Agenda del sanitario");
         return PageResponse.de(
                 citaRepository.findByIdDniSan(dniSan, pageable).map(citaMapper::toResponse)
         );
@@ -114,7 +114,7 @@ public class CitaService {
         cita.setSanitario(sanitario);
 
         Cita guardada = citaRepository.save(cita);
-        auditService.registrar(AccionAuditoria.CREAR, "cita",
+        auditService.registrar(AccionAuditoria.CREATE, "cita",
                 request.dniPac() + "-" + request.dniSan() + "-" + request.fechaCita() + "-" + request.horaCita(),
                 "Cita creada");
 
@@ -144,7 +144,7 @@ public class CitaService {
         }
 
         citaRepository.deleteById(citaId);
-        auditService.registrar(AccionAuditoria.ELIMINAR, "cita",
+        auditService.registrar(AccionAuditoria.SOFT_DELETE, "cita",
                 dniPac + "-" + dniSan + "-" + fechaCita + "-" + horaCita,
                 "Cita eliminada");
     }

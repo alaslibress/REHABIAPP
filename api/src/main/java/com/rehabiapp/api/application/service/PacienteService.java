@@ -62,7 +62,7 @@ public class PacienteService {
      */
     @Transactional(readOnly = true)
     public PageResponse<PacienteResponse> listar(Pageable pageable) {
-        auditService.registrar(AccionAuditoria.LEER, "paciente", "todos", "Listado de pacientes");
+        auditService.registrar(AccionAuditoria.READ, "paciente", "todos", "Listado de pacientes");
         return PageResponse.de(
                 pacienteRepository.findAllByActivoTrue(pageable).map(pacienteMapper::toResponse)
         );
@@ -77,7 +77,7 @@ public class PacienteService {
      */
     @Transactional(readOnly = true)
     public PageResponse<PacienteResponse> listarPorSanitario(String dniSan, Pageable pageable) {
-        auditService.registrar(AccionAuditoria.LEER, "paciente", dniSan, "Listado de pacientes por sanitario");
+        auditService.registrar(AccionAuditoria.READ, "paciente", dniSan, "Listado de pacientes por sanitario");
         return PageResponse.de(
                 pacienteRepository.findAllBySanitarioDniSan(dniSan, pageable).map(pacienteMapper::toResponse)
         );
@@ -97,7 +97,7 @@ public class PacienteService {
     public PacienteResponse obtenerPorDni(String dni) {
         Paciente paciente = pacienteRepository.findByDniPacAndActivoTrue(dni)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado: " + dni));
-        auditService.registrar(AccionAuditoria.LEER, "paciente", dni, "Consulta historial paciente");
+        auditService.registrar(AccionAuditoria.READ, "paciente", dni, "Consulta historial paciente");
         return pacienteMapper.toResponse(paciente);
     }
 
@@ -158,7 +158,7 @@ public class PacienteService {
         }
 
         Paciente guardado = pacienteRepository.save(paciente);
-        auditService.registrar(AccionAuditoria.CREAR, "paciente", request.dniPac(), "Paciente creado");
+        auditService.registrar(AccionAuditoria.CREATE, "paciente", request.dniPac(), "Paciente creado");
         return pacienteMapper.toResponse(guardado);
     }
 
@@ -204,7 +204,7 @@ public class PacienteService {
             paciente.setFechaConsentimiento(LocalDateTime.now());
         }
 
-        auditService.registrar(AccionAuditoria.ACTUALIZAR, "paciente", dni, "Paciente actualizado");
+        auditService.registrar(AccionAuditoria.UPDATE, "paciente", dni, "Paciente actualizado");
         return pacienteMapper.toResponse(pacienteRepository.save(paciente));
     }
 
@@ -224,7 +224,7 @@ public class PacienteService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado: " + dni));
         paciente.setFoto(bytes);
         pacienteRepository.save(paciente);
-        auditService.registrar(AccionAuditoria.ACTUALIZAR, "paciente", dni, "Foto de paciente actualizada");
+        auditService.registrar(AccionAuditoria.UPDATE, "paciente", dni, "Foto de paciente actualizada");
     }
 
     /**
@@ -241,7 +241,7 @@ public class PacienteService {
     public byte[] obtenerFoto(String dni) {
         Paciente paciente = pacienteRepository.findByDniPacAndActivoTrue(dni)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado: " + dni));
-        auditService.registrar(AccionAuditoria.LEER, "paciente", dni, "Foto de paciente consultada");
+        auditService.registrar(AccionAuditoria.READ, "paciente", dni, "Foto de paciente consultada");
         return paciente.getFoto();
     }
 
@@ -257,7 +257,7 @@ public class PacienteService {
      */
     @Transactional(readOnly = true)
     public PageResponse<PacienteResponse> buscar(String texto, Pageable pageable) {
-        auditService.registrar(AccionAuditoria.LEER, "paciente", texto, "Busqueda de pacientes por texto");
+        auditService.registrar(AccionAuditoria.READ, "paciente", texto, "Busqueda de pacientes por texto");
         return PageResponse.de(
                 pacienteRepository.buscarPorTexto(texto, pageable).map(pacienteMapper::toResponse)
         );
@@ -281,6 +281,6 @@ public class PacienteService {
         paciente.setFechaBaja(LocalDateTime.now());
         pacienteRepository.save(paciente);
 
-        auditService.registrar(AccionAuditoria.ELIMINAR, "paciente", dni, "Paciente dado de baja");
+        auditService.registrar(AccionAuditoria.SOFT_DELETE, "paciente", dni, "Paciente dado de baja");
     }
 }

@@ -57,7 +57,7 @@ public class SanitarioService {
      */
     @Transactional(readOnly = true)
     public PageResponse<SanitarioResponse> listar(Pageable pageable) {
-        auditService.registrar(AccionAuditoria.LEER, "sanitario", "todos", "Listado de sanitarios");
+        auditService.registrar(AccionAuditoria.READ, "sanitario", "todos", "Listado de sanitarios");
         return PageResponse.de(
                 sanitarioRepository.findAllByActivoTrue(pageable).map(sanitarioMapper::toResponse)
         );
@@ -74,7 +74,7 @@ public class SanitarioService {
     public SanitarioResponse obtenerPorDni(String dni) {
         Sanitario sanitario = sanitarioRepository.findByDniSanAndActivoTrue(dni)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Sanitario no encontrado: " + dni));
-        auditService.registrar(AccionAuditoria.LEER, "sanitario", dni, "Consulta sanitario");
+        auditService.registrar(AccionAuditoria.READ, "sanitario", dni, "Consulta sanitario");
         return sanitarioMapper.toResponse(sanitario);
     }
 
@@ -90,7 +90,7 @@ public class SanitarioService {
      */
     @Transactional(readOnly = true)
     public PageResponse<SanitarioResponse> buscar(String texto, Pageable pageable) {
-        auditService.registrar(AccionAuditoria.LEER, "sanitario", texto, "Busqueda de sanitarios por texto");
+        auditService.registrar(AccionAuditoria.READ, "sanitario", texto, "Busqueda de sanitarios por texto");
         return PageResponse.de(
                 sanitarioRepository.buscarPorTexto(texto, pageable).map(sanitarioMapper::toResponse)
         );
@@ -134,7 +134,7 @@ public class SanitarioService {
         sanitario.setRol(rol);
 
         Sanitario guardado = sanitarioRepository.save(sanitario);
-        auditService.registrar(AccionAuditoria.CREAR, "sanitario", request.dniSan(), "Sanitario creado");
+        auditService.registrar(AccionAuditoria.CREATE, "sanitario", request.dniSan(), "Sanitario creado");
         return sanitarioMapper.toResponse(guardado);
     }
 
@@ -163,7 +163,7 @@ public class SanitarioService {
             sanitario.setContrasenaSan(passwordService.hashear(request.contrasena()));
         }
 
-        auditService.registrar(AccionAuditoria.ACTUALIZAR, "sanitario", dni, "Sanitario actualizado");
+        auditService.registrar(AccionAuditoria.UPDATE, "sanitario", dni, "Sanitario actualizado");
         return sanitarioMapper.toResponse(sanitarioRepository.save(sanitario));
     }
 
@@ -186,6 +186,6 @@ public class SanitarioService {
         sanitario.setFechaBaja(LocalDateTime.now());
         sanitarioRepository.save(sanitario);
 
-        auditService.registrar(AccionAuditoria.ELIMINAR, "sanitario", dni, "Sanitario dado de baja");
+        auditService.registrar(AccionAuditoria.SOFT_DELETE, "sanitario", dni, "Sanitario dado de baja");
     }
 }

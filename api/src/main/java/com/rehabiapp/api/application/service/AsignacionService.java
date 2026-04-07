@@ -106,7 +106,7 @@ public class AsignacionService {
         }
 
         PacienteDiscapacidad guardada = pacienteDiscapacidadRepository.save(pd);
-        auditService.registrar(AccionAuditoria.CREAR, "paciente_discapacidad",
+        auditService.registrar(AccionAuditoria.CREATE, "paciente_discapacidad",
                 dniPac + "-" + request.codDis(), "Discapacidad asignada al paciente");
 
         return pacienteDiscapacidadMapper.toResponse(guardada);
@@ -120,7 +120,7 @@ public class AsignacionService {
      */
     @Transactional(readOnly = true)
     public List<PacienteDiscapacidadResponse> listarDiscapacidades(String dniPac) {
-        auditService.registrar(AccionAuditoria.LEER, "paciente_discapacidad", dniPac,
+        auditService.registrar(AccionAuditoria.READ, "paciente_discapacidad", dniPac,
                 "Consulta discapacidades del paciente");
         return pacienteDiscapacidadRepository.findByIdDniPac(dniPac)
                 .stream()
@@ -149,7 +149,7 @@ public class AsignacionService {
         pd.setNivelProgresion(nivel);
 
         PacienteDiscapacidad actualizada = pacienteDiscapacidadRepository.save(pd);
-        auditService.registrar(AccionAuditoria.ACTUALIZAR, "paciente_discapacidad",
+        auditService.registrar(AccionAuditoria.UPDATE, "paciente_discapacidad",
                 dniPac + "-" + codDis, "Nivel de progresión actualizado a: " + idNivel);
 
         return pacienteDiscapacidadMapper.toResponse(actualizada);
@@ -163,7 +163,7 @@ public class AsignacionService {
      */
     @Transactional(readOnly = true)
     public List<PacienteTratamientoResponse> listarTratamientos(String dniPac) {
-        auditService.registrar(AccionAuditoria.LEER, "paciente_tratamiento", dniPac,
+        auditService.registrar(AccionAuditoria.READ, "paciente_tratamiento", dniPac,
                 "Consulta tratamientos del paciente");
         return pacienteTratamientoRepository.findByIdDniPac(dniPac)
                 .stream()
@@ -206,7 +206,7 @@ public class AsignacionService {
         pt.setVisible(!pt.isVisible());
 
         PacienteTratamiento guardado = pacienteTratamientoRepository.save(pt);
-        auditService.registrar(AccionAuditoria.ACTUALIZAR, "paciente_tratamiento",
+        auditService.registrar(AccionAuditoria.UPDATE, "paciente_tratamiento",
                 dniPac + "-" + codTrat,
                 "Visibilidad de tratamiento cambiada a: " + guardado.isVisible());
 

@@ -29,6 +29,9 @@ public enum AccionAuditoria {
     /** Modificacion de un registro existente. */
     UPDATE,
 
+    /** Eliminacion fisica de un registro (desasignacion). */
+    DELETE,
+
     /** Baja logica (soft delete) de un registro. */
     SOFT_DELETE,
 

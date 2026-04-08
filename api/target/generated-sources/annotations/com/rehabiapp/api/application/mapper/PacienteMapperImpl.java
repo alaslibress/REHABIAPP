@@ -1,5 +1,6 @@
 package com.rehabiapp.api.application.mapper;
 
+import com.rehabiapp.api.application.dto.DireccionDto;
 import com.rehabiapp.api.application.dto.PacienteResponse;
 import com.rehabiapp.api.domain.entity.Paciente;
 import com.rehabiapp.api.domain.entity.Sanitario;
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-04-07T16:03:42+0200",
+    date = "2026-04-09T00:19:57+0200",
     comments = "version: 1.6.3, compiler: javac, environment: Java 24.0.2 (Oracle Corporation)"
 )
 @Component
@@ -53,8 +54,9 @@ public class PacienteMapperImpl implements PacienteMapper {
         Boolean activo = paciente.isActivo();
         Boolean protesis = paciente.isProtesis();
         Boolean consentimientoRgpd = paciente.isConsentimientoRgpd();
+        DireccionDto direccion = paciente.getDireccion() == null ? null : new DireccionDto(paciente.getDireccion().getCalle(), paciente.getDireccion().getNumero(), paciente.getDireccion().getPiso(), paciente.getDireccion().getCodigoPostal().getCp(), paciente.getDireccion().getCodigoPostal().getLocalidad().getNombreLocalidad(), paciente.getDireccion().getCodigoPostal().getLocalidad().getProvincia());
 
-        PacienteResponse pacienteResponse = new PacienteResponse( dniPac, dniSan, nombrePac, apellido1Pac, apellido2Pac, edadPac, emailPac, numSs, sexo, fechaNacimiento, protesis, activo, alergias, antecedentes, medicacionActual, consentimientoRgpd, telefonos );
+        PacienteResponse pacienteResponse = new PacienteResponse( dniPac, dniSan, nombrePac, apellido1Pac, apellido2Pac, edadPac, emailPac, numSs, sexo, fechaNacimiento, protesis, activo, alergias, antecedentes, medicacionActual, consentimientoRgpd, telefonos, direccion );
 
         return pacienteResponse;
     }

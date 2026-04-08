@@ -1,11 +1,14 @@
 com/rehabiapp/api/domain/repository/NivelProgresionRepository.class
 com/rehabiapp/api/presentation/controller/AuthController.class
+com/rehabiapp/api/domain/repository/CodigoPostalRepository.class
 com/rehabiapp/api/application/mapper/NivelProgresionMapper.class
 com/rehabiapp/api/application/service/AsignacionService.class
 com/rehabiapp/api/application/dto/PageResponse.class
 com/rehabiapp/api/domain/entity/PacienteDiscapacidad.class
 com/rehabiapp/api/domain/repository/TratamientoRepository.class
+com/rehabiapp/api/application/dto/ActualizarNotasRequest.class
 com/rehabiapp/api/application/dto/RefreshRequest.class
+com/rehabiapp/api/domain/repository/DireccionRepository.class
 com/rehabiapp/api/presentation/controller/CitaController.class
 com/rehabiapp/api/application/dto/CitaRequest.class
 com/rehabiapp/api/application/service/AuthApplicationService.class
@@ -32,8 +35,9 @@ com/rehabiapp/api/domain/enums/Rol.class
 com/rehabiapp/api/application/service/CitaService.class
 com/rehabiapp/api/application/mapper/DiscapacidadMapperImpl.class
 com/rehabiapp/api/presentation/controller/CatalogoController.class
-com/rehabiapp/api/application/mapper/PacienteTratamientoMapper.class
 com/rehabiapp/api/ApiApplication.class
+com/rehabiapp/api/application/dto/PacienteTratamientoRequest.class
+com/rehabiapp/api/application/mapper/PacienteTratamientoMapper.class
 com/rehabiapp/api/application/service/CatalogoService.class
 com/rehabiapp/api/application/mapper/PacienteDiscapacidadMapper.class
 com/rehabiapp/api/application/dto/NivelProgresionResponse.class
@@ -57,6 +61,7 @@ com/rehabiapp/api/domain/entity/Direccion.class
 com/rehabiapp/api/infrastructure/security/JwtAuthenticationFilter.class
 com/rehabiapp/api/domain/entity/Discapacidad.class
 com/rehabiapp/api/presentation/handler/GlobalExceptionHandler.class
+com/rehabiapp/api/application/dto/DireccionDto.class
 com/rehabiapp/api/application/dto/SanitarioRequest.class
 com/rehabiapp/api/domain/entity/AuditLog.class
 com/rehabiapp/api/domain/exception/RecursoNoEncontradoException.class
@@ -69,6 +74,7 @@ com/rehabiapp/api/domain/entity/DiscapacidadTratamientoId.class
 com/rehabiapp/api/application/mapper/PacienteMapperImpl.class
 com/rehabiapp/api/infrastructure/audit/AuditService.class
 com/rehabiapp/api/presentation/controller/PacienteController.class
+com/rehabiapp/api/domain/repository/LocalidadRepository.class
 com/rehabiapp/api/application/mapper/PacienteDiscapacidadMapperImpl.class
 com/rehabiapp/api/domain/repository/AuditLogRepository.class
 com/rehabiapp/api/application/dto/LoginRequest.class

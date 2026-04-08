@@ -56,9 +56,6 @@ CREATE TABLE paciente_audit (
     edad_pac             INTEGER,
     email_pac            VARCHAR(200),
     num_ss               VARCHAR(20),
-    discapacidad_pac     VARCHAR(200),
-    tratamiento_pac      VARCHAR(200),
-    estado_tratamiento   VARCHAR(100),
     protesis             BOOLEAN,
     fecha_nacimiento     DATE,
     sexo                 VARCHAR(20),
@@ -95,12 +92,12 @@ CREATE TABLE cita_audit (
 -- incluyendo variaciones del nivel de progresión clínica.
 -- --------------------------------------------------------
 CREATE TABLE paciente_discapacidad_audit (
-    dni_pac  VARCHAR(20) NOT NULL,
-    cod_dis  VARCHAR(20) NOT NULL,
-    rev      INTEGER     NOT NULL REFERENCES revinfo(rev),
-    rev_type SMALLINT,
-    id_nivel INTEGER,
-    notas    TEXT,
+    dni_pac         VARCHAR(20) NOT NULL,
+    cod_dis         VARCHAR(20) NOT NULL,
+    rev             INTEGER     NOT NULL REFERENCES revinfo(rev),
+    rev_type        SMALLINT,
+    id_nivel_actual INTEGER,
+    notas           TEXT,
     PRIMARY KEY (dni_pac, cod_dis, rev)
 );
 

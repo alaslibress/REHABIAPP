@@ -52,7 +52,7 @@ public class PacienteDiscapacidad {
      */
     @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_nivel")
+    @JoinColumn(name = "id_nivel_actual")
     private NivelProgresion nivelProgresion;
 
     /**

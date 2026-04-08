@@ -1,15 +1,22 @@
 package com.rehabiapp.api.application.service;
 
+import com.rehabiapp.api.application.dto.DireccionDto;
 import com.rehabiapp.api.application.dto.PageResponse;
 import com.rehabiapp.api.application.dto.PacienteRequest;
 import com.rehabiapp.api.application.dto.PacienteResponse;
 import com.rehabiapp.api.application.mapper.PacienteMapper;
+import com.rehabiapp.api.domain.entity.CodigoPostal;
+import com.rehabiapp.api.domain.entity.Direccion;
+import com.rehabiapp.api.domain.entity.Localidad;
 import com.rehabiapp.api.domain.entity.Paciente;
 import com.rehabiapp.api.domain.entity.Sanitario;
 import com.rehabiapp.api.domain.entity.TelefonoPaciente;
 import com.rehabiapp.api.domain.enums.AccionAuditoria;
 import com.rehabiapp.api.domain.enums.Sexo;
 import com.rehabiapp.api.domain.exception.RecursoNoEncontradoException;
+import com.rehabiapp.api.domain.repository.CodigoPostalRepository;
+import com.rehabiapp.api.domain.repository.DireccionRepository;
+import com.rehabiapp.api.domain.repository.LocalidadRepository;
 import com.rehabiapp.api.domain.repository.PacienteRepository;
 import com.rehabiapp.api.domain.repository.SanitarioRepository;
 import com.rehabiapp.api.infrastructure.audit.AuditService;
@@ -40,17 +47,26 @@ public class PacienteService {
     private final SanitarioRepository sanitarioRepository;
     private final PacienteMapper pacienteMapper;
     private final AuditService auditService;
+    private final DireccionRepository direccionRepository;
+    private final CodigoPostalRepository codigoPostalRepository;
+    private final LocalidadRepository localidadRepository;
 
     public PacienteService(
             PacienteRepository pacienteRepository,
             SanitarioRepository sanitarioRepository,
             PacienteMapper pacienteMapper,
-            AuditService auditService
+            AuditService auditService,
+            DireccionRepository direccionRepository,
+            CodigoPostalRepository codigoPostalRepository,
+            LocalidadRepository localidadRepository
     ) {
         this.pacienteRepository = pacienteRepository;
         this.sanitarioRepository = sanitarioRepository;
         this.pacienteMapper = pacienteMapper;
         this.auditService = auditService;
+        this.direccionRepository = direccionRepository;
+        this.codigoPostalRepository = codigoPostalRepository;
+        this.localidadRepository = localidadRepository;
     }
 
     /**
@@ -146,6 +162,7 @@ public class PacienteService {
         }
 
         paciente.setActivo(true);
+        paciente.setDireccion(resolverDireccion(request.direccion()));
 
         // Añadir teléfonos en cascada
         if (request.telefonos() != null) {
@@ -204,8 +221,166 @@ public class PacienteService {
             paciente.setFechaConsentimiento(LocalDateTime.now());
         }
 
+        if (request.direccion() != null) {
+            paciente.setDireccion(resolverDireccion(request.direccion()));
+        }
+
         auditService.registrar(AccionAuditoria.UPDATE, "paciente", dni, "Paciente actualizado");
         return pacienteMapper.toResponse(pacienteRepository.save(paciente));
+    }
+
+    /**
+     * Crea un paciente con direccion, telefonos y opcionalmente foto, todo en una unica transaccion.
+     * Si la persistencia de cualquier parte falla, se hace rollback completo del agregado.
+     *
+     * @param request   DTO con los datos del paciente.
+     * @param fotoBytes Bytes de la foto, o null si no hay foto.
+     * @return DTO de respuesta con el paciente creado.
+     */
+    public PacienteResponse crearConFoto(PacienteRequest request, byte[] fotoBytes) {
+        Sanitario sanitario = sanitarioRepository.findByDniSanAndActivoTrue(request.dniSan())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Sanitario no encontrado: " + request.dniSan()));
+
+        Paciente paciente = new Paciente();
+        paciente.setDniPac(request.dniPac());
+        paciente.setSanitario(sanitario);
+        paciente.setNombrePac(request.nombrePac());
+        paciente.setApellido1Pac(request.apellido1Pac());
+        paciente.setApellido2Pac(request.apellido2Pac());
+        paciente.setEdadPac(request.edadPac());
+        paciente.setEmailPac(request.emailPac());
+        paciente.setNumSs(request.numSs());
+
+        if (request.sexo() != null) {
+            paciente.setSexo(Sexo.valueOf(request.sexo()));
+        }
+
+        paciente.setFechaNacimiento(request.fechaNacimiento());
+        paciente.setProtesis(request.protesis() != null && request.protesis());
+        paciente.setAlergias(request.alergias());
+        paciente.setAntecedentes(request.antecedentes());
+        paciente.setMedicacionActual(request.medicacionActual());
+
+        if (Boolean.TRUE.equals(request.consentimientoRgpd())) {
+            paciente.setConsentimientoRgpd(true);
+            paciente.setFechaConsentimiento(LocalDateTime.now());
+        }
+
+        paciente.setActivo(true);
+        paciente.setDireccion(resolverDireccion(request.direccion()));
+
+        if (request.telefonos() != null) {
+            request.telefonos().forEach(tel -> {
+                TelefonoPaciente t = new TelefonoPaciente();
+                t.setPaciente(paciente);
+                t.setTelefono(tel);
+                paciente.getTelefonos().add(t);
+            });
+        }
+
+        // Persistir foto en la misma entidad antes del save -> mismo flush, misma transaccion
+        if (fotoBytes != null && fotoBytes.length > 0) {
+            paciente.setFoto(fotoBytes);
+        }
+
+        Paciente guardado = pacienteRepository.save(paciente);
+        auditService.registrar(AccionAuditoria.CREATE, "paciente", request.dniPac(),
+                "Paciente creado" + (fotoBytes != null ? " (con foto)" : ""));
+        return pacienteMapper.toResponse(guardado);
+    }
+
+    /**
+     * Actualiza un paciente y opcionalmente su foto en una unica transaccion.
+     * Si fotoBytes es null, la foto existente se mantiene intacta.
+     *
+     * @param dni       DNI del paciente a actualizar.
+     * @param request   DTO con los nuevos datos del paciente.
+     * @param fotoBytes Bytes de la nueva foto, o null para mantener la actual.
+     * @return DTO de respuesta con el paciente actualizado.
+     */
+    public PacienteResponse actualizarConFoto(String dni, PacienteRequest request, byte[] fotoBytes) {
+        Paciente paciente = pacienteRepository.findByDniPacAndActivoTrue(dni)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado: " + dni));
+
+        paciente.setNombrePac(request.nombrePac());
+        paciente.setApellido1Pac(request.apellido1Pac());
+        paciente.setApellido2Pac(request.apellido2Pac());
+        paciente.setEdadPac(request.edadPac());
+        paciente.setEmailPac(request.emailPac());
+        paciente.setNumSs(request.numSs());
+
+        if (request.sexo() != null) {
+            paciente.setSexo(Sexo.valueOf(request.sexo()));
+        }
+
+        paciente.setFechaNacimiento(request.fechaNacimiento());
+
+        if (request.protesis() != null) {
+            paciente.setProtesis(request.protesis());
+        }
+
+        paciente.setAlergias(request.alergias());
+        paciente.setAntecedentes(request.antecedentes());
+        paciente.setMedicacionActual(request.medicacionActual());
+
+        if (Boolean.TRUE.equals(request.consentimientoRgpd()) && !paciente.isConsentimientoRgpd()) {
+            paciente.setConsentimientoRgpd(true);
+            paciente.setFechaConsentimiento(LocalDateTime.now());
+        }
+
+        if (request.direccion() != null) {
+            paciente.setDireccion(resolverDireccion(request.direccion()));
+        }
+
+        if (fotoBytes != null && fotoBytes.length > 0) {
+            paciente.setFoto(fotoBytes);
+        }
+
+        auditService.registrar(AccionAuditoria.UPDATE, "paciente", dni,
+                "Paciente actualizado" + (fotoBytes != null ? " (con foto)" : ""));
+        return pacienteMapper.toResponse(pacienteRepository.save(paciente));
+    }
+
+    /**
+     * Find-or-create idempotente de Direccion + CodigoPostal + Localidad.
+     * Ejecuta dentro de la misma @Transactional del metodo llamante.
+     *
+     * @param dto Datos de direccion del request, o null.
+     * @return Entidad Direccion gestionada por JPA, o null si dto es null.
+     */
+    private Direccion resolverDireccion(DireccionDto dto) {
+        if (dto == null) return null;
+
+        // 1. Find-or-create Localidad por nombre
+        Localidad localidad = localidadRepository.findByNombreLocalidad(dto.nombreLocalidad())
+                .orElseGet(() -> {
+                    Localidad nueva = new Localidad();
+                    nueva.setNombreLocalidad(dto.nombreLocalidad());
+                    nueva.setProvincia(dto.provincia());
+                    return localidadRepository.save(nueva);
+                });
+
+        // 2. Find-or-create CodigoPostal por cp
+        CodigoPostal cp = codigoPostalRepository.findById(dto.cp())
+                .orElseGet(() -> {
+                    CodigoPostal nuevo = new CodigoPostal();
+                    nuevo.setCp(dto.cp());
+                    nuevo.setLocalidad(localidad);
+                    return codigoPostalRepository.save(nuevo);
+                });
+
+        // 3. Find-or-create Direccion por (calle, numero, piso, cp) — reutiliza si ya existe
+        return direccionRepository
+                .findByCalleAndNumeroAndPisoAndCodigoPostalCp(
+                        dto.calle(), dto.numero(), dto.piso(), dto.cp())
+                .orElseGet(() -> {
+                    Direccion d = new Direccion();
+                    d.setCalle(dto.calle());
+                    d.setNumero(dto.numero());
+                    d.setPiso(dto.piso());
+                    d.setCodigoPostal(cp);
+                    return direccionRepository.save(d);
+                });
     }
 
     /**

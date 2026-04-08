@@ -5,6 +5,12 @@ spring:
   application:
     name: rehabiapp-api
 
+  # Multipart — limite de tamaño para subida de fotos de pacientes (max 5 MB por archivo)
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   # JPA — configuración base; perfiles específicos añaden propiedades adicionales
   jpa:
     # Previene el anti-patrón Open Session in View en todos los entornos

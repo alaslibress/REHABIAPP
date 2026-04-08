@@ -1,6 +1,0 @@
-/home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/ApiApplicationTests.java
-/home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/application/service/SanitarioServiceTest.java
-/home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/infrastructure/encryption/CampoClinicoConverterTest.java
-/home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/infrastructure/security/JwtServiceTest.java
-/home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/infrastructure/security/PasswordServiceTest.java
-/home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/presentation/controller/AuthControllerIT.java

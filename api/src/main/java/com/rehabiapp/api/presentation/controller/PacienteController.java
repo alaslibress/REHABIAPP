@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -80,36 +80,49 @@ public class PacienteController {
     }
 
     /**
-     * Crea un nuevo paciente en el sistema.
-     * Los campos clínicos se cifran automáticamente al persistir.
+     * Crea un nuevo paciente y, opcionalmente, su fotografia, en una unica transaccion atomica.
      *
-     * <p>POST /api/pacientes</p>
+     * <p>Recibe multipart/form-data con dos partes:</p>
+     * <ul>
+     *   <li><b>paciente</b>: JSON serializado de PacienteRequest (Content-Type application/json).</li>
+     *   <li><b>foto</b>: archivo de imagen opcional (image/png o image/jpeg).</li>
+     * </ul>
      *
-     * @param request DTO validado con los datos del nuevo paciente.
+     * <p>POST /api/pacientes (multipart/form-data)</p>
+     *
+     * @param request DTO validado con los datos del nuevo paciente (incluyendo telefonos y direccion).
+     * @param foto    Archivo de imagen opcional.
      * @return 201 Created con los datos del paciente creado.
      */
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<PacienteResponse> crear(@Valid @RequestBody PacienteRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(pacienteService.crear(request));
+    public ResponseEntity<PacienteResponse> crear(
+            @Valid @RequestPart("paciente") PacienteRequest request,
+            @RequestPart(value = "foto", required = false) MultipartFile foto) throws IOException {
+        byte[] fotoBytes = (foto != null && !foto.isEmpty()) ? foto.getBytes() : null;
+        return ResponseEntity.status(HttpStatus.CREATED).body(pacienteService.crearConFoto(request, fotoBytes));
     }
 
     /**
-     * Actualiza los datos de un paciente existente.
-     * Los campos clínicos se re-cifran con nuevo IV aleatorio por escritura (RGPD Art. 9).
+     * Actualiza los datos de un paciente y, opcionalmente, su fotografia, en una unica transaccion.
+     * Los campos clinicos se re-cifran con nuevo IV aleatorio por escritura (RGPD Art. 9).
+     * Si no se envia foto, la fotografia existente se mantiene intacta.
      *
-     * <p>PUT /api/pacientes/{dni}</p>
+     * <p>PUT /api/pacientes/{dni} (multipart/form-data)</p>
      *
      * @param dni     DNI del paciente a actualizar.
      * @param request DTO validado con los nuevos datos.
+     * @param foto    Archivo de imagen opcional. Si es null, mantiene la foto actual.
      * @return 200 OK con los datos actualizados, 404 si no existe.
      */
-    @PutMapping("/{dni}")
+    @PutMapping(value = "/{dni}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PacienteResponse> actualizar(
             @PathVariable String dni,
-            @Valid @RequestBody PacienteRequest request) {
-        return ResponseEntity.ok(pacienteService.actualizar(dni, request));
+            @Valid @RequestPart("paciente") PacienteRequest request,
+            @RequestPart(value = "foto", required = false) MultipartFile foto) throws IOException {
+        byte[] fotoBytes = (foto != null && !foto.isEmpty()) ? foto.getBytes() : null;
+        return ResponseEntity.ok(pacienteService.actualizarConFoto(dni, request, fotoBytes));
     }
 
     /**

@@ -41,7 +41,7 @@ class PacienteDAOTest {
             dni, "S01", "Juan", "Garcia", "Lopez",
             30, "juan@test.com", "SS001",
             "M", null, false, true,
-            null, null, null, false, List.of()
+            null, null, null, false, List.of(), null
         );
     }
 
@@ -126,41 +126,62 @@ class PacienteDAOTest {
     // ==================== insertar ====================
 
     @Test
-    void insertar_llamaPostConRutaCorrecta() {
-        when(apiClientMock.post(eq("/api/pacientes"), any(), eq(PacienteResponse.class)))
-            .thenReturn(responseMinimo("12345678A"));
-
+    void insertar_llamaSendMultipartPost() {
         Paciente p = new Paciente("12345678A", "Juan", "Garcia", "Lopez",
             30, "juan@test.com", "SS001", false, "S01");
         dao.insertar(p);
 
-        verify(apiClientMock).post(eq("/api/pacientes"), any(), eq(PacienteResponse.class));
+        verify(apiClientMock).sendMultipart(
+            eq("/api/pacientes"), eq("POST"),
+            eq("paciente"), any(),
+            eq("foto"), isNull(), isNull(), isNull(),
+            eq(PacienteResponse.class)
+        );
+    }
+
+    @Test
+    void insertar_conFoto_pasaBytesAlMultipart() {
+        Paciente p = new Paciente("12345678A", "Juan", "Garcia", "Lopez",
+            30, "juan@test.com", "SS001", false, "S01");
+        byte[] bytes = new byte[]{1, 2, 3};
+        dao.insertar(p, bytes);
+
+        verify(apiClientMock).sendMultipart(
+            eq("/api/pacientes"), eq("POST"),
+            eq("paciente"), any(),
+            eq("foto"), eq(bytes), eq("foto.png"), eq("image/png"),
+            eq(PacienteResponse.class)
+        );
     }
 
     // ==================== actualizar ====================
 
     @Test
-    void actualizar_llamaPutConDniOriginalEnRuta() {
-        when(apiClientMock.put(eq("/api/pacientes/12345678A"), any(), eq(PacienteResponse.class)))
-            .thenReturn(responseMinimo("12345678A"));
-
+    void actualizar_llamaSendMultipartPutConDniOriginalEnRuta() {
         Paciente p = new Paciente("12345678A", "Juan", "Garcia", "Lopez",
             30, "juan@test.com", "SS001", false, "S01");
         dao.actualizar(p, "12345678A");
 
-        verify(apiClientMock).put(eq("/api/pacientes/12345678A"), any(), eq(PacienteResponse.class));
+        verify(apiClientMock).sendMultipart(
+            eq("/api/pacientes/12345678A"), eq("PUT"),
+            eq("paciente"), any(),
+            eq("foto"), isNull(), isNull(), isNull(),
+            eq(PacienteResponse.class)
+        );
     }
 
     @Test
     void actualizar_dniCambiado_rutaUsaDniOriginal() {
-        when(apiClientMock.put(eq("/api/pacientes/ORIGINAL"), any(), eq(PacienteResponse.class)))
-            .thenReturn(responseMinimo("NUEVODNI"));
-
         Paciente p = new Paciente("NUEVODNI", "Juan", "Garcia", "Lopez",
             30, "juan@test.com", "SS001", false, "S01");
         dao.actualizar(p, "ORIGINAL");
 
-        verify(apiClientMock).put(eq("/api/pacientes/ORIGINAL"), any(), eq(PacienteResponse.class));
+        verify(apiClientMock).sendMultipart(
+            eq("/api/pacientes/ORIGINAL"), eq("PUT"),
+            eq("paciente"), any(),
+            eq("foto"), isNull(), isNull(), isNull(),
+            eq(PacienteResponse.class)
+        );
     }
 
     // ==================== eliminar ====================

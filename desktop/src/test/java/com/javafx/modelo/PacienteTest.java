@@ -27,7 +27,7 @@ class PacienteTest {
             true, true,
             "Penicilina", "Diabetes tipo 2", "Metformina",
             true,
-            List.of("600111222", "600333444")
+            List.of("600111222", "600333444"), null
         );
 
         Paciente p = Paciente.desdePacienteResponse(response);
@@ -61,7 +61,7 @@ class PacienteTest {
             null, null,
             null, null, null,
             null,
-            null
+            null, null
         );
 
         Paciente p = Paciente.desdePacienteResponse(response);
@@ -87,7 +87,7 @@ class PacienteTest {
             40, "luis@test.com", "SS777",
             "M", null, false, true,
             null, null, null, false,
-            List.of("600555666")
+            List.of("600555666"), null
         );
 
         Paciente p = Paciente.desdePacienteResponse(response);

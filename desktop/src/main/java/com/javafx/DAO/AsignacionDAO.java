@@ -4,8 +4,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.javafx.Clases.ApiClient;
 import com.javafx.Clases.PacienteDiscapacidad;
 import com.javafx.Clases.PacienteTratamiento;
+import com.javafx.dto.ActualizarNotasRequest;
 import com.javafx.dto.PacienteDiscapacidadRequest;
 import com.javafx.dto.PacienteDiscapacidadResponse;
+import com.javafx.dto.PacienteTratamientoRequest;
 import com.javafx.dto.PacienteTratamientoResponse;
 
 import java.util.List;
@@ -48,6 +50,26 @@ public class AsignacionDAO {
     }
 
     /**
+     * Desasigna una discapacidad de un paciente.
+     */
+    public void desasignarDiscapacidad(String dniPac, String codDis) {
+        api.delete("/api/pacientes/" + dniPac + "/discapacidades/" + codDis);
+    }
+
+    /**
+     * Actualiza las notas clinicas de una discapacidad asignada al paciente.
+     */
+    public PacienteDiscapacidad actualizarNotas(String dniPac, String codDis, String notas) {
+        ActualizarNotasRequest request = new ActualizarNotasRequest(notas);
+        PacienteDiscapacidadResponse response = api.patch(
+            "/api/pacientes/" + dniPac + "/discapacidades/" + codDis + "/notas",
+            request,
+            PacienteDiscapacidadResponse.class
+        );
+        return PacienteDiscapacidad.desdePacienteDiscapacidadResponse(response);
+    }
+
+    /**
      * Actualiza el nivel de progresion de una discapacidad asignada.
      */
     public PacienteDiscapacidad actualizarNivel(String dniPac, String codDis, Integer idNivel) {
@@ -72,6 +94,26 @@ public class AsignacionDAO {
         return respuestas.stream()
             .map(PacienteTratamiento::desdePacienteTratamientoResponse)
             .toList();
+    }
+
+    /**
+     * Asigna un tratamiento a un paciente con visibilidad activada por defecto.
+     */
+    public PacienteTratamiento asignarTratamiento(String dniPac, String codTrat) {
+        PacienteTratamientoRequest request = new PacienteTratamientoRequest(codTrat);
+        PacienteTratamientoResponse response = api.post(
+            "/api/pacientes/" + dniPac + "/tratamientos",
+            request,
+            PacienteTratamientoResponse.class
+        );
+        return PacienteTratamiento.desdePacienteTratamientoResponse(response);
+    }
+
+    /**
+     * Desasigna un tratamiento de un paciente.
+     */
+    public void desasignarTratamiento(String dniPac, String codTrat) {
+        api.delete("/api/pacientes/" + dniPac + "/tratamientos/" + codTrat);
     }
 
     /**

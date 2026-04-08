@@ -100,12 +100,12 @@ Completed items provide context of what already exists. Uncompleted items are th
 - [x] Clinical fields added to patient table: date_of_birth, sex, allergies, medical_history, current_medication, rgpd_consent, consent_date, active, deactivation_date.
 - [x] Soft delete fields (active, deactivation_date) on both patient and practitioner tables.
 - [x] Disability and treatment catalog tables with N:M relationship (discapacidad, tratamiento, discapacidad_tratamiento).
-- [ ] Progression level catalog table (nivel_progresion) with 4 clinical phases (acute, subacute, strengthening, functional).
-- [ ] Patient-disability assignment table (paciente_discapacidad) with per-disability progression level tracking.
-- [ ] Patient-treatment visibility table (paciente_tratamiento) with practitioner-controlled visibility flag.
-- [ ] Add id_nivel foreign key to tratamiento table linking treatments to progression levels.
-- [ ] Migration script for progression level integration.
-- [ ] Deprecate and eventually remove legacy text fields discapacidad_pac and tratamiento_pac from patient table.
+- [x] Progression level catalog table (nivel_progresion) with 4 clinical phases (acute, subacute, strengthening, functional).
+- [x] Patient-disability assignment table (paciente_discapacidad) with per-disability progression level tracking.
+- [x] Patient-treatment visibility table (paciente_tratamiento) with practitioner-controlled visibility flag.
+- [x] Add id_nivel foreign key to tratamiento table linking treatments to progression levels.
+- [x] Migration script for progression level integration.
+- [x] Deprecate and eventually remove legacy text fields discapacidad_pac and tratamiento_pac from patient table.
 
 ### Security and encryption
 
@@ -125,9 +125,9 @@ Completed items provide context of what already exists. Uncompleted items are th
 - [x] Full CRUD for practitioners with BCrypt, soft delete, active=TRUE filtering.
 - [x] Appointment management with calendar view, conflict detection, async loading.
 - [x] PacienteService and SanitarioService wrappers with automatic audit logging.
-- [ ] Implement atomic transactions (commit/rollback) in PacienteService for compound operations (patient + phones + address + photo).
-- [ ] Implement atomic transactions in SanitarioService for compound operations (practitioner + role + phones).
-- [ ] Integrate photo upload within the same transaction as patient INSERT.
+- [x] Implement atomic transactions (commit/rollback) in PacienteService for compound operations (patient + phones + address + photo).
+- [x] Implement atomic transactions in SanitarioService for compound operations (practitioner + role + phones).
+- [x] Integrate photo upload within the same transaction as patient INSERT.
 
 ### User interface
 

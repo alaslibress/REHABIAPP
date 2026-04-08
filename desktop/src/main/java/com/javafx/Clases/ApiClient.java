@@ -17,12 +17,14 @@ import com.javafx.excepcion.ValidacionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Properties;
@@ -243,6 +245,13 @@ public class ApiClient {
     }
 
     /**
+     * PATCH con body JSON y deserializacion de respuesta.
+     */
+    public <T> T patch(String path, Object body, Class<T> responseType) {
+        return ejecutarConReintento(() -> ejecutarPatch(path, body, responseType));
+    }
+
+    /**
      * DELETE sin parametros adicionales.
      */
     public void delete(String path) {
@@ -250,6 +259,29 @@ public class ApiClient {
             ejecutarDelete(path);
             return null;
         });
+    }
+
+    /**
+     * Envia una peticion multipart/form-data con una parte JSON y, opcionalmente, una parte de archivo.
+     * Util para endpoints atomicos de creacion/edicion que combinan datos estructurados y un blob.
+     *
+     * @param path         Ruta absoluta sin baseUrl (ej. "/api/pacientes").
+     * @param method       "POST" o "PUT".
+     * @param jsonPartName Nombre de la parte JSON (ej. "paciente").
+     * @param jsonBody     Objeto a serializar como JSON.
+     * @param filePartName Nombre de la parte archivo (ej. "foto"). Puede ser null si no hay archivo.
+     * @param fileBytes    Bytes del archivo. Puede ser null.
+     * @param fileName     Nombre del archivo. Puede ser null.
+     * @param fileMime     Content-Type del archivo (ej. "image/png"). Puede ser null.
+     * @param responseType Clase de la respuesta a deserializar.
+     */
+    public <T> T sendMultipart(String path, String method,
+                               String jsonPartName, Object jsonBody,
+                               String filePartName, byte[] fileBytes,
+                               String fileName, String fileMime,
+                               Class<T> responseType) {
+        return ejecutarConReintento(() -> ejecutarMultipart(path, method,
+                jsonPartName, jsonBody, filePartName, fileBytes, fileName, fileMime, responseType));
     }
 
     /**
@@ -347,6 +379,35 @@ public class ApiClient {
                 .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             LOG.debug("PUT {}{} -> {}", baseUrl, path, response.statusCode());
+            if (response.statusCode() == 200) {
+                if (responseType == Void.class || response.body() == null || response.body().isEmpty()) {
+                    return null;
+                }
+                return objectMapper.readValue(response.body(), responseType);
+            }
+            manejarErrorHttp(response.statusCode(), response.body());
+            return null;
+        } catch (ConexionException | AutenticacionException | PermisoException |
+                 ValidacionException | DuplicadoException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ConexionException("Error al conectar con la API: " + e.getMessage(), e);
+        }
+    }
+
+    private <T> T ejecutarPatch(String path, Object body, Class<T> responseType) {
+        LOG.debug("PATCH {}{}", baseUrl, path);
+        try {
+            String json = body != null ? objectMapper.writeValueAsString(body) : "";
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + path))
+                .timeout(timeout)
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + accessToken)
+                .method("PATCH", HttpRequest.BodyPublishers.ofString(json))
+                .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            LOG.debug("PATCH {}{} -> {}", baseUrl, path, response.statusCode());
             if (response.statusCode() == 200) {
                 if (responseType == Void.class || response.body() == null || response.body().isEmpty()) {
                     return null;
@@ -477,6 +538,72 @@ public class ApiClient {
             return error.message() != null ? error.message() : responseBody;
         } catch (Exception e) {
             return responseBody;
+        }
+    }
+
+    private <T> T ejecutarMultipart(String path, String method,
+                                    String jsonPartName, Object jsonBody,
+                                    String filePartName, byte[] fileBytes,
+                                    String fileName, String fileMime,
+                                    Class<T> responseType) {
+        try {
+            String boundary = "----RehabiAppBoundary" + System.currentTimeMillis();
+            String json = objectMapper.writeValueAsString(jsonBody);
+
+            // Construir cuerpo multipart con dos partes: json + archivo opcional
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+            // Parte JSON
+            String jsonHeader = "--" + boundary + "\r\n"
+                    + "Content-Disposition: form-data; name=\"" + jsonPartName + "\"\r\n"
+                    + "Content-Type: application/json\r\n\r\n";
+            out.write(jsonHeader.getBytes(StandardCharsets.UTF_8));
+            out.write(json.getBytes(StandardCharsets.UTF_8));
+            out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+
+            // Parte archivo (opcional)
+            if (fileBytes != null && fileBytes.length > 0) {
+                String fileHeader = "--" + boundary + "\r\n"
+                        + "Content-Disposition: form-data; name=\"" + filePartName
+                        + "\"; filename=\"" + fileName + "\"\r\n"
+                        + "Content-Type: " + fileMime + "\r\n\r\n";
+                out.write(fileHeader.getBytes(StandardCharsets.UTF_8));
+                out.write(fileBytes);
+                out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+            }
+
+            // Cierre del boundary
+            out.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+            byte[] cuerpo = out.toByteArray();
+
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + path))
+                    .timeout(timeout)
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .header("Authorization", "Bearer " + accessToken);
+
+            if ("PUT".equalsIgnoreCase(method)) {
+                builder.PUT(HttpRequest.BodyPublishers.ofByteArray(cuerpo));
+            } else {
+                builder.POST(HttpRequest.BodyPublishers.ofByteArray(cuerpo));
+            }
+
+            HttpResponse<String> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            LOG.debug("{} multipart {}{} -> {}", method, baseUrl, path, response.statusCode());
+
+            if (response.statusCode() == 200 || response.statusCode() == 201) {
+                if (responseType == Void.class || response.body() == null || response.body().isEmpty()) {
+                    return null;
+                }
+                return objectMapper.readValue(response.body(), responseType);
+            }
+            manejarErrorHttp(response.statusCode(), response.body());
+            return null;
+        } catch (ConexionException | AutenticacionException | PermisoException
+                 | ValidacionException | DuplicadoException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ConexionException("Error al enviar multipart: " + e.getMessage(), e);
         }
     }
 

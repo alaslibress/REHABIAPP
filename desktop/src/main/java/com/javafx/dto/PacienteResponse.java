@@ -20,5 +20,6 @@ public record PacienteResponse(
     String antecedentes,
     String medicacionActual,
     Boolean consentimientoRgpd,
-    List<String> telefonos
+    List<String> telefonos,
+    DireccionDto direccion
 ) {}

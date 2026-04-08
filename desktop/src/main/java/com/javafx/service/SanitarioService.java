@@ -9,12 +9,27 @@ import java.util.Optional;
 
 /**
  * Capa de servicio para operaciones de Sanitario.
- * Delega directamente al SanitarioDAO que consume la API REST.
- * La auditoria, el BCrypt y las transacciones son responsabilidad de la API.
+ * Delega al SanitarioDAO que consume la API REST.
+ * La auditoria, el BCrypt y el cifrado son responsabilidad de la API.
+ *
+ * <p><b>Atomicidad:</b> La creacion y actualizacion de un sanitario son operaciones
+ * atomicas server-side. Una sola llamada HTTP a POST/PUT /api/sanitarios dispara una
+ * unica transaccion @Transactional en la API que persiste sanitario, cargo, telefonos
+ * y contrasena hasheada via cascade. Si cualquier parte falla, se hace rollback completo
+ * — no queda ningun registro parcial en la base de datos.</p>
  */
 public class SanitarioService {
 
-    private final SanitarioDAO sanitarioDAO = new SanitarioDAO();
+    private final SanitarioDAO sanitarioDAO;
+
+    public SanitarioService() {
+        this(new SanitarioDAO());
+    }
+
+    /** Constructor para tests con DAO inyectado. */
+    SanitarioService(SanitarioDAO sanitarioDAO) {
+        this.sanitarioDAO = sanitarioDAO;
+    }
 
     /**
      * Lista todos los sanitarios activos.

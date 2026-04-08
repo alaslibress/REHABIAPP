@@ -101,14 +101,12 @@ INSERT INTO telefono_sanitario (dni_san, telefono) VALUES
 --
 -- sexo usa CHECK (sexo IN ('M', 'F', 'O'))
 -- protesis es INTEGER (0 = sin protesis)
--- discapacidad_pac y tratamiento_pac son campos legacy, se dejan NULL.
 -- -------------------------------------------------------------------------
 INSERT INTO paciente (
     dni_pac, dni_san,
     nombre_pac, apellido1_pac, apellido2_pac,
     edad_pac, email_pac, num_ss,
     id_direccion,
-    discapacidad_pac, tratamiento_pac, estado_tratamiento,
     protesis,
     fecha_nacimiento, sexo,
     alergias, antecedentes, medicacion_actual,
@@ -119,7 +117,6 @@ INSERT INTO paciente (
     'Pedro', 'Sanchez', 'Gomez',
     45, 'pedro.sanchez@example.local', '281234567890',
     (SELECT MAX(id_direccion) FROM direccion),
-    NULL, NULL, NULL,
     0,
     '1980-05-15', 'MASCULINO',
     NULL, NULL, NULL,

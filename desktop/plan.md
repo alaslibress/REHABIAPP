@@ -1,934 +1,1164 @@
-# Plan: Diagnostico y reparacion de la conexion Desktop ↔ API REST
+# Plan — Transacciones atómicas en `PacienteService` y `SanitarioService`
 
-> **Fecha:** 2026-04-07
-> **Rama:** desktop-final
-> **Autor (Thinker):** Agent 3 - Opus
-> **Audiencia (Doer):** Agent 3 - Sonnet
-> **Prerequisito:** El plan anterior (correccion de errores de ejecucion JavaFX desde IntelliJ) se asume completado segun el commit `17f79c6`. Si alguna fase de aquel plan no se hubiera aplicado, debe completarse antes de empezar este.
-
-> ⚠ **ACTUALIZACION 2026-04-07 (post-FASE 0):** durante los smoke tests el Doer ha confirmado que los sanitarios actuales en BD tienen contrasenas en texto plano, lo que provoca **500 Internal Server Error** al hacer login. Ver la nueva subseccion **"Actualizacion 2026-04-07: reseed completo"** al inicio de la FASE 3, que **sustituye** la subseccion 3.3 original. La FASE 3 ha cambiado de objetivo: ya no es solo "sembrar usuarios" sino "borrar todos los usuarios actuales y dejar 3 sanitarios + 1 paciente de prueba bien formados".
-
----
-
-## Contexto
-
-Tras la migracion completa del desktop ERP de JDBC directo a consumo de la REST API central (`/api`), la aplicacion JavaFX:
-
-- Compila correctamente con Gradle 8.14 + Java 24.
-- Tiene 74 tests unitarios verdes (todos mockeados, ninguno integra contra una API real).
-- Arranca sin errores en Linux despues de los ajustes recientes del plan IntelliJ.
-- **No consigue establecer comunicacion real con la base de datos a traves de la API en runtime.**
-
-El sintoma exacto que reporta el desarrollador es **"no conecta con la base de datos"**. Sin trazas no se puede afirmar si el fallo esta en:
-
-1. La API no esta arrancada o no escucha en `localhost:8080`.
-2. La API arranca pero no consigue conectar con PostgreSQL (mismatch de credenciales muy probable).
-3. El desktop no carga `api.properties` y usa una URL incorrecta.
-4. El desktop pega a la URL correcta pero no envia el JWT bien.
-5. El usuario no existe en la BD o el hash BCrypt no coincide.
-6. Otra causa todavia no contemplada.
-
-Este plan establece una secuencia de fases ordenadas que permitiran al Doer aislar la causa raiz, repararla y dejar el sistema con visibilidad suficiente para que un fallo similar nunca vuelva a ser opaco.
+> **Thinker:** Agent 3 (Opus)
+> **Doer objetivo:** Sonnet
+> **Fecha:** 2026-04-08
+> **Items del checklist `desktop/CLAUDE.md §7 — CRUD operations`:**
+> - [ ] Implement atomic transactions (commit/rollback) in PacienteService for compound operations (patient + phones + address + photo).
+> - [ ] Implement atomic transactions in SanitarioService for compound operations (practitioner + role + phones).
+> - [ ] Integrate photo upload within the same transaction as patient INSERT.
 
 ---
 
-## Hallazgos previos del Thinker (estado actual del codigo, ya verificado)
+## 1. Contexto y diagnóstico
 
-### En /desktop
+El checklist habla de "atomic transactions in `PacienteService`/`SanitarioService`". Los nombres son los mismos pero el contexto cambió radicalmente tras la migración JDBC → REST API:
 
-| # | Fichero | Hallazgo | Severidad |
-|---|---------|----------|-----------|
-| H1 | `src/main/java/com/javafx/Clases/ApiClient.java:55` | URL base = `http://localhost:8080`, cargada desde `api.properties` con fallback hardcoded silencioso. | Alta (sin visibilidad) |
-| H2 | `src/main/java/com/javafx/Clases/ApiClient.java:101-113` | `probarConexion()` pega a `/actuator/health` con timeout 5 s. Captura toda excepcion y devuelve `false` SIN log. | Critica |
-| H3 | `src/main/java/com/javafx/Clases/ApiClient.java` (entero) | CERO trazas SLF4J / System.out / System.err en TODA la clase. `slf4j-simple` esta en build.gradle pero no se usa. | Critica |
-| H4 | `src/main/java/com/javafx/Clases/ApiClient.java:47-54` | `cargarPropiedades()` silencia IOException. Si `api.properties` no esta en classpath, la app usa el fallback hardcoded sin avisar. | Alta |
-| H5 | `src/main/java/com/javafx/DAO/PacienteDAO.java:163,165,182,184` | `insertarFoto()` y `obtenerFoto()` crean su propio `HttpClient` y hardcodean `http://localhost:8080/api/pacientes/{dni}/foto`. NO usan `ApiClient.baseUrl`. | Media (rompe en cualquier entorno != localhost) |
-| H6 | `src/main/resources/config/api.properties` | Contenido correcto: `api.base-url=http://localhost:8080`, `api.timeout-ms=30000`. | OK |
-| H7 | `src/main/resources/config/ip.properties` | Legacy, solo referencias a host PostgreSQL. No se usa. | Bajo (limpieza) |
-| H8 | `src/main/resources/config/database.properties` | Legacy, credenciales JDBC plaintext. No se usa. | Bajo (limpieza) |
-| H9 | `src/main/java/com/javafx/Interface/controladorSesion.java:189` | El mensaje de error al usuario menciona literalmente `localhost:8080`. Util para el usuario, pero hardcodea la URL en la UI. | Bajo |
-| H10 | `build.gradle` | Limpio: sin `postgresql`, `HikariCP`, `jBCrypt`. Jackson y SLF4J presentes. | OK |
-| H11 | `src/test/java/com/javafx/Clases/ApiClientTest.java` | 16 tests; todos con `HttpClient` mockeado. No se ejerce ningun extremo real. | OK pero insuficiente para integracion |
+- En el mundo JDBC, atomicidad significaba `BEGIN/COMMIT/ROLLBACK` en una `Connection` local del desktop.
+- En el mundo REST, **el desktop NO tiene transacciones**. La atomicidad real ocurre en la API (Spring `@Transactional`).
+- Por tanto, "atomic transaction in PacienteService" hoy se traduce a: "el desktop debe hacer **una sola llamada HTTP** que dispare **una sola transacción** en la API que cubra todas las entidades del agregado".
 
-### En /api
+### 1.1 Estado real auditado (recorrido por todo el stack)
 
-| # | Fichero | Hallazgo | Implicacion para desktop |
-|---|---------|----------|--------------------------|
-| A1 | `src/main/resources/application.yml:39` | Puerto = `${SERVER_PORT:8080}`. Coincide con desktop. | OK |
-| A2 | `src/main/java/com/rehabiapp/api/presentation/controller/AuthController.java:24` | `POST /api/auth/login`, payload `{dni, contrasena}`, respuesta `{accessToken, refreshToken, rol}` en body. | Coincide exactamente con lo que envia el desktop. |
-| A3 | `src/main/java/com/rehabiapp/api/infrastructure/config/SecurityConfig.java:55-61` | `permitAll` en `/api/auth/**` y `/actuator/health/**`. Resto requiere JWT `Authorization: Bearer`. | Coincide con desktop. |
-| A4 | `src/main/resources/application-local.yml:5-10` | `spring.datasource.url=jdbc:postgresql://localhost:5432/rehabiapp`, usuario `rehabiapp_dev`, password `dev_password_change_me`. | **Mismatch con docker-compose.** |
-| A5 | `infra/docker-compose.yml:6-27` | El contenedor PG levanta con `POSTGRES_USER=admin`, `POSTGRES_PASSWORD=admin`, `POSTGRES_DB=rehabiapp`. | **Mismatch con application-local.yml. Sospechoso #1.** |
-| A6 | `db/migration/V1..V4` | Esquema completo + Envers + `tratamiento.id_nivel`. | OK |
-| A7 | `presentation/controller/*` | Todos los endpoints que el desktop consume existen con la firma esperada. | OK |
-| A8 | `application.yml:48-68` | `actuator/health`, `liveness`, `readiness`, `prometheus` habilitados sin auth. | OK |
+| Operación compuesta | Estado actual | ¿Atómico hoy? |
+|---------------------|---------------|---------------|
+| `paciente + telefonos` | `POST /api/pacientes` ya recibe `telefonos: List<String>` y los persiste vía cascade `OneToMany` con `@Transactional`. | ✅ **SÍ** (server-side cascade) |
+| `paciente + direccion` | El controlador desktop **valida** `txtCalle/txtNumero/txtPiso/txtCodigoPostal/txtLocalidad/txtProvincia` pero **NUNCA** los copia al objeto `Paciente`. `PacienteRequest` (API y desktop) no tiene campo `direccion`. `Paciente.java` (entidad) sí tiene `@ManyToOne Direccion` pero `PacienteService.crear()` no la setea. **Los campos se pierden silenciosamente.** | ❌ **NO** (no fluyen) |
+| `paciente + foto` | `desktop/PacienteService.insertar(p, t1, t2, foto)` hace **dos llamadas HTTP** secuenciales: `POST /api/pacientes` y luego `POST /api/pacientes/{dni}/foto`. Si la segunda falla, el paciente queda creado **sin foto** (estado roto). El comentario JavaDoc en `controladorAgregarPaciente.java:434` afirma "operacion atomica" — **es mentira**. | ❌ **NO** (split state real) |
+| `sanitario + rol + telefonos` | `POST /api/sanitarios` acepta `cargo` + `telefonos`, y `SanitarioService.crear()` (API) construye `Sanitario` + `SanitarioRol` + `TelefonoSanitario` en cascada bajo `@Transactional`. Una sola llamada HTTP. | ✅ **SÍ** (ya correcto, falta verificar y documentar) |
 
-### Hipotesis ordenadas por probabilidad (segun el Thinker)
+### 1.2 Qué hay que hacer realmente
 
-1. **(Muy probable)** La API falla al arrancar porque sus credenciales (`rehabiapp_dev`/`dev_password_change_me`) no coinciden con las del PostgreSQL del docker-compose (`admin`/`admin`). La app desktop intenta conectar y nunca obtiene respuesta porque la API ni siquiera levanta.
-2. **(Probable)** La API arranca pero no hay ningun sanitario sembrado en la BD, el login devuelve 401, y la UI lo interpreta como "no hay conexion".
-3. **(Probable)** `api.properties` no se empaqueta correctamente en el classpath y el desktop usa el fallback hardcoded silenciosamente. Si el desarrollador esta apuntando a una API remota, fallara.
-4. **(Posible)** El usuario semilla existe pero su hash BCrypt no se generó con el cost factor 12 que espera la API.
-5. **(Menos probable)** Algun firewall o iptables local en Fedora 43 esta bloqueando el puerto 8080.
-6. **(Muy poco probable)** Un cambio en Spring Security 6 / Spring Boot 4 esta filtrando peticiones del HttpClient nativo de Java por User-Agent (no hay evidencia de esto en SecurityConfig pero merece descartarse).
+1. **Wire address through the API.** Añadir campos `direccion` a `PacienteRequest`/`PacienteResponse`, persistir en la misma `@Transactional` que crea el paciente con un patrón "find-or-create" sobre `localidad`/`cp`/`direccion`. Wire en el desktop (Paciente.java + controladores) para que los campos no se pierdan.
+2. **Atomic photo + paciente.** Crear un endpoint `POST /api/pacientes` (y `PUT /api/pacientes/{dni}`) que acepte `multipart/form-data` con dos partes: `paciente` (JSON con todo el agregado) y `foto` (archivo opcional). Toda la operación dentro de una sola `@Transactional`.
+3. **Refactor desktop.** `PacienteService.insertar(p, t1, t2, foto)` y `actualizar(p, dni, t1, t2, foto)` deben pasar de "dos calls" a "un call multipart". Eliminar `PacienteDAO.insertarFoto()` del flujo de creación/edición (mantenerlo solo para reemplazo aislado de la foto desde otra pantalla, si lo necesita alguien).
+4. **Verificar Sanitario.** Confirmar que la cascada funciona (test integración), eliminar el comentario "TODO: Mover operaciones de foto al servicio" del controlador, dejar JavaDoc claro de que la operación es atómica server-side.
+5. **Tests.** JUnit 5 + Mockito sobre los wrappers desktop verificando que `insertar(...)` hace **una sola llamada** al `ApiClient` y que un fallo HTTP propaga la excepción sin dejar estado parcial.
+6. **Marcar [x]** los 3 ítems del checklist.
 
-El orden de las fases del plan refleja esta prioridad. La FASE 0 valida la hipotesis 1 y 2 antes de tocar codigo.
+### 1.3 Limitaciones contextuales
+
+- **`api.cp` y `api.localidad` están casi vacías** (2 filas seed). Cuando un sanitario inserta una dirección con un CP nuevo, la API debe crear el `CodigoPostal` + `Localidad` automáticamente en la misma transacción. Si no, todo flujo de alta falla con `RecursoNoEncontradoException`.
+- **No existen `DireccionRepository`, `CodigoPostalRepository`, `LocalidadRepository`** en la API. Hay que crearlos.
+- **`ApiClient.java` (desktop) no soporta multipart**. Hay que añadirle un método `postMultipart(path, jsonBody, fileBytes, fileName, contentType, responseClass)`. `PacienteDAO.insertarFoto()` ya construye multipart manualmente — reutilizar esa lógica.
+- **Flyway no está activo en dev** (igual que en el plan anterior). Los cambios de schema se aplican con SQL directo; la migración V9 se crea para entornos frescos pero no se aplica a dev.
 
 ---
 
-## FASE 0: Smoke tests del entorno (sin tocar codigo)
+## 2. Decisiones de diseño
 
-**Objetivo:** Antes de modificar nada, verificar que cada eslabon del stack esta vivo y reportar exactamente donde se rompe la cadena. Esta fase entrega un diagnostico, no un fix.
+| Decisión | Elección | Justificación |
+|----------|----------|---------------|
+| ¿Multipart vs JSON+segundo POST con compensación? | **Multipart en un único endpoint.** | El patrón saga (POST + DELETE en caso de fallo de foto) es frágil — el DELETE puede fallar también, dejando huérfano el paciente. Una sola petición HTTP con `@Transactional` es la única solución verdaderamente atómica. |
+| ¿Mantener `POST /api/pacientes/{dni}/foto`? | **Sí**, como endpoint independiente para "reemplazar foto en paciente existente" desde otras pantallas. Solo se elimina su uso desde el flujo de creación/edición. | El endpoint sigue siendo válido para una pantalla "Editar foto" aislada. No romper API pública. |
+| ¿`paciente + direccion` en JSON anidado o flat? | **Anidado**: `direccion: { calle, numero, piso, cp, nombreLocalidad, provincia }` dentro del JSON `paciente`. | Más limpio, refleja el modelo, fácil de hacer opcional (`null` = paciente sin dirección registrada). |
+| Manejo de `cp` / `localidad` no existentes | **Find-or-create idempotente.** Si el CP existe, se reusa. Si no, se inserta `localidad` (find-or-create por nombre+provincia) + `cp`. Todo dentro del mismo `@Transactional`. | Evita exigir un catálogo precargado completo (España tiene >55k CPs). El sanitario teclea y la API resuelve. |
+| ¿`PUT /api/pacientes/{dni}` también multipart? | **Sí**, para que la edición tenga la misma semántica atómica. Si el sanitario sube una foto nueva al editar, va en la misma transacción que el resto del UPDATE. | Consistencia con `POST`. Sin esto, la edición sigue rota. |
+| Tamaño máximo de foto | **5 MB** (configurable en `application.yml` con `spring.servlet.multipart.max-file-size=5MB`). Si la foto es mayor, la API responde `413 Payload Too Large` antes de tocar BD. | Pacientes con fotos >5MB son extremadamente raros y rompen rendimiento. |
+| Tests | **JUnit 5 + Mockito** sobre `desktop/PacienteService` y `desktop/SanitarioService` con `ApiClient` mockeado. **No** integración real con la API (no hay infra de IT en este repo). | Cubre el contrato del wrapper. Los tests de integración server-side son competencia del Agent 1. |
 
-### 0.1 Verificar PostgreSQL
+---
 
-```bash
-docker ps --filter "name=rehabiapp" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-```
+## 3. Plan de ejecución por fases
 
-- Si NO aparece ningun contenedor: levantarlo con `cd /home/alaslibres/DAM/RehabiAPP && docker compose -f infra/docker-compose.yml up -d postgres` (o el nombre de servicio que corresponda).
-- Si aparece pero no esta `Up`: `docker logs <nombre_contenedor>` y reportar las ultimas 50 lineas al thinker.
-- Si esta `Up`, validar conexion directa con `psql`:
+Las fases se ejecutan **secuencialmente**. Cada fase deja el sistema en un estado compilable. Si una fase falla, no avanzar a la siguiente — diagnosticar y corregir.
 
-```bash
-PGPASSWORD=admin psql -h localhost -p 5432 -U admin -d rehabiapp -c "\dt"
-```
+---
 
-- Reportar al thinker: numero de tablas listadas, contenido de `sanitario` (`SELECT dni_san, email_san, activo FROM sanitario LIMIT 5;`).
+### FASE 0 — Preparación (lectura obligatoria + arranque del stack)
 
-### 0.2 Verificar arranque de la API
+**Objetivo:** garantizar que el Doer tiene el contexto correcto y el stack arranca antes de tocar nada.
 
-```bash
-curl -v --max-time 5 http://localhost:8080/actuator/health
-```
+**Acciones:**
 
-- Si responde `200 {"status":"UP"}` -> la API esta viva. Saltar a 0.4.
-- Si responde `Connection refused` o `Connection reset` -> la API no esta arrancada. Continuar en 0.3.
+1. Leer (en orden):
+   - `/home/alaslibres/DAM/RehabiAPP/CLAUDE.md` (orquestador global)
+   - `/home/alaslibres/DAM/RehabiAPP/desktop/CLAUDE.md` (este dominio)
+   - `/home/alaslibres/DAM/RehabiAPP/desktop/.claude/skills/javafx-java24/SKILL.md` (skill obligatorio para Java 24/JavaFX)
+2. Arrancar el stack siguiendo el RUNBOOK del `desktop/CLAUDE.md` (PostgreSQL → API → Desktop). Verificar:
+   ```bash
+   curl http://localhost:8080/actuator/health
+   docker exec rehabiapp-db psql -U admin -d rehabiapp -c "SELECT COUNT(*) FROM cp; SELECT COUNT(*) FROM localidad; SELECT COUNT(*) FROM direccion;"
+   ```
+3. Login con `ADMIN0000 / admin` desde la UI para confirmar que el flujo base funciona.
 
-### 0.3 Arrancar la API en modo verboso
+**Criterio de éxito:** la API responde 200, el desktop puede listar pacientes existentes.
 
-**No usar `nohup`. El doer debe ver los logs en vivo en una terminal dedicada.**
+---
 
+### FASE 1 — API: repositorios para `Direccion`, `CodigoPostal`, `Localidad`
+
+**Objetivo:** habilitar consultas de catálogo de direcciones desde la capa de servicio.
+
+**Archivos a crear** (todos en `/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/`):
+
+1. **`DireccionRepository.java`**
+   ```java
+   package com.rehabiapp.api.domain.repository;
+
+   import com.rehabiapp.api.domain.entity.Direccion;
+   import org.springframework.data.jpa.repository.JpaRepository;
+   import org.springframework.stereotype.Repository;
+
+   import java.util.Optional;
+
+   @Repository
+   public interface DireccionRepository extends JpaRepository<Direccion, Long> {
+
+       /**
+        * Busca una direccion existente que coincida exactamente con calle/numero/piso/cp.
+        * Util para reutilizar registros en lugar de duplicar.
+        */
+       Optional<Direccion> findByCalleAndNumeroAndPisoAndCodigoPostalCp(
+               String calle, String numero, String piso, String cp);
+   }
+   ```
+
+2. **`CodigoPostalRepository.java`**
+   ```java
+   package com.rehabiapp.api.domain.repository;
+
+   import com.rehabiapp.api.domain.entity.CodigoPostal;
+   import org.springframework.data.jpa.repository.JpaRepository;
+   import org.springframework.stereotype.Repository;
+
+   @Repository
+   public interface CodigoPostalRepository extends JpaRepository<CodigoPostal, String> {
+   }
+   ```
+
+3. **`LocalidadRepository.java`**
+   ```java
+   package com.rehabiapp.api.domain.repository;
+
+   import com.rehabiapp.api.domain.entity.Localidad;
+   import org.springframework.data.jpa.repository.JpaRepository;
+   import org.springframework.stereotype.Repository;
+
+   import java.util.Optional;
+
+   @Repository
+   public interface LocalidadRepository extends JpaRepository<Localidad, String> {
+
+       /**
+        * Busca una localidad por su nombre exacto.
+        * Util para el patron find-or-create al insertar direcciones.
+        */
+       Optional<Localidad> findByNombreLocalidad(String nombreLocalidad);
+   }
+   ```
+
+**Verificación:** `./mvnw clean compile` debe terminar sin errores.
+
+---
+
+### FASE 2 — API: extender DTOs (`PacienteRequest`, `PacienteResponse`) con `DireccionDto`
+
+**Objetivo:** transportar dirección por el contrato JSON.
+
+**Archivos a crear / modificar** en `/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/`:
+
+1. **Crear `DireccionDto.java`** (record nuevo):
+   ```java
+   package com.rehabiapp.api.application.dto;
+
+   import jakarta.validation.constraints.NotBlank;
+   import jakarta.validation.constraints.Pattern;
+   import jakarta.validation.constraints.Size;
+
+   /**
+    * DTO de direccion postal usado tanto en request como en response del paciente.
+    * Todos los campos obligatorios excepto piso. El cp se valida con regex de 5 digitos.
+    */
+   public record DireccionDto(
+           @NotBlank @Size(max = 200) String calle,
+           @Size(max = 20) String numero,
+           @Size(max = 20) String piso,
+           @NotBlank @Pattern(regexp = "^[0-9]{5}$") String cp,
+           @NotBlank @Size(max = 100) String nombreLocalidad,
+           @Size(max = 100) String provincia
+   ) {}
+   ```
+
+2. **Editar `PacienteRequest.java`** — añadir campo `DireccionDto direccion` al final del record (antes de `telefonos`). Importar `jakarta.validation.Valid` y anotar el campo con `@Valid` para que la validación recursiva funcione:
+   ```java
+   public record PacienteRequest(
+           @NotBlank @Size(max = 20) String dniPac,
+           @NotBlank String dniSan,
+           // ... resto de campos ...
+           Boolean consentimientoRgpd,
+           @Valid DireccionDto direccion,   // ← NUEVO (opcional, puede ser null)
+           List<String> telefonos
+   ) {}
+   ```
+
+3. **Editar `PacienteResponse.java`** — añadir `DireccionDto direccion` al final del record:
+   ```java
+   public record PacienteResponse(
+           // ... campos existentes ...
+           List<String> telefonos,
+           DireccionDto direccion   // ← NUEVO
+   ) {}
+   ```
+
+**Verificación:** `./mvnw clean compile`. Aparecerán errores en `PacienteService` y `PacienteMapper` que se resolverán en la Fase 3.
+
+---
+
+### FASE 3 — API: `PacienteService` con find-or-create de `Direccion` y `PacienteMapper` actualizado
+
+**Objetivo:** persistir `Direccion` (creando `Localidad`/`CodigoPostal` si no existen) en la misma transacción que `Paciente`. El método sigue siendo `@Transactional` (heredado de la clase) — toda la operación es un único rollback unit.
+
+**Archivo:** `/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/service/PacienteService.java`
+
+1. **Inyectar los nuevos repos:** añadir tres campos finales y modificar el constructor:
+   ```java
+   private final DireccionRepository direccionRepository;
+   private final CodigoPostalRepository codigoPostalRepository;
+   private final LocalidadRepository localidadRepository;
+
+   public PacienteService(
+           PacienteRepository pacienteRepository,
+           SanitarioRepository sanitarioRepository,
+           PacienteMapper pacienteMapper,
+           AuditService auditService,
+           DireccionRepository direccionRepository,
+           CodigoPostalRepository codigoPostalRepository,
+           LocalidadRepository localidadRepository
+   ) { ... }
+   ```
+
+2. **Crear método privado `resolverDireccion(DireccionDto dto)`** que devuelve la entidad `Direccion` lista para asociar:
+   ```java
+   /**
+    * Find-or-create idempotente de Direccion + CodigoPostal + Localidad.
+    * Ejecuta dentro de la misma @Transactional del metodo llamante.
+    *
+    * @param dto Datos de direccion del request, o null.
+    * @return Entidad Direccion gestionada por JPA, o null si dto es null.
+    */
+   private Direccion resolverDireccion(DireccionDto dto) {
+       if (dto == null) return null;
+
+       // 1. Find-or-create Localidad por nombre
+       Localidad localidad = localidadRepository.findByNombreLocalidad(dto.nombreLocalidad())
+               .orElseGet(() -> {
+                   Localidad nueva = new Localidad();
+                   nueva.setNombreLocalidad(dto.nombreLocalidad());
+                   nueva.setProvincia(dto.provincia());
+                   return localidadRepository.save(nueva);
+               });
+
+       // 2. Find-or-create CodigoPostal por cp
+       CodigoPostal cp = codigoPostalRepository.findById(dto.cp())
+               .orElseGet(() -> {
+                   CodigoPostal nuevo = new CodigoPostal();
+                   nuevo.setCp(dto.cp());
+                   nuevo.setLocalidad(localidad);
+                   return codigoPostalRepository.save(nuevo);
+               });
+
+       // 3. Find-or-create Direccion por (calle, numero, piso, cp) — reutiliza si ya existe
+       return direccionRepository
+               .findByCalleAndNumeroAndPisoAndCodigoPostalCp(
+                       dto.calle(), dto.numero(), dto.piso(), dto.cp())
+               .orElseGet(() -> {
+                   Direccion d = new Direccion();
+                   d.setCalle(dto.calle());
+                   d.setNumero(dto.numero());
+                   d.setPiso(dto.piso());
+                   d.setCodigoPostal(cp);
+                   return direccionRepository.save(d);
+               });
+   }
+   ```
+
+3. **En `crear(PacienteRequest)`**, después de `paciente.setActivo(true);` y antes del bucle de teléfonos, añadir:
+   ```java
+   paciente.setDireccion(resolverDireccion(request.direccion()));
+   ```
+
+4. **En `actualizar(String dni, PacienteRequest)`**, antes de `auditService.registrar(...)`, añadir:
+   ```java
+   if (request.direccion() != null) {
+       paciente.setDireccion(resolverDireccion(request.direccion()));
+   }
+   // Si request.direccion() es null, mantener la direccion existente intacta.
+   ```
+
+5. **Imports nuevos** al inicio del archivo:
+   ```java
+   import com.rehabiapp.api.application.dto.DireccionDto;
+   import com.rehabiapp.api.domain.entity.CodigoPostal;
+   import com.rehabiapp.api.domain.entity.Direccion;
+   import com.rehabiapp.api.domain.entity.Localidad;
+   import com.rehabiapp.api.domain.repository.CodigoPostalRepository;
+   import com.rehabiapp.api.domain.repository.DireccionRepository;
+   import com.rehabiapp.api.domain.repository.LocalidadRepository;
+   ```
+
+**Archivo:** `/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/PacienteMapper.java`
+
+6. **Mapear la dirección al `PacienteResponse`.** Localizar el método `toResponse(Paciente)` y añadir un mapeo manual o `@Mapping` MapStruct dependiendo de cómo esté estructurado el mapper actual. Patrón sugerido (revisar primero el archivo y adaptar):
+   ```java
+   @Mapping(target = "direccion", expression =
+       "java(paciente.getDireccion() == null ? null : new DireccionDto(" +
+       "paciente.getDireccion().getCalle(), " +
+       "paciente.getDireccion().getNumero(), " +
+       "paciente.getDireccion().getPiso(), " +
+       "paciente.getDireccion().getCodigoPostal().getCp(), " +
+       "paciente.getDireccion().getCodigoPostal().getLocalidad().getNombreLocalidad(), " +
+       "paciente.getDireccion().getCodigoPostal().getLocalidad().getProvincia()))")
+   PacienteResponse toResponse(Paciente paciente);
+   ```
+   **Nota:** la entidad `Direccion` y su `CodigoPostal`/`Localidad` están en `LAZY`. Para que el mapper no lance `LazyInitializationException`, asegurar que el método del service que llama al mapper esté dentro de una transacción abierta — ya lo está porque `PacienteService` es `@Transactional` a nivel clase.
+
+**Verificación:**
 ```bash
 cd /home/alaslibres/DAM/RehabiAPP/api
-SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run
+./mvnw clean compile
 ```
+Debe compilar sin errores.
 
-Observar la consola hasta una de estas situaciones:
+---
 
-| Sintoma en consola | Diagnostico | Accion del doer |
-|--------------------|-------------|-----------------|
-| `Started ApiApplication in X seconds` y queda escuchando | API OK | Continuar a 0.4 |
-| `FATAL: password authentication failed for user "rehabiapp_dev"` | **Mismatch de credenciales (hipotesis #1 confirmada)** | Saltar a 0.3.bis |
-| `Connection refused` al puerto 5432 | PostgreSQL no esta corriendo | Volver a 0.1 |
-| `Flyway migration failed` | Migracion de Flyway en conflicto con datos existentes | Reportar al thinker la version de migracion que falla |
-| `Address already in use: 8080` | Algo ya ocupa el puerto 8080 | `ss -tlnp | grep 8080` y reportar el proceso |
+### FASE 4 — API: endpoint multipart `POST /api/pacientes` y `PUT /api/pacientes/{dni}`
 
-#### 0.3.bis Si el problema son las credenciales
+**Objetivo:** una sola petición HTTP que acepta el JSON del paciente + los bytes de la foto, todo dentro de la misma `@Transactional`.
 
-Hay tres opciones, ordenadas por preferencia del thinker:
+**Archivo:** `/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/presentation/controller/PacienteController.java`
 
-**Opcion A (recomendada):** alinear via variables de entorno sin tocar yml ni docker-compose. Crear `/home/alaslibres/DAM/RehabiAPP/api/.env.local` (NO commitear, añadir al `.gitignore` si no esta) con:
+1. **Modificar el endpoint `crear`** — cambiar la firma para aceptar multipart con dos partes (`paciente` JSON y `foto` archivo opcional):
+   ```java
+   /**
+    * Crea un nuevo paciente y, opcionalmente, su fotografia, en una unica transaccion atomica.
+    *
+    * <p>Recibe multipart/form-data con dos partes:</p>
+    * <ul>
+    *   <li><b>paciente</b>: JSON serializado de PacienteRequest (Content-Type application/json).</li>
+    *   <li><b>foto</b>: archivo de imagen opcional (image/png o image/jpeg).</li>
+    * </ul>
+    *
+    * <p>POST /api/pacientes (multipart/form-data)</p>
+    *
+    * @param request DTO validado con los datos del nuevo paciente (incluyendo telefonos y direccion).
+    * @param foto    Archivo de imagen opcional.
+    * @return 201 Created con los datos del paciente creado.
+    */
+   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+   @PreAuthorize("isAuthenticated()")
+   public ResponseEntity<PacienteResponse> crear(
+           @Valid @RequestPart("paciente") PacienteRequest request,
+           @RequestPart(value = "foto", required = false) MultipartFile foto) throws IOException {
+       byte[] fotoBytes = (foto != null && !foto.isEmpty()) ? foto.getBytes() : null;
+       PacienteResponse response = pacienteService.crearConFoto(request, fotoBytes);
+       return ResponseEntity.status(HttpStatus.CREATED).body(response);
+   }
+   ```
 
-```
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/rehabiapp
-SPRING_DATASOURCE_USERNAME=admin
-SPRING_DATASOURCE_PASSWORD=admin
-SPRING_PROFILES_ACTIVE=local
-```
+2. **Modificar el endpoint `actualizar`** análogamente:
+   ```java
+   @PutMapping(value = "/{dni}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+   @PreAuthorize("isAuthenticated()")
+   public ResponseEntity<PacienteResponse> actualizar(
+           @PathVariable String dni,
+           @Valid @RequestPart("paciente") PacienteRequest request,
+           @RequestPart(value = "foto", required = false) MultipartFile foto) throws IOException {
+       byte[] fotoBytes = (foto != null && !foto.isEmpty()) ? foto.getBytes() : null;
+       PacienteResponse response = pacienteService.actualizarConFoto(dni, request, fotoBytes);
+       return ResponseEntity.ok(response);
+   }
+   ```
 
-Luego arrancar con:
+3. **Imports nuevos:** `org.springframework.web.bind.annotation.RequestPart`. Eliminar `@RequestBody` de los métodos modificados.
 
+4. **Mantener intacto** `POST /api/pacientes/{dni}/foto` y `GET /api/pacientes/{dni}/foto` (siguen siendo válidos para edición aislada de foto). **No** mantener una variante JSON-only de `crear`/`actualizar` — el desktop migrará al multipart en una sola pasada y mantener dos variantes complica el contrato.
+
+**Archivo:** `/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/service/PacienteService.java`
+
+5. **Añadir dos nuevos métodos públicos** que envuelven los existentes y persisten la foto en la misma transacción:
+   ```java
+   /**
+    * Crea un paciente con direccion, telefonos y opcionalmente foto, todo en una unica transaccion.
+    * Si la persistencia de la foto falla, se hace rollback completo del paciente.
+    *
+    * @param request   DTO con los datos del paciente.
+    * @param fotoBytes Bytes de la foto, o null si no hay foto.
+    * @return DTO de respuesta con el paciente creado.
+    */
+   public PacienteResponse crearConFoto(PacienteRequest request, byte[] fotoBytes) {
+       // 1. Resolver sanitario y construir entidad (logica reutilizada de crear())
+       Sanitario sanitario = sanitarioRepository.findByDniSanAndActivoTrue(request.dniSan())
+               .orElseThrow(() -> new RecursoNoEncontradoException(
+                       "Sanitario no encontrado: " + request.dniSan()));
+
+       Paciente paciente = new Paciente();
+       paciente.setDniPac(request.dniPac());
+       paciente.setSanitario(sanitario);
+       // ... (replicar todos los setters de crear() — extraer a metodo privado si crece) ...
+       paciente.setActivo(true);
+       paciente.setDireccion(resolverDireccion(request.direccion()));
+
+       if (request.telefonos() != null) {
+           request.telefonos().forEach(tel -> {
+               TelefonoPaciente t = new TelefonoPaciente();
+               t.setPaciente(paciente);
+               t.setTelefono(tel);
+               paciente.getTelefonos().add(t);
+           });
+       }
+
+       // 2. Persistir foto en la MISMA entidad antes del save -> mismo flush, misma transaccion
+       if (fotoBytes != null && fotoBytes.length > 0) {
+           paciente.setFoto(fotoBytes);
+       }
+
+       Paciente guardado = pacienteRepository.save(paciente);
+       auditService.registrar(AccionAuditoria.CREATE, "paciente", request.dniPac(),
+               "Paciente creado" + (fotoBytes != null ? " (con foto)" : ""));
+       return pacienteMapper.toResponse(guardado);
+   }
+
+   /**
+    * Actualiza un paciente y opcionalmente su foto en una unica transaccion.
+    * Si fotoBytes es null, la foto existente se mantiene intacta.
+    */
+   public PacienteResponse actualizarConFoto(String dni, PacienteRequest request, byte[] fotoBytes) {
+       Paciente paciente = pacienteRepository.findByDniPacAndActivoTrue(dni)
+               .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado: " + dni));
+
+       // ... (replicar los setters de actualizar()) ...
+
+       if (request.direccion() != null) {
+           paciente.setDireccion(resolverDireccion(request.direccion()));
+       }
+
+       if (fotoBytes != null && fotoBytes.length > 0) {
+           paciente.setFoto(fotoBytes);
+       }
+
+       auditService.registrar(AccionAuditoria.UPDATE, "paciente", dni,
+               "Paciente actualizado" + (fotoBytes != null ? " (con foto)" : ""));
+       return pacienteMapper.toResponse(pacienteRepository.save(paciente));
+   }
+   ```
+
+6. **REFACTOR sugerido (no obligatorio):** los métodos antiguos `crear(PacienteRequest)` y `actualizar(String, PacienteRequest)` quedan **sin uso** desde el controlador. Eliminarlos o marcarlos `@Deprecated`. Recomendación del Thinker: **eliminarlos** para evitar duplicación. La firma con foto es la nueva canónica.
+
+**Archivo:** `/home/alaslibres/DAM/RehabiAPP/api/src/main/resources/application.yml` (o `application-local.yml`)
+
+7. **Configurar el límite de tamaño multipart:**
+   ```yaml
+   spring:
+     servlet:
+       multipart:
+         max-file-size: 5MB
+         max-request-size: 6MB
+   ```
+
+**Verificación:**
 ```bash
 cd /home/alaslibres/DAM/RehabiAPP/api
-set -a && source .env.local && set +a && ./mvnw spring-boot:run
+./mvnw clean spring-boot:run
 ```
-
-**Opcion B:** modificar el contenedor PG para que use `rehabiapp_dev/dev_password_change_me`. Requiere `docker compose down -v` (DESTRUCTIVO: borra el volumen). El doer NO debe ejecutar esto sin aprobacion explicita del thinker porque destruye datos.
-
-**Opcion C:** modificar `application-local.yml` directamente. **Prohibido para el doer**: tocar `/api` esta fuera del dominio del Agente 3. Si la opcion A no funciona, escalar al thinker y este coordinara con Agente 1.
-
-### 0.4 Test manual de login con curl
-
-Una vez la API responda al health, verificar que existe al menos un sanitario activo en la BD (ver 0.1) y probar el endpoint de login:
-
+Debe arrancar sin errores. Probar con `curl`:
 ```bash
-curl -v -X POST http://localhost:8080/api/auth/login \
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"dni":"<DNI_REAL_DE_LA_BD>","contrasena":"<CONTRASENA_CONOCIDA>"}'
+  -d '{"dni":"ADMIN0000","contrasena":"admin"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")
+
+# Crear paciente sin foto, con direccion
+curl -X POST http://localhost:8080/api/pacientes \
+  -H "Authorization: Bearer $TOKEN" \
+  -F 'paciente={"dniPac":"99999999X","dniSan":"ADMIN0000","nombrePac":"Test","apellido1Pac":"Atomico","edadPac":30,"direccion":{"calle":"Calle Mayor","numero":"1","cp":"28013","nombreLocalidad":"Madrid","provincia":"Madrid"},"telefonos":["600111222"]};type=application/json'
+
+# Crear paciente con foto
+curl -X POST http://localhost:8080/api/pacientes \
+  -H "Authorization: Bearer $TOKEN" \
+  -F 'paciente={"dniPac":"99999998Y","dniSan":"ADMIN0000","nombrePac":"Test2","apellido1Pac":"ConFoto","edadPac":25,"direccion":{"calle":"Gran Via","numero":"50","cp":"28013","nombreLocalidad":"Madrid","provincia":"Madrid"},"telefonos":["600222333"]};type=application/json' \
+  -F 'foto=@/tmp/test.png;type=image/png'
 ```
-
-| Status | Diagnostico | Siguiente paso |
-|--------|-------------|----------------|
-| 200 con `{accessToken, refreshToken, rol}` | Camino feliz, API operativa | Continuar a FASE 1 |
-| 401 Unauthorized | Usuario inexistente o BCrypt incorrecto | Saltar a FASE 3 (semilla de datos) |
-| 400 Bad Request | Payload mal formado (no deberia ocurrir con curl literal) | Reportar body de respuesta al thinker |
-| 500 Internal Server Error | Fallo en la API. Mirar logs de la terminal donde corre `mvn spring-boot:run` | Reportar excepcion completa al thinker |
-| Sin respuesta / timeout | La API se cayo entre 0.3 y 0.4 | Volver a 0.3 |
-
-### 0.5 Reporte de la FASE 0
-
-El doer debe entregar al thinker un reporte breve con:
-
-- Estado de PG (Up / Down / contenido de sanitario).
-- Estado de la API (Up / Down / log de arranque).
-- Resultado del curl de login (status + body).
-- Si se usaron variables de entorno, cuales.
-- Conclusion: que hipotesis quedo confirmada.
-
-**No avanzar a FASE 1 sin que el thinker valide el reporte.**
-
-### Criterio de aceptacion de la FASE 0
-
-- [ ] PG corriendo y `sanitario` con al menos 1 fila activa.
-- [ ] API responde 200 a `/actuator/health`.
-- [ ] curl de login devuelve 200 con un JWT valido.
-- [ ] Reporte entregado al thinker.
+Ambas deben devolver `201 Created` con el JSON del paciente. La segunda debe haber persistido la foto (verificar con `GET /api/pacientes/99999998Y/foto`).
 
 ---
 
-## FASE 1: Habilitar logging diagnostico en ApiClient
+### FASE 5 — Desktop: extender `Paciente.java` con campos de dirección y `toPacienteRequest()`
 
-**Objetivo:** dar visibilidad runtime a TODAS las llamadas HTTP del desktop. Sin esto cualquier futuro diagnostico volveria a ser ciego.
+**Objetivo:** que el modelo del desktop transporte la dirección de extremo a extremo.
 
-**Justificacion (thinker):** el problema central que motivo este plan es que `probarConexion()` devuelve `false` y la app dice "no hay conexion" sin que nadie pueda saber por que. Esto es una deuda tecnica de observabilidad que debe pagarse antes que cualquier otra cosa, porque sin trazas no podemos validar las fases siguientes.
+**Archivos a modificar** en `/home/alaslibres/DAM/RehabiAPP/desktop/src/main/java/com/javafx/`:
 
-### 1.1 Anadir SLF4J a ApiClient
+1. **Crear `dto/DireccionDto.java`** (record nuevo en el package `dto`):
+   ```java
+   package com.javafx.dto;
 
-`src/main/java/com/javafx/Clases/ApiClient.java`
+   /**
+    * DTO de direccion postal usado en PacienteRequest/PacienteResponse.
+    * Mismo shape que el record DireccionDto de la API — Jackson lo mapea por nombres.
+    */
+   public record DireccionDto(
+           String calle,
+           String numero,
+           String piso,
+           String cp,
+           String nombreLocalidad,
+           String provincia
+   ) {}
+   ```
 
-- Importar `org.slf4j.Logger` y `org.slf4j.LoggerFactory`.
-- Declarar `private static final Logger LOG = LoggerFactory.getLogger(ApiClient.class);`.
-- Anadir trazas en estos puntos exactos:
+2. **Editar `dto/PacienteRequest.java`** (record desktop) — añadir el campo `DireccionDto direccion` antes de `telefonos`:
+   ```java
+   public record PacienteRequest(
+           String dniPac,
+           String dniSan,
+           // ... resto ...
+           Boolean consentimientoRgpd,
+           DireccionDto direccion,   // ← NUEVO
+           List<String> telefonos
+   ) {}
+   ```
 
-| Metodo | Nivel | Mensaje sugerido | Datos a incluir |
-|--------|-------|------------------|-----------------|
-| Constructor | INFO | `"ApiClient inicializado: baseUrl={}, timeoutMs={}"` | `baseUrl`, `timeoutMs` |
-| `cargarPropiedades()` exito | INFO | `"api.properties cargado correctamente"` | ruta del recurso |
-| `cargarPropiedades()` fallo | ERROR | `"No se pudo cargar api.properties, usando fallback hardcoded {}"` | URL fallback, `e.getMessage()` |
-| `probarConexion()` antes | DEBUG | `"Probando conexion a {}"` | URL completa |
-| `probarConexion()` exito | INFO | `"Conexion API verificada: {} -> {}"` | URL, statusCode |
-| `probarConexion()` excepcion | ERROR | `"Conexion API fallida: {} -> {}"` | URL, `e.getClass().getSimpleName() + ": " + e.getMessage()` |
-| `login()` antes | INFO | `"Login: POST {}/api/auth/login (dni={})"` | baseUrl, dni |
-| `login()` 200 | INFO | `"Login OK para {}, rol={}"` | dni, rol |
-| `login()` 4xx/5xx | WARN | `"Login fallido para {}: status={} body={}"` | dni, statusCode, body recortado a 500 chars |
-| `login()` excepcion red | ERROR | `"Login network error: {}"` | clase + mensaje de excepcion |
-| `get/post/put/delete()` | DEBUG | `"{} {} -> {}"` | metodo, URL completa, statusCode |
-| Cualquier 4xx/5xx | WARN | `"Error HTTP {} en {} {}: body={}"` | status, metodo, URL, body recortado a 500 chars |
+3. **Editar `dto/PacienteResponse.java`** análogamente — añadir `DireccionDto direccion`.
 
-**Reglas para el doer:**
+4. **Editar `Clases/Paciente.java`** — añadir 6 propiedades JavaFX (`StringProperty calle, numero, piso, codigoPostal, localidad, provincia`), getters/setters/properties al estilo del resto, y modificar:
 
-- Las trazas DEBEN estar en castellano.
-- NO loggear el contenido completo del body de respuestas exitosas (puede contener datos clinicos en otros endpoints).
-- NO loggear nunca la contrasena en plano (ni siquiera en DEBUG).
-- NO loggear nunca el accessToken o refreshToken completos. Si quieres trazar su existencia, usa `accessToken != null ? "presente" : "ausente"`.
-- Los logs van a stdout via `slf4j-simple`. NO inventar appenders ni anadir logback.
+   a. **El constructor `desdePacienteResponse`** para copiar la dirección del response al objeto:
+      ```java
+      if (response.direccion() != null) {
+          p.setCalle(response.direccion().calle());
+          p.setNumero(response.direccion().numero());
+          p.setPiso(response.direccion().piso());
+          p.setCodigoPostal(response.direccion().cp());
+          p.setLocalidad(response.direccion().nombreLocalidad());
+          p.setProvincia(response.direccion().provincia());
+      }
+      ```
 
-### 1.2 Configuracion de SimpleLogger
+   b. **El método `toPacienteRequest()`** para construir el `DireccionDto` si los campos están informados:
+      ```java
+      DireccionDto direccion = null;
+      if (getCalle() != null && !getCalle().isEmpty()
+              && getCodigoPostal() != null && !getCodigoPostal().isEmpty()
+              && getLocalidad() != null && !getLocalidad().isEmpty()) {
+          direccion = new DireccionDto(
+                  getCalle(),
+                  getNumero(),
+                  getPiso(),
+                  getCodigoPostal(),
+                  getLocalidad(),
+                  getProvincia()
+          );
+      }
 
-Crear `src/main/resources/simplelogger.properties`:
+      return new PacienteRequest(
+              getDni(), getDniSanitario(), getNombre(),
+              // ...
+              isConsentimientoRgpd(),
+              direccion,           // ← NUEVO (puede ser null si el formulario no la captura)
+              telefonos
+      );
+      ```
 
-```
-org.slf4j.simpleLogger.defaultLogLevel=info
-org.slf4j.simpleLogger.log.com.javafx.Clases.ApiClient=debug
-org.slf4j.simpleLogger.showDateTime=true
-org.slf4j.simpleLogger.dateTimeFormat=yyyy-MM-dd HH:mm:ss
-org.slf4j.simpleLogger.showThreadName=true
-org.slf4j.simpleLogger.showShortLogName=true
-```
-
-Esto da:
-- INFO global para la app.
-- DEBUG solo para `ApiClient` (donde lo necesitamos).
-- Sin logs spammy del resto.
-
-### 1.3 Verificar tests existentes
-
-`./gradlew test` despues del cambio. **Los 74 tests deben seguir pasando**. Si algun `ApiClientTest` rompe porque ahora hay logs en stdout, NO silenciar el log; corregir el assert para que ignore stdout.
-
-### 1.4 Entregable de la FASE 1
-
-- Diff aplicado a `ApiClient.java`.
-- Nuevo `simplelogger.properties`.
-- Captura de consola del primer arranque tras el cambio mostrando las trazas.
-
-### Criterio de aceptacion de la FASE 1
-
-- [ ] `./gradlew run` arranca y emite por stdout: `ApiClient inicializado: baseUrl=http://localhost:8080, timeoutMs=30000`.
-- [ ] Tras pulsar el indicador de conexion del login, aparece traza `Probando conexion a http://localhost:8080/actuator/health` seguida de `Conexion API verificada` o `Conexion API fallida` con la causa real.
-- [ ] `./gradlew test` -> 74 tests verdes.
+**Verificación:** `./gradlew compileJava` debe pasar.
 
 ---
 
-## FASE 2: Verificar que `api.properties` se carga en runtime
+### FASE 6 — Desktop: `ApiClient.postMultipart()` + refactor `PacienteDAO` y `PacienteService`
 
-**Objetivo:** descartar la hipotesis #3. Aunque el fichero existe en source, no esta confirmado que Gradle lo empaquete y que el classloader lo encuentre.
+**Objetivo:** una sola llamada HTTP atómica desde el desktop al endpoint multipart.
 
-### 2.1 Confirmar empaquetado en el JAR
+**Archivo:** `/home/alaslibres/DAM/RehabiAPP/desktop/src/main/java/com/javafx/Clases/ApiClient.java`
 
+1. **Añadir un método público nuevo `postMultipart`** (y `putMultipart`) al `ApiClient`. Aprovechar la lógica existente de `PacienteDAO.insertarFoto()` (líneas 146–177) y generalizarla:
+   ```java
+   /**
+    * Envia una peticion multipart/form-data con una parte JSON y, opcionalmente, una parte de archivo.
+    * Util para endpoints atomicos de creacion/edicion que combinan datos estructurados y un blob.
+    *
+    * @param path         Ruta absoluta sin baseUrl (ej. "/api/pacientes").
+    * @param method       "POST" o "PUT".
+    * @param jsonPartName Nombre de la parte JSON (ej. "paciente").
+    * @param jsonBody     Objeto a serializar como JSON.
+    * @param filePartName Nombre de la parte archivo (ej. "foto"). Puede ser null si no hay archivo.
+    * @param fileBytes    Bytes del archivo. Puede ser null.
+    * @param fileName     Nombre del archivo. Puede ser null.
+    * @param fileMime     Content-Type del archivo (ej. "image/png"). Puede ser null.
+    * @param responseType Clase de la respuesta a deserializar.
+    */
+   public <T> T sendMultipart(String path, String method,
+                              String jsonPartName, Object jsonBody,
+                              String filePartName, byte[] fileBytes,
+                              String fileName, String fileMime,
+                              Class<T> responseType) {
+       return ejecutarConReintento(() -> ejecutarMultipart(path, method,
+               jsonPartName, jsonBody, filePartName, fileBytes, fileName, fileMime, responseType));
+   }
+
+   private <T> T ejecutarMultipart(String path, String method,
+                                   String jsonPartName, Object jsonBody,
+                                   String filePartName, byte[] fileBytes,
+                                   String fileName, String fileMime,
+                                   Class<T> responseType) {
+       try {
+           String boundary = "----RehabiAppBoundary" + System.currentTimeMillis();
+           String json = objectMapper.writeValueAsString(jsonBody);
+
+           // Construir cuerpo multipart con dos partes: json + archivo opcional
+           java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+
+           // Parte JSON
+           String jsonHeader = "--" + boundary + "\r\n"
+                   + "Content-Disposition: form-data; name=\"" + jsonPartName + "\"\r\n"
+                   + "Content-Type: application/json\r\n\r\n";
+           out.write(jsonHeader.getBytes(StandardCharsets.UTF_8));
+           out.write(json.getBytes(StandardCharsets.UTF_8));
+           out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+
+           // Parte archivo (opcional)
+           if (fileBytes != null && fileBytes.length > 0) {
+               String fileHeader = "--" + boundary + "\r\n"
+                       + "Content-Disposition: form-data; name=\"" + filePartName
+                       + "\"; filename=\"" + fileName + "\"\r\n"
+                       + "Content-Type: " + fileMime + "\r\n\r\n";
+               out.write(fileHeader.getBytes(StandardCharsets.UTF_8));
+               out.write(fileBytes);
+               out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+           }
+
+           // Cierre del boundary
+           out.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+           byte[] cuerpo = out.toByteArray();
+
+           HttpRequest.Builder builder = HttpRequest.newBuilder()
+                   .uri(URI.create(baseUrl + path))
+                   .timeout(timeout)
+                   .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                   .header("Authorization", "Bearer " + accessToken);
+
+           if ("PUT".equalsIgnoreCase(method)) {
+               builder.PUT(HttpRequest.BodyPublishers.ofByteArray(cuerpo));
+           } else {
+               builder.POST(HttpRequest.BodyPublishers.ofByteArray(cuerpo));
+           }
+
+           HttpResponse<String> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+           LOG.debug("{} multipart {}{} -> {}", method, baseUrl, path, response.statusCode());
+
+           if (response.statusCode() == 200 || response.statusCode() == 201) {
+               if (responseType == Void.class || response.body() == null || response.body().isEmpty()) {
+                   return null;
+               }
+               return objectMapper.readValue(response.body(), responseType);
+           }
+           manejarErrorHttp(response.statusCode(), response.body());
+           return null;
+       } catch (ConexionException | AutenticacionException | PermisoException
+                | ValidacionException | DuplicadoException e) {
+           throw e;
+       } catch (Exception e) {
+           throw new ConexionException("Error al enviar multipart: " + e.getMessage(), e);
+       }
+   }
+   ```
+
+2. **Imports nuevos** en `ApiClient.java`: `java.io.ByteArrayOutputStream`, `java.nio.charset.StandardCharsets`.
+
+**Archivo:** `/home/alaslibres/DAM/RehabiAPP/desktop/src/main/java/com/javafx/DAO/PacienteDAO.java`
+
+3. **Modificar `insertar(Paciente paciente)`** para aceptar un `byte[] fotoBytes` opcional y usar el nuevo método multipart:
+   ```java
+   /**
+    * Inserta un nuevo paciente con telefonos, direccion y foto opcional en UNA SOLA llamada HTTP atomica.
+    * El servidor garantiza la atomicidad via @Transactional. Si cualquier parte falla, no queda nada persistido.
+    *
+    * @param paciente  Paciente a crear (con telefonos y direccion ya seteados).
+    * @param fotoBytes Bytes de la foto, o null si no hay foto.
+    */
+   public void insertar(Paciente paciente, byte[] fotoBytes) {
+       api.sendMultipart(
+               "/api/pacientes", "POST",
+               "paciente", paciente.toPacienteRequest(),
+               "foto", fotoBytes,
+               fotoBytes != null ? "foto.png" : null,
+               fotoBytes != null ? "image/png" : null,
+               PacienteResponse.class
+       );
+   }
+
+   /** Sobrecarga sin foto, llama al multipart con fotoBytes=null. */
+   public void insertar(Paciente paciente) {
+       insertar(paciente, null);
+   }
+   ```
+
+4. **Modificar `actualizar(Paciente paciente, String dniOriginal)`** análogamente:
+   ```java
+   public void actualizar(Paciente paciente, String dniOriginal, byte[] fotoBytes) {
+       api.sendMultipart(
+               "/api/pacientes/" + dniOriginal, "PUT",
+               "paciente", paciente.toPacienteRequest(),
+               "foto", fotoBytes,
+               fotoBytes != null ? "foto.png" : null,
+               fotoBytes != null ? "image/png" : null,
+               PacienteResponse.class
+       );
+   }
+
+   public void actualizar(Paciente paciente, String dniOriginal) {
+       actualizar(paciente, dniOriginal, null);
+   }
+   ```
+
+5. **Mantener** `insertarFoto(String dni, File archivo)` y `obtenerFoto(String dni)` intactos — siguen siendo válidos para edición aislada de foto desde otras pantallas.
+
+**Archivo:** `/home/alaslibres/DAM/RehabiAPP/desktop/src/main/java/com/javafx/service/PacienteService.java`
+
+6. **Reescribir el método `insertar(Paciente, String, String, File)`** para una sola llamada al DAO:
+   ```java
+   /**
+    * Inserta un paciente con telefonos y foto en una unica transaccion atomica.
+    * Si la foto falla, el paciente NO se crea (rollback total en el server).
+    */
+   public void insertar(Paciente paciente, String tel1, String tel2, File archivoFoto) {
+       paciente.setTelefono1(tel1 != null ? tel1 : "");
+       paciente.setTelefono2(tel2 != null ? tel2 : "");
+       byte[] fotoBytes = leerBytesArchivo(archivoFoto);
+       pacienteDAO.insertar(paciente, fotoBytes);
+   }
+   ```
+
+7. **Reescribir `actualizar(Paciente, String, String, String, File)`** análogamente:
+   ```java
+   public void actualizar(Paciente paciente, String dniOriginal, String tel1, String tel2, File archivoFoto) {
+       paciente.setTelefono1(tel1 != null ? tel1 : "");
+       paciente.setTelefono2(tel2 != null ? tel2 : "");
+       byte[] fotoBytes = leerBytesArchivo(archivoFoto);
+       pacienteDAO.actualizar(paciente, dniOriginal, fotoBytes);
+   }
+   ```
+
+8. **Añadir helper privado `leerBytesArchivo(File f)`:**
+   ```java
+   /**
+    * Lee los bytes de un archivo, devolviendo null si el archivo es null.
+    * @throws com.javafx.excepcion.ValidacionException si el archivo no se puede leer.
+    */
+   private byte[] leerBytesArchivo(File archivo) {
+       if (archivo == null) return null;
+       try {
+           return java.nio.file.Files.readAllBytes(archivo.toPath());
+       } catch (java.io.IOException e) {
+           throw new com.javafx.excepcion.ValidacionException(
+                   "No se pudo leer el archivo: " + archivo.getName(), "foto");
+       }
+   }
+   ```
+
+9. **Eliminar las sobrecargas obsoletas** `insertar(Paciente, String, String)` y `actualizar(Paciente, String, String, String)` SOLO si ningún controlador las usa. Verificar con un grep:
+   ```bash
+   grep -rn "pacienteService.insertar(" desktop/src/main/java/com/javafx/Interface/
+   grep -rn "pacienteService.actualizar(" desktop/src/main/java/com/javafx/Interface/
+   ```
+   Si hay usos sin foto, mantener una sobrecarga de 3 parámetros que delegue al de 4 con `archivoFoto=null`. Si no hay usos, eliminar.
+
+**Verificación:**
 ```bash
 cd /home/alaslibres/DAM/RehabiAPP/desktop
-./gradlew clean jar
-unzip -l build/libs/desktop.jar | grep -E "(api\.properties|simplelogger)"
+./gradlew compileJava
 ```
 
-Debe listar ambos ficheros. Si NO aparecen:
+---
 
-- Revisar `build.gradle` bloque `processResources` o `sourceSets.main.resources.srcDirs`.
-- Hallazgo H7/H8: si el bloque excluye explicitamente `**/*.properties`, esa es la causa.
-- Reportar al thinker antes de modificar build.gradle (podria romper la inclusion de `*.jrxml` de JasperReports).
+### FASE 7 — Desktop: wire campos de dirección del controlador al `Paciente`
 
-### 2.2 Confirmar carga en runtime
+**Objetivo:** que los campos `txtCalle/txtNumero/txtPiso/txtCodigoPostal/txtLocalidad/txtProvincia` (que hoy se validan pero no se transmiten) acaben en el objeto `Paciente`.
 
-Tras la FASE 1 ya tenemos el log del constructor. El doer debe arrancar la app y verificar:
+**Archivo:** `/home/alaslibres/DAM/RehabiAPP/desktop/src/main/java/com/javafx/Interface/controladorAgregarPaciente.java`
 
-```
-ApiClient inicializado: baseUrl=http://localhost:8080, timeoutMs=30000
-api.properties cargado correctamente
-```
+1. **En el método `guardarPaciente()` (alrededor de la línea 382)**, después de los `paciente.setMedicacionActual(...)` y antes del bloque `try { if (modoEdicion) ...`, añadir:
+   ```java
+   // Configurar direccion (los validadores ya garantizan que calle/cp/localidad estan presentes)
+   paciente.setCalle(txtCalle.getText().trim());
+   paciente.setNumero(txtNumero.getText().trim());
+   paciente.setPiso(txtPiso.getText().trim());
+   paciente.setCodigoPostal(txtCodigoPostal.getText().trim());
+   paciente.setLocalidad(txtLocalidad.getText().trim());
+   paciente.setProvincia(txtProvincia.getText().trim());
+   ```
 
-Si en su lugar aparece:
+2. **En el modo edición**, también poblar los campos al cargar el paciente. Buscar el método que rellena el formulario al editar (probablemente `cargarDatosPaciente(Paciente)` o similar) y añadir:
+   ```java
+   txtCalle.setText(paciente.getCalle() != null ? paciente.getCalle() : "");
+   txtNumero.setText(paciente.getNumero() != null ? paciente.getNumero() : "");
+   txtPiso.setText(paciente.getPiso() != null ? paciente.getPiso() : "");
+   txtCodigoPostal.setText(paciente.getCodigoPostal() != null ? paciente.getCodigoPostal() : "");
+   txtLocalidad.setText(paciente.getLocalidad() != null ? paciente.getLocalidad() : "");
+   txtProvincia.setText(paciente.getProvincia() != null ? paciente.getProvincia() : "");
+   ```
 
-```
-No se pudo cargar api.properties, usando fallback hardcoded http://localhost:8080
-```
+3. **Eliminar el comentario engañoso** en las líneas 433–435 y 452–454:
+   - Cambiar `"La operacion es atomica: paciente + telefonos + foto en una sola transaccion."`
+   - Por `"Atomico server-side: una sola peticion multipart al endpoint POST/PUT /api/pacientes."`
+   - Eliminar también el comentario `// (Se mantiene PacienteDAO solo para operaciones de foto que aún no están en el servicio)` y el `// TODO: Mover operaciones de foto al servicio` (líneas 144-146) — ya no aplica.
 
-entonces hay un problema de classpath. Posibles causas y orden de investigacion:
+**Verificación:** `./gradlew compileJava` y arrancar la aplicación: crear un paciente nuevo con dirección y foto, verificar que se persiste correctamente con `GET /api/pacientes/{dni}` (la respuesta debe incluir el bloque `direccion`).
 
-1. El recurso esta en `src/main/resources/config/api.properties` pero el codigo lo busca en `/api.properties` (sin `/config/`) o viceversa. Verificar la ruta exacta en `ApiClient.cargarPropiedades()`.
-2. `getClass().getResourceAsStream(...)` vs `getClass().getClassLoader().getResourceAsStream(...)`: la primera busca relativa al paquete, la segunda absoluta. Confirmar cual se usa y si la ruta es coherente.
+---
 
-### 2.3 Endurecer la carga (mejora opcional pero recomendada)
+### FASE 8 — Sanitario: verificación + documentación (no requiere código)
 
-Anadir un fallback adicional por variable de entorno:
+**Objetivo:** confirmar que `sanitario + rol + telefonos` ya es atómico y dejarlo documentado.
+
+**Acciones:**
+
+1. **Verificar la atomicidad actual** con un test manual via `curl`:
+   ```bash
+   TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"dni":"ADMIN0000","contrasena":"admin"}' \
+     | python3 -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")
+
+   curl -X POST http://localhost:8080/api/sanitarios \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "dniSan":"99999998Z",
+       "nombreSan":"Test",
+       "apellido1San":"Atomico",
+       "emailSan":"test.atomico@example.com",
+       "contrasena":"test1234",
+       "cargo":"NURSE",
+       "telefonos":["600999888","600999889"]
+     }'
+   ```
+   Debe devolver `201 Created`. Verificar en BD que se crearon 1 fila en `sanitario`, 1 en `sanitario_agrega_sanitario` (rol), 2 en `telefono_sanitario` — todas con el mismo `dni_san`.
+
+2. **Verificar el rollback** simulando un fallo: enviar el mismo `dniSan` dos veces. La segunda debe fallar con `409 Conflict`/`DuplicadoException` y NO debe haber creado roles ni teléfonos huérfanos. Comprobar:
+   ```sql
+   SELECT COUNT(*) FROM telefono_sanitario WHERE dni_san = '99999998Z';
+   -- Debe ser 2 (los del primer insert), no 4.
+   ```
+
+3. **Editar el JavaDoc de `desktop/SanitarioService.java`** (líneas 11-15) para reflejar el estado real:
+   ```java
+   /**
+    * Capa de servicio para operaciones de Sanitario.
+    *
+    * <p><b>Atomicidad:</b> La creacion y actualizacion de un sanitario son
+    * operaciones atomicas server-side. Una sola llamada HTTP a POST/PUT /api/sanitarios
+    * dispara una unica transaccion @Transactional en la API que persiste sanitario,
+    * rol (sanitario_agrega_sanitario) y telefonos (telefono_sanitario) via cascade.
+    * Si cualquier parte falla, se hace rollback completo.</p>
+    *
+    * <p>Delega directamente al SanitarioDAO que consume la API REST.
+    * El BCrypt y la auditoria son responsabilidad de la API.</p>
+    */
+   ```
+
+4. **No tocar `SanitarioService.java` ni `SanitarioDAO.java` del desktop** — su lógica ya es correcta.
+
+5. **No tocar `SanitarioService.java` ni `SanitarioController.java` de la API** — ya son atómicos.
+
+---
+
+### FASE 9 — Tests JUnit 5 + Mockito (REQUERIDO por `desktop/CLAUDE.md §2.4`)
+
+**Objetivo:** garantizar que los wrappers desktop hacen una sola llamada y propagan errores correctamente. Cubre el contrato sin necesidad de stack real.
+
+**Archivo a crear:** `/home/alaslibres/DAM/RehabiAPP/desktop/src/test/java/com/javafx/service/PacienteServiceTest.java`
 
 ```java
-// pseudo-codigo, el doer lo escribe limpio
-String envUrl = System.getenv("REHABIAPP_API_URL");
-if (envUrl != null && !envUrl.isBlank()) {
-    baseUrl = envUrl;
-    LOG.info("baseUrl override desde REHABIAPP_API_URL = {}", baseUrl);
+package com.javafx.service;
+
+import com.javafx.Clases.ApiClient;
+import com.javafx.Clases.Paciente;
+import com.javafx.DAO.PacienteDAO;
+import com.javafx.dto.PacienteResponse;
+import com.javafx.excepcion.ConexionException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.io.File;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+/**
+ * Tests del wrapper desktop PacienteService.
+ * Verifica que la insercion/actualizacion compuesta hace UNA SOLA llamada
+ * al PacienteDAO (que internamente hace UNA SOLA llamada multipart al ApiClient).
+ */
+@ExtendWith(MockitoExtension.class)
+class PacienteServiceTest {
+
+    @Mock private PacienteDAO pacienteDAO;
+    private PacienteService service;
+
+    @BeforeEach
+    void setUp() {
+        // Inyectar el mock por reflexion ya que PacienteService crea el DAO en el constructor.
+        // Alternativa preferida: refactorizar PacienteService para aceptar el DAO por constructor.
+        service = new PacienteService();
+        // ... usar reflection para reemplazar el campo final pacienteDAO con el mock ...
+    }
+
+    @Test
+    void insertar_conFoto_haceUnaSolaLlamadaAtomica() {
+        Paciente paciente = nuevoPacienteValido();
+        File foto = new File("src/test/resources/foto-test.png"); // colocar un PNG mock pequeno
+
+        service.insertar(paciente, "600111222", "600222333", foto);
+
+        verify(pacienteDAO, times(1)).insertar(eq(paciente), any(byte[].class));
+        verifyNoMoreInteractions(pacienteDAO);
+    }
+
+    @Test
+    void insertar_sinFoto_haceUnaSolaLlamadaConBytesNull() {
+        Paciente paciente = nuevoPacienteValido();
+
+        service.insertar(paciente, "600111222", "", null);
+
+        verify(pacienteDAO, times(1)).insertar(eq(paciente), isNull());
+    }
+
+    @Test
+    void insertar_propagaConexionExceptionSinDejarEstadoParcial() {
+        Paciente paciente = nuevoPacienteValido();
+        doThrow(new ConexionException("API caida")).when(pacienteDAO).insertar(any(), any());
+
+        assertThrows(ConexionException.class,
+                () -> service.insertar(paciente, "600111222", "", null));
+
+        // Garantia: solo hubo UN intento, no hay compensacion (no hace falta — el server hace rollback)
+        verify(pacienteDAO, times(1)).insertar(any(), any());
+    }
+
+    @Test
+    void actualizar_conFoto_haceUnaSolaLlamadaAtomica() {
+        Paciente paciente = nuevoPacienteValido();
+        File foto = new File("src/test/resources/foto-test.png");
+
+        service.actualizar(paciente, "12345678A", "600111222", "", foto);
+
+        verify(pacienteDAO, times(1)).actualizar(eq(paciente), eq("12345678A"), any(byte[].class));
+    }
+
+    private Paciente nuevoPacienteValido() {
+        Paciente p = new Paciente();
+        p.setDni("99999999X");
+        p.setNombre("Test");
+        // ... setear campos minimos validos ...
+        return p;
+    }
 }
 ```
 
-**Justificacion (thinker):** facilita pruebas en distintas maquinas (local, AWS, CI) sin recompilar. Es una mejora pequena de portabilidad.
+**Nota del Thinker para el Doer:** el `PacienteService` actual crea su `PacienteDAO` con `new` en el constructor (línea 18), lo que dificulta el mocking. **Antes de escribir los tests, refactorizar `PacienteService` para aceptar el DAO por constructor** (constructor injection con un DAO opcional). Mantener un constructor sin parámetros que llame al constructor con `new PacienteDAO()` para no romper el resto del código:
 
-### Criterio de aceptacion de la FASE 2
+```java
+public class PacienteService {
 
-- [ ] `desktop.jar` contiene `config/api.properties` y `simplelogger.properties`.
-- [ ] El log de arranque confirma la carga del fichero.
-- [ ] Si se aplica 2.3, el override por env funciona (probado lanzando con `REHABIAPP_API_URL=http://test:9090 ./gradlew run` y verificando el log).
+    private final PacienteDAO pacienteDAO;
 
----
+    public PacienteService() {
+        this(new PacienteDAO());
+    }
 
-## FASE 3: Sembrar usuarios de prueba en la BD
+    /** Constructor para tests con DAO inyectado. */
+    PacienteService(PacienteDAO pacienteDAO) {
+        this.pacienteDAO = pacienteDAO;
+    }
+    // ...
+}
+```
 
-**Objetivo:** validar el extremo /api/auth/login con credenciales reales reproducibles. Resuelve la hipotesis #2 y #4.
+Aplicar el mismo patrón a `SanitarioService`.
 
-**Importante:** esto es responsabilidad del Doer del Agente 3 SOLO en la parte de generacion del SQL y documentacion. La modificacion del esquema de migraciones de Flyway pertenece al Agente 1. El Doer entregara el script al thinker, que decidira si delega al Agente 1 o lo aplica como script ad-hoc local.
+**Archivo a crear:** `/home/alaslibres/DAM/RehabiAPP/desktop/src/test/java/com/javafx/service/SanitarioServiceTest.java`
 
----
+Estructura idéntica a `PacienteServiceTest`. Tests:
+- `insertar_haceUnaSolaLlamadaAtomicaAlDAO()`
+- `insertar_propagaConexionExceptionSinReintentar()`
+- `actualizar_haceUnaSolaLlamadaAtomicaAlDAO()`
+- `cambiarContrasena_haceUnaSolaLlamada()`
 
-### Actualizacion 2026-04-07: reseed completo (SUSTITUYE a la subseccion 3.3 original)
-
-#### Hallazgo durante la ejecucion de FASE 0
-
-Al ejecutar los smoke tests, el Doer Sonnet descubrio que:
-
-1. PG levanta correctamente con `admin/admin` (docker-compose).
-2. La API arranca correctamente con `.env.local` apuntando a esas credenciales (FASE 0.3 Opcion A aplicada con exito).
-3. `/actuator/health` responde 200 OK (UP).
-4. **Pero el login con curl devuelve `500 Internal Server Error`**, no 401.
-
-La causa raiz: los 3 sanitarios sembrados en la BD por desarrollo previo tienen las contrasenas almacenadas en **texto plano**:
-
-| dni_san | contrasena_san (plain) |
-|---------|------------------------|
-| ADMIN0000 | admin |
-| 78834700J | alejandro123 |
-| 11111111B | maria123 |
-
-`AuthApplicationService` invoca `BCrypt.checkpw(input, storedHash)` y BCrypt **lanza `IllegalArgumentException`** porque "admin" no tiene la estructura `$2a$12$...`. La excepcion sube al `GlobalExceptionHandler` y se traduce a 500 con body `{"error":"Error interno del servidor"}`.
-
-Esto confirma que la causa raiz original de "el desktop no conecta" es una combinacion de:
-- (resuelto en FASE 0.3) Mismatch de credenciales API <-> PG.
-- (pendiente, esta seccion) Datos de usuario incorrectos en BD.
-
-#### Decision del Thinker (Agente 3): reseed completo
-
-**Borramos los tres usuarios actuales y rehacemos la semilla** con un conjunto minimo de usuarios de prueba que cumplan TODAS las constraints del esquema y tengan contrasenas BCrypt validas. Esto sustituye lo descrito en la subseccion 3.3 original (que queda marcada como SUPERSEDED y se conserva mas abajo solo como referencia historica).
-
-#### Composicion del nuevo seed (4 entidades: 3 sanitarios + 1 paciente)
-
-| Tipo | DNI | Rol | Credenciales | Proposito |
-|------|-----|-----|--------------|-----------|
-| Sanitario | `admin0000` | SPECIALIST | `admin0000` / `admin` | Usuario administrador unico para acceso pleno durante desarrollo |
-| Sanitario | (DNI espanol valido inventado) | SPECIALIST | DNI / `medico1234` | Medico especialista de ejemplo |
-| Sanitario | (DNI espanol valido inventado) | NURSE | DNI / `enfermero1234` | Enfermero de ejemplo |
-| Paciente | (DNI espanol valido inventado) | n/a | n/a (no hace login) | Paciente de ejemplo asignado al medico especialista |
-
-**Aclaraciones importantes para el Doer:**
-
-- En este sistema **no existe un rol "ADMIN" distinto**. Solo hay `SPECIALIST` y `NURSE` (segun `SecurityConfig.java` y la columna `cargo` de `sanitario_agrega_sanitario`). El "admin" es simplemente un sanitario con rol `SPECIALIST` cuyo DNI es `admin0000`.
-- DNI `admin0000` no cumple el formato DNI espanol estandar (8 digitos + letra). El esquema actual NO enforza CHECK de formato sobre `dni_san`, asi que se acepta tal cual. Si el doer encuentra una constraint del esquema que lo bloquee, **escalar al thinker antes de modificar nada del esquema**.
-- Los demas DNIs deben inventarse con formato espanol valido (8 digitos + letra, letra calculada con el algoritmo modulo 23). El doer puede usar la tabla estandar `T R W A G M Y F P D X B N J Z S Q V H L C K E` (resto de dividir el numero entre 23 -> letra correspondiente).
-- Nombres, apellidos, emails, telefonos, direcciones — todo inventado, plausible, en castellano, sin emojis, sin datos reales de personas.
-- `email_san` (en sanitario) y `email_pac` + `num_ss` (en paciente) son UNIQUE.
-- Los emails no deben colisionar con los actuales (`admin@rehabiapp.com`, `alejandro.pozo@rehabiapp.com`, `maria.lopez@rehabiapp.com`). Como ademas vamos a borrar esos usuarios, tampoco habra colision posible.
-
-#### Pasos del Doer (sustituyen 3.1, 3.2, 3.3, 3.4 originales)
-
-**Paso A — Generar hashes BCrypt cost 12** (comando ya verificado funcional en la FASE 0):
-
+**Crear archivo PNG mock:** `/home/alaslibres/DAM/RehabiAPP/desktop/src/test/resources/foto-test.png` (cualquier PNG válido pequeño, p.ej. 100×100 px). Puede generarse con:
 ```bash
-htpasswd -nbBC 12 "" admin          | tr -d ':\n' | sed 's/\$2y\$/\$2a\$/'
-htpasswd -nbBC 12 "" medico1234     | tr -d ':\n' | sed 's/\$2y\$/\$2a\$/'
-htpasswd -nbBC 12 "" enfermero1234  | tr -d ':\n' | sed 's/\$2y\$/\$2a\$/'
+mkdir -p /home/alaslibres/DAM/RehabiAPP/desktop/src/test/resources
+python3 -c "
+import struct, zlib
+def png(w,h):
+    sig = b'\\x89PNG\\r\\n\\x1a\\n'
+    ihdr = struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)
+    ihdr_chunk = struct.pack('>I', len(ihdr)) + b'IHDR' + ihdr + struct.pack('>I', zlib.crc32(b'IHDR'+ihdr))
+    raw = b''.join(b'\\x00' + b'\\xff\\xff\\xff\\xff'*w for _ in range(h))
+    comp = zlib.compress(raw)
+    idat_chunk = struct.pack('>I', len(comp)) + b'IDAT' + comp + struct.pack('>I', zlib.crc32(b'IDAT'+comp))
+    iend_chunk = struct.pack('>I', 0) + b'IEND' + struct.pack('>I', zlib.crc32(b'IEND'))
+    return sig + ihdr_chunk + idat_chunk + iend_chunk
+open('/home/alaslibres/DAM/RehabiAPP/desktop/src/test/resources/foto-test.png','wb').write(png(10,10))
+"
 ```
 
-Guardar los tres hashes para usarlos en el script SQL. Si htpasswd cambia los hashes en cada llamada (es BCrypt con sal aleatoria), eso es esperado y correcto.
-
-**Paso B — Crear `desktop/scripts/reseed-dev.sql`** con la siguiente estructura:
-
-```sql
--- Reseed de datos de desarrollo para el desktop SGE.
--- SOLO para desarrollo local. NO ejecutar en produccion.
--- Genera: 3 sanitarios (admin SPECIALIST, medico SPECIALIST, enfermero NURSE) + 1 paciente.
--- Credenciales documentadas en desktop/scripts/README.md.
-
-BEGIN;
-
--- 1. Limpiar datos previos en orden FK-safe
-DELETE FROM cita;
-DELETE FROM telefono_paciente;
-DELETE FROM telefono_sanitario;
-DELETE FROM paciente_tratamiento;     -- si existe la tabla
-DELETE FROM paciente_discapacidad;    -- si existe la tabla
-DELETE FROM paciente;
-DELETE FROM sanitario_agrega_sanitario;
-DELETE FROM sanitario;
-
--- 2. Asegurar localidad y CP de prueba
-INSERT INTO localidad (nombre_localidad, provincia)
-  VALUES ('Madrid', 'Madrid')
-  ON CONFLICT (nombre_localidad) DO NOTHING;
-
-INSERT INTO cp (cp, nombre_localidad)
-  VALUES ('28001', 'Madrid')
-  ON CONFLICT (cp) DO NOTHING;
-
--- 3. Direccion de prueba (capturamos id_direccion para el paciente)
-WITH dir AS (
-  INSERT INTO direccion (calle, numero, piso, cp)
-  VALUES ('Calle de la Prueba', '1', '1A', '28001')
-  RETURNING id_direccion
-)
-SELECT id_direccion FROM dir;
--- El doer puede tambien hacer un INSERT independiente y leer el currval/RETURNING.
-
--- 4. Sanitarios
-INSERT INTO sanitario (
-  dni_san, nombre_san, apellido1_san, apellido2_san, email_san,
-  num_de_pacientes, contrasena_san, activo
-) VALUES
-  ('admin0000', 'Admin',  'Sistema',  NULL,    'admin@rehabiapp.local',
-   0, '<HASH_BCRYPT_admin>', TRUE),
-  ('<DNI_MEDICO>', 'Carlos', 'Garcia', 'Lopez', 'carlos.garcia@rehabiapp.local',
-   1, '<HASH_BCRYPT_medico1234>', TRUE),
-  ('<DNI_ENFERMERO>', 'Lucia', 'Martinez', 'Ruiz', 'lucia.martinez@rehabiapp.local',
-   0, '<HASH_BCRYPT_enfermero1234>', TRUE);
-
-INSERT INTO sanitario_agrega_sanitario (dni_san, cargo) VALUES
-  ('admin0000',     'SPECIALIST'),
-  ('<DNI_MEDICO>',  'SPECIALIST'),
-  ('<DNI_ENFERMERO>','NURSE');
-
--- 5. Telefonos (opcional pero recomendado para que la UI no muestre listas vacias)
-INSERT INTO telefono_sanitario (dni_san, telefono) VALUES
-  ('admin0000',     '600000000'),
-  ('<DNI_MEDICO>',  '600111111'),
-  ('<DNI_ENFERMERO>','600222222');
-
--- 6. Paciente de prueba asignado al MEDICO ESPECIALISTA (no al admin)
--- IMPORTANTE: alergias / antecedentes / medicacion_actual se dejan NULL
--- porque la app los espera cifrados con AES-256-GCM. Si el seed los pone en
--- texto plano, el ApiClient/Service revientan al deserializar.
-INSERT INTO paciente (
-  dni_pac, dni_san, nombre_pac, apellido1_pac, apellido2_pac, edad_pac,
-  email_pac, num_ss, id_direccion,
-  discapacidad_pac, tratamiento_pac, estado_tratamiento,
-  protesis, fecha_nacimiento, sexo,
-  alergias, antecedentes, medicacion_actual,
-  consentimiento_rgpd, fecha_consentimiento, activo
-) VALUES (
-  '<DNI_PACIENTE>', '<DNI_MEDICO>', 'Pedro', 'Sanchez', 'Gomez', 45,
-  'pedro.sanchez@example.local', '281234567890',
-  (SELECT MAX(id_direccion) FROM direccion),
-  NULL, NULL, NULL,
-  FALSE, '1980-05-15', 'H',
-  NULL, NULL, NULL,
-  TRUE, '2026-04-07', TRUE
-);
-
-COMMIT;
-
--- Verificacion final
-SELECT dni_san, email_san, activo FROM sanitario ORDER BY dni_san;
-SELECT s.dni_san, sas.cargo FROM sanitario s
-  LEFT JOIN sanitario_agrega_sanitario sas USING (dni_san)
-  ORDER BY s.dni_san;
-SELECT dni_pac, dni_san, activo FROM paciente;
-```
-
-**Notas tecnicas para el Doer al rellenar el script:**
-
-- Sustituir los 4 placeholders `<DNI_MEDICO>`, `<DNI_ENFERMERO>`, `<DNI_PACIENTE>`, y los 3 `<HASH_BCRYPT_*>` por valores reales antes de ejecutar.
-- Si el esquema de `sexo` usa CHECK con valores distintos a `'H'` / `'M'` (puede ser `'HOMBRE'` / `'MUJER'` o codigos numericos), el doer debe inspeccionar `V1__esquema_core.sql` y ajustar.
-- Si la tabla `paciente_discapacidad` o `paciente_tratamiento` aun no existe (segun checklist de `desktop/CLAUDE.md` seccion 7 estaban pendientes de crear), comentar el `DELETE` correspondiente con `--`.
-- Si alguna FK impide el orden de borrado propuesto, NO usar `TRUNCATE ... CASCADE`. Reordenar los DELETE manualmente segun el grafo de dependencias y, si no se puede, escalar al thinker.
-- El bloque `WITH dir AS ...` del paso 3 es ilustrativo; el doer puede simplificarlo a un `INSERT ... RETURNING` separado y luego usar `currval('direccion_id_direccion_seq')` o un `SELECT MAX(id_direccion)`.
-- **NO borrar:** `discapacidad`, `tratamiento`, `discapacidad_tratamiento`, `nivel_progresion`, `localidad`, `cp`, `direccion`. Son catalogos / datos de soporte que pueden reusarse. Si el doer quiere empezar 100% limpio, escalar al thinker antes.
-
-**Paso C — Aplicar el script** en la BD via docker exec:
-
-```bash
-docker exec -i rehabiapp-db psql -U admin -d rehabiapp \
-  < /home/alaslibres/DAM/RehabiAPP/desktop/scripts/reseed-dev.sql
-```
-
-Capturar la salida completa. Cualquier error de `ERROR:` debe pararse y reportarse al thinker antes de continuar.
-
-**Paso D — Verificar con curl** los 3 logins:
-
-```bash
-# admin
-curl -s -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"dni":"admin0000","contrasena":"admin"}' | jq .
-
-# medico ejemplo
-curl -s -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"dni":"<DNI_MEDICO>","contrasena":"medico1234"}' | jq .
-
-# enfermero ejemplo
-curl -s -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"dni":"<DNI_ENFERMERO>","contrasena":"enfermero1234"}' | jq .
-```
-
-Los tres deben devolver 200 con `accessToken`, `refreshToken` y el `rol` correcto (`SPECIALIST`, `SPECIALIST`, `NURSE`).
-
-**Paso E — Documentar credenciales** en `desktop/scripts/README.md`:
-
-```markdown
-# Scripts de desarrollo
-
-## reseed-dev.sql
-
-Borra todos los sanitarios y pacientes actuales y crea un seed minimo
-para desarrollo local. **NO USAR EN PRODUCCION.**
-
-### Aplicar
-
-    docker exec -i rehabiapp-db psql -U admin -d rehabiapp < desktop/scripts/reseed-dev.sql
-
-### Credenciales generadas
-
-| DNI | Password | Rol | Tipo |
-|-----|----------|-----|------|
-| admin0000 | admin | SPECIALIST | Sanitario admin |
-| <DNI_MEDICO> | medico1234 | SPECIALIST | Sanitario medico ejemplo |
-| <DNI_ENFERMERO> | enfermero1234 | NURSE | Sanitario enfermero ejemplo |
-| <DNI_PACIENTE> | n/a (no logea) | n/a | Paciente ejemplo asignado al medico |
-
-Las contrasenas se almacenan como hash BCrypt cost 12.
-Las contrasenas en plano de esta tabla son SOLO para desarrollo local.
-```
-
-#### Criterio de aceptacion del reseed
-
-- [ ] `SELECT COUNT(*) FROM sanitario;` devuelve **exactamente 3**.
-- [ ] `SELECT COUNT(*) FROM paciente;` devuelve **exactamente 1**.
-- [ ] Los 3 sanitarios tienen `activo = TRUE` y un `cargo` valido en `sanitario_agrega_sanitario`.
-- [ ] Los 3 logins curl devuelven 200 con el rol correcto.
-- [ ] No queda rastro de los usuarios anteriores (`ADMIN0000`, `78834700J`, `11111111B`).
-- [ ] `desktop/scripts/reseed-dev.sql` y `desktop/scripts/README.md` estan creados.
-- [ ] `./gradlew test` sigue verde (no se han tocado tests, deben seguir 74).
-
-#### Que pasa con la subseccion 3.3 original
-
-La subseccion 3.3 original ("Script de seed" con `00000001A` y `00000002B`) queda **SUPERSEDED**. **El doer NO debe ejecutarla.** Se conserva mas abajo en el documento solo como referencia historica del razonamiento previo del thinker.
-
----
-
-### 3.1 Comprobar estado actual de `sanitario`
-
-```bash
-PGPASSWORD=admin psql -h localhost -p 5432 -U admin -d rehabiapp \
-  -c "SELECT COUNT(*) FROM sanitario;"
-```
-
-- Si > 0, listar para ver si hay alguno usable: `SELECT dni_san, email_san, activo FROM sanitario LIMIT 10;`
-- Si = 0, generar script de seed (3.2).
-
-### 3.2 Generar hash BCrypt
-
-El doer NO debe inventar hashes. Generarlos con un comando reproducible:
-
+**Verificación:**
 ```bash
 cd /home/alaslibres/DAM/RehabiAPP/desktop
-./gradlew -q --console=plain --no-daemon \
-  -Pmain=com.javafx.util.GenerarHashBCrypt run --args='dev1234'
+./gradlew test
 ```
-
-Si la utility class `GenerarHashBCrypt` no existe (y NO existe en el codigo actual porque jBCrypt fue eliminado), el doer **no** debe recrearla en el desktop. En su lugar, usar el comando equivalente desde la API que sigue teniendo BCrypt:
-
-```bash
-cd /home/alaslibres/DAM/RehabiAPP/api
-./mvnw -q exec:java \
-  -Dexec.mainClass=org.springframework.security.crypto.bcrypt.BCrypt \
-  -Dexec.args="dev1234"
-```
-
-O alternativamente, usar `htpasswd -bnBC 12 "" dev1234 | tr -d ':\n' | sed 's/$2y/$2a/'` si htpasswd esta instalado.
-
-Documentar exactamente que comando funciono y guardar los hashes resultantes.
-
-### 3.3 Script de seed  ⚠ SUPERSEDED por la "Actualizacion 2026-04-07: reseed completo" al inicio de la FASE 3. NO EJECUTAR. Conservada solo como referencia historica.
-
-Crear `/home/alaslibres/DAM/RehabiAPP/desktop/scripts/seed-dev.sql` (nuevo fichero, NO va a Flyway):
-
-```sql
--- Seed de datos de desarrollo SOLO para pruebas locales del desktop.
--- NO ejecutar en produccion.
--- Usuarios: dev_specialist / dev1234, dev_nurse / nurse1234
-
--- direccion ficticia
-INSERT INTO localidad (nombre_localidad, provincia) VALUES ('Madrid', 'Madrid')
-  ON CONFLICT DO NOTHING;
-INSERT INTO cp (cp, nombre_localidad) VALUES ('28001', 'Madrid')
-  ON CONFLICT DO NOTHING;
-
--- sanitario especialista
-INSERT INTO sanitario (
-  dni_san, nombre_san, apellido1_san, apellido2_san, email_san,
-  num_de_pacientes, contrasena_san, activo
-) VALUES (
-  '00000001A', 'Dev', 'Specialist', NULL, 'dev.specialist@local',
-  0, '<HASH_BCRYPT_DE_dev1234>', TRUE
-) ON CONFLICT (dni_san) DO NOTHING;
-
-INSERT INTO sanitario_agrega_sanitario (dni_san, cargo)
-  VALUES ('00000001A', 'SPECIALIST') ON CONFLICT DO NOTHING;
-
--- sanitario enfermero
-INSERT INTO sanitario (
-  dni_san, nombre_san, apellido1_san, apellido2_san, email_san,
-  num_de_pacientes, contrasena_san, activo
-) VALUES (
-  '00000002B', 'Dev', 'Nurse', NULL, 'dev.nurse@local',
-  0, '<HASH_BCRYPT_DE_nurse1234>', TRUE
-) ON CONFLICT (dni_san) DO NOTHING;
-
-INSERT INTO sanitario_agrega_sanitario (dni_san, cargo)
-  VALUES ('00000002B', 'NURSE') ON CONFLICT DO NOTHING;
-```
-
-El doer sustituira `<HASH_BCRYPT_DE_xxx>` por los hashes reales generados en 3.2.
-
-### 3.4 Ejecutar el script
-
-```bash
-PGPASSWORD=admin psql -h localhost -p 5432 -U admin -d rehabiapp \
-  -f /home/alaslibres/DAM/RehabiAPP/desktop/scripts/seed-dev.sql
-```
-
-Validar:
-
-```bash
-PGPASSWORD=admin psql -h localhost -p 5432 -U admin -d rehabiapp \
-  -c "SELECT dni_san, email_san, activo FROM sanitario WHERE activo = TRUE;"
-```
-
-### 3.5 Re-test del login con curl
-
-```bash
-curl -s -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"dni":"00000001A","contrasena":"dev1234"}' | jq .
-```
-
-Debe devolver `accessToken`, `refreshToken`, `rol="SPECIALIST"`.
-
-### Criterio de aceptacion de la FASE 3
-
-- [ ] Tabla `sanitario` contiene al menos los dos usuarios seed.
-- [ ] curl al login devuelve 200 con JWT.
-- [ ] El script `seed-dev.sql` queda commiteado en `desktop/scripts/` con su README explicando como ejecutarlo.
+Debe pasar todos los tests existentes + los nuevos. **Si algún test antiguo se rompe por la refactorización del constructor, arreglarlo en la misma fase.**
 
 ---
 
-## FASE 4: Prueba end-to-end del login desde la UI JavaFX
+### FASE 10 — Verificación end-to-end
 
-**Objetivo:** validar que el flujo completo Desktop -> API -> PG funciona desde la interfaz, no solo desde curl.
+Ejecutar en este orden tras completar las fases 1–9:
 
-### 4.1 Setup del entorno
+1. **Compilación limpia API + Desktop:**
+   ```bash
+   cd /home/alaslibres/DAM/RehabiAPP/api && ./mvnw clean compile
+   cd /home/alaslibres/DAM/RehabiAPP/desktop && ./gradlew clean build
+   ```
 
-Tres terminales en paralelo:
+2. **Arranque del stack** (PostgreSQL + API + Desktop) según RUNBOOK.
 
-| Terminal | Comando | Que observar |
-|----------|---------|--------------|
-| 1 | `docker compose -f infra/docker-compose.yml up postgres` (sin `-d`) | Logs de PG |
-| 2 | `cd api && SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run` (con `.env.local` cargado) | Logs de la API. Si quieres mas verbosidad, anadir `--debug` |
-| 3 | `cd desktop && ./gradlew run` | Logs del desktop incluyendo trazas SLF4J de la FASE 1 |
+3. **E2E manual desde la UI:**
+   - Login con `ADMIN0000 / admin`.
+   - Pestaña Pacientes → "Añadir paciente".
+   - Rellenar TODOS los campos incluyendo dirección (Calle, Número, Piso, CP, Localidad, Provincia) y subir una foto.
+   - Guardar. Verificar: mensaje de éxito, paciente aparece en la lista, al abrir su ficha se ven dirección y foto.
+   - Editar el mismo paciente: cambiar Calle, dejar el resto, NO subir foto nueva. Guardar. Verificar que la foto previa se mantiene y la dirección se actualizó.
+   - Editar de nuevo: subir una foto distinta. Verificar que la nueva foto reemplaza la antigua.
 
-### 4.2 Subir nivel de log de Spring Security (temporal, en el lado API)
+4. **Verificación de atomicidad real (rollback test):**
+   - Intentar crear un paciente con un `dniPac` que ya existe (provoca error de duplicado en la API).
+   - Verificar en BD que NO quedó ningún registro huérfano:
+     ```sql
+     SELECT COUNT(*) FROM telefono_paciente WHERE dni_pac = '<dni-duplicado>';
+     SELECT COUNT(*) FROM direccion d
+        WHERE d.id_direccion NOT IN (SELECT id_direccion FROM paciente WHERE id_direccion IS NOT NULL);
+     ```
+     La primera consulta debe seguir devolviendo el COUNT del paciente original (no se duplican teléfonos). La segunda no debe crecer entre intentos (no hay direcciones huérfanas — `find-or-create` reutiliza si los datos ya coinciden).
 
-**Restriccion:** el Doer del Agente 3 NO toca `application-local.yml`. En su lugar, usar variable de entorno al arrancar:
+5. **Verificación de la atomicidad de la foto:**
+   - Crear un paciente nuevo con un archivo de foto inválido (p.ej. `.txt` renombrado a `.png`). La API debe responder error y NO debe haber creado nada en `paciente`. Verificar:
+     ```sql
+     SELECT * FROM paciente WHERE dni_pac = '<dni-test>';
+     ```
+     Debe devolver 0 filas.
 
-```bash
-LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG \
-  ./mvnw spring-boot:run
+6. **Verificación de Sanitario:**
+   - Crear un sanitario nuevo desde la UI con dos teléfonos.
+   - Verificar en BD: 1 fila en `sanitario`, 1 en `sanitario_agrega_sanitario`, 2 en `telefono_sanitario`, todas con el mismo DNI.
+   - Intentar crear el mismo sanitario otra vez (DNI duplicado). Debe fallar. Verificar que NO hay teléfonos ni rol huérfanos del segundo intento.
+
+7. **Tests automatizados:**
+   ```bash
+   cd /home/alaslibres/DAM/RehabiAPP/desktop && ./gradlew test
+   ```
+   Todos verdes. Si hay fallo, **arreglar antes** de avanzar — no marcar el checklist con tests rotos.
+
+---
+
+### FASE 11 — Migración Flyway documental (V9) y checklist
+
+**Objetivo:** dejar histórico de la nueva semántica multipart para entornos futuros. **No** aplica cambios de schema (no hay nuevas tablas — solo se empieza a usar `direccion` que ya existe).
+
+**Acción única:** la migración V9 NO es necesaria. La FASE 8 del plan anterior (V8) cubre las correcciones de schema. Esta tarea solo modifica código de aplicación. **Saltar este paso.**
+
+**Marcar checklist:** editar `/home/alaslibres/DAM/RehabiAPP/desktop/CLAUDE.md` sección `## 7. IMPLEMENTATION CHECKLIST → ### CRUD operations`. Cambiar las 3 líneas:
+
+```
+- [x] Implement atomic transactions (commit/rollback) in PacienteService for compound operations (patient + phones + address + photo).
+- [x] Implement atomic transactions in SanitarioService for compound operations (practitioner + role + phones).
+- [x] Integrate photo upload within the same transaction as patient INSERT.
 ```
 
-Esto es solo para la sesion de pruebas; al cerrar la terminal vuelve a INFO.
-
-### 4.3 Caso de prueba: login
-
-1. En la ventana de login, observar el indicador de conexion. Debe pintarse en verde tras 1-2 segundos. Si esta rojo, mirar la traza `Probando conexion a ...` en la terminal 3 para ver la causa exacta.
-2. Introducir `00000001A` / `dev1234`.
-3. Pulsar Iniciar Sesion.
-4. Comportamiento esperado:
-   - Terminal 3 (desktop): traza `Login: POST http://localhost:8080/api/auth/login (dni=00000001A)`, seguida de `Login OK para 00000001A, rol=SPECIALIST`.
-   - Terminal 2 (API): peticion 200 al endpoint con tiempo de respuesta.
-   - UI: se cierra el login y abre la VentanaPrincipal.
-
-### 4.4 Caso de prueba: listado de pacientes
-
-Tras el login, navegar al tab de pacientes. Debe ejecutarse `GET /api/pacientes?page=0&size=10000&sort=nombrePac,asc`.
-
-- Si la tabla esta vacia (porque no hay pacientes en BD), eso es OK; lo importante es que la peticion devuelva 200, no que haya datos.
-- Si devuelve 401, el JWT no se esta enviando. Revisar `ApiClient.get()` y el header `Authorization`.
-- Si devuelve 403, el rol no tiene permiso (no deberia ocurrir con SPECIALIST).
-- Si revuelve 500, mirar logs API.
-
-### 4.5 Caso de prueba: cierre de sesion
-
-Cerrar sesion -> volver al login. El indicador debe seguir en verde. Reintentar con el usuario NURSE para verificar que el RBAC funciona (la pestana de sanitarios debe estar oculta).
-
-### 4.6 Captura de evidencias
-
-El doer debe guardar:
-
-- Captura del terminal 3 mostrando la secuencia completa de logs del login + listado de pacientes.
-- Captura del terminal 2 mostrando las peticiones recibidas en la API.
-- Screenshot de la app abierta tras el login (sin datos sensibles).
-
-Estas evidencias acompanan el reporte final al thinker.
-
-### Criterio de aceptacion de la FASE 4
-
-- [ ] Login con SPECIALIST exitoso desde la UI.
-- [ ] Login con NURSE exitoso desde la UI.
-- [ ] Listado de pacientes carga sin error.
-- [ ] Cierre de sesion limpio.
-- [ ] Trazas SLF4J coherentes en cada paso.
+No tocar el resto del checklist.
 
 ---
 
-## FASE 5: Eliminar URL hardcoded en `PacienteDAO` (fotos)
+## 4. Orden de ejecución recomendado
 
-**Objetivo:** corregir el hallazgo H5. Hoy las fotos solo funcionan si la API esta literalmente en `localhost:8080`. Si manana movemos la API a otra IP o puerto, las fotos romperian sin avisar.
+1. **FASE 0** — leer contexto, arrancar stack.
+2. **FASE 1** — repos. Compilar API.
+3. **FASE 2** — DTOs API. Compilar API (errores esperables en service/mapper, se arreglan en F3).
+4. **FASE 3** — service + mapper API. Compilar API limpio.
+5. **FASE 4** — endpoint multipart API. Arrancar API. **Probar con `curl` antes de continuar.**
+6. **FASE 5** — modelo desktop. Compilar desktop.
+7. **FASE 6** — `ApiClient.sendMultipart` + DAO + service desktop. Compilar desktop.
+8. **FASE 7** — wire campos del controlador. Compilar y arrancar desktop. **E2E manual mínimo: crear un paciente con dirección y foto.**
+9. **FASE 8** — verificar Sanitario, actualizar JavaDoc. Sin código.
+10. **FASE 9** — refactor de constructores para inyección + tests. `./gradlew test` verde.
+11. **FASE 10** — verificación E2E completa con rollback tests.
+12. **FASE 11** — marcar checklist `[x]`.
 
-### 5.1 Exponer baseUrl en ApiClient
-
-`src/main/java/com/javafx/Clases/ApiClient.java`:
-
-- Si no existe ya, anadir `public String getBaseUrl() { return baseUrl; }`.
-- No exponer setter publico.
-
-### 5.2 Refactorizar `PacienteDAO.insertarFoto` y `obtenerFoto`
-
-`src/main/java/com/javafx/DAO/PacienteDAO.java:146-197`:
-
-- Sustituir la URL hardcoded `"http://localhost:8080/api/pacientes/" + dni + "/foto"` por `apiClient.getBaseUrl() + "/api/pacientes/" + dni + "/foto"`.
-- Usar el campo `apiClient` ya inyectado en el constructor; no usar `ApiClient.getInstancia()` desde dentro del metodo (los tests ya inyectan via constructor).
-- Si el doer considera que el HttpClient local sigue siendo necesario porque ApiClient no soporta multipart, esto es aceptable, PERO debe documentarse con un comentario en castellano que explique el por que.
-
-### 5.3 Inyectar el JWT en las llamadas de fotos
-
-Hoy estas llamadas no envian `Authorization: Bearer`, por lo que la API las rechazara con 401 (los endpoints de foto requieren `isAuthenticated()`). Comprobar y, si es asi, anadir el header tomandolo de `apiClient.getAccessToken()` (anadir getter package-private si no existe).
-
-### 5.4 Tests
-
-Anadir a `PacienteDAOTest`:
-
-- `insertarFoto_usaBaseUrlInyectada()`: configura mock con baseUrl `http://test:9090`, llama insertarFoto, captura la URL real construida y assertEquals.
-- `insertarFoto_envia_authorization_header()`: configura accessToken en el mock, captura el HttpRequest y verifica `Authorization` presente.
-- Ditto para `obtenerFoto`.
-
-### Criterio de aceptacion de la FASE 5
-
-- [ ] `grep -rn "localhost:8080" desktop/src/main/java/` devuelve solo el mensaje de UI de `controladorSesion` (H9).
-- [ ] Tests nuevos verdes.
-- [ ] Foto sube y se descarga desde la UI tras setear `REHABIAPP_API_URL=http://localhost:8080` (no se rompe el camino feliz).
+**Si algo falla en mitad de una fase, no avanzar.** Diagnosticar, corregir, re-verificar la fase actual antes de pasar a la siguiente.
 
 ---
 
-## FASE 6: Limpieza de configuracion legacy
+## 5. Archivos críticos (referencia rápida)
 
-**Objetivo:** eliminar ficheros que ya no se usan y que generan confusion para futuros agentes (hallazgos H7, H8).
+### API (`/home/alaslibres/DAM/RehabiAPP/api`)
 
-### 6.1 Eliminar `ip.properties`
+**Crear:**
+- `src/main/java/com/rehabiapp/api/domain/repository/DireccionRepository.java`
+- `src/main/java/com/rehabiapp/api/domain/repository/CodigoPostalRepository.java`
+- `src/main/java/com/rehabiapp/api/domain/repository/LocalidadRepository.java`
+- `src/main/java/com/rehabiapp/api/application/dto/DireccionDto.java`
 
-```bash
-cd /home/alaslibres/DAM/RehabiAPP/desktop
-git rm src/main/resources/config/ip.properties
-```
+**Editar:**
+- `src/main/java/com/rehabiapp/api/application/dto/PacienteRequest.java` — añadir `DireccionDto direccion`
+- `src/main/java/com/rehabiapp/api/application/dto/PacienteResponse.java` — añadir `DireccionDto direccion`
+- `src/main/java/com/rehabiapp/api/application/service/PacienteService.java` — `crearConFoto`, `actualizarConFoto`, `resolverDireccion`, nuevos repos en constructor; eliminar `crear`/`actualizar` antiguos
+- `src/main/java/com/rehabiapp/api/application/mapper/PacienteMapper.java` — mapping de `direccion`
+- `src/main/java/com/rehabiapp/api/presentation/controller/PacienteController.java` — `@RequestPart` en `crear`/`actualizar`
+- `src/main/resources/application.yml` (o `application-local.yml`) — `multipart.max-file-size: 5MB`
 
-Antes de borrar, **verificar con grep** que ningun .java lo referencia:
+### Desktop (`/home/alaslibres/DAM/RehabiAPP/desktop`)
 
-```bash
-```
+**Crear:**
+- `src/main/java/com/javafx/dto/DireccionDto.java`
+- `src/test/java/com/javafx/service/PacienteServiceTest.java`
+- `src/test/java/com/javafx/service/SanitarioServiceTest.java`
+- `src/test/resources/foto-test.png`
 
-(Usar el tool Grep, no bash.) Buscar `ip.properties`, `local.ip`, `local.port` en `src/`. Esperado: ninguna ocurrencia.
-
-### 6.2 Eliminar `database.properties`
-
-Mismo procedimiento. Antes de borrar, grep para `database.properties`, `db.url`, `db.usuario`, `db.password`, `db.driver` en `src/`. Esperado: ninguna ocurrencia tras la migracion.
-
-### 6.3 Verificar `.gitignore`
-
-Asegurar que `cifrado.properties` sigue listado (no se debe versionar). El nuevo fichero `.env.local` de la API NO esta en este repo, pero si la convencion fuese tenerlo en `/api/.gitignore`, escalar al thinker para que coordine con Agente 1.
-
-### 6.4 Actualizar `/desktop/CLAUDE.md`
-
-- Seccion 4 PACKAGE STRUCTURE: eliminar la mencion a `database.properties` (linea actual: `database.properties, preferencias.properties, cifrado.properties (excluded from Git)`).
-- Seccion 1 PROJECT DEFINITION: actualizar el parrafo "El SGE has direct JDBC connection to PostgreSQL..." -> "El SGE consume la REST API central (`/api`) sin acceso directo a la base de datos. La conexion JDBC legacy fue eliminada en la migracion completada en marzo-abril de 2026."
-- Seccion 6 SECURITY RULES: la mencion a "SSL/TLS: Code prepared in ConexionBD" ya no aplica porque ConexionBD fue eliminada. Reescribir o eliminar esa linea.
-- Seccion 8 DATABASE SCHEMA REFERENCE: marcar como "esquema de la API, mantenida por Agente 1" para evitar futuras confusiones sobre quien la modifica.
-
-### Criterio de aceptacion de la FASE 6
-
-- [ ] `ip.properties` y `database.properties` eliminados.
-- [ ] `git status` solo muestra los cambios planificados.
-- [ ] `./gradlew run` y `./gradlew test` siguen verdes (74 tests).
-- [ ] CLAUDE.md actualizado y coherente con el estado real.
+**Editar:**
+- `src/main/java/com/javafx/dto/PacienteRequest.java` — añadir `DireccionDto direccion`
+- `src/main/java/com/javafx/dto/PacienteResponse.java` — añadir `DireccionDto direccion`
+- `src/main/java/com/javafx/Clases/Paciente.java` — 6 propiedades JavaFX, `desdePacienteResponse` y `toPacienteRequest` con dirección
+- `src/main/java/com/javafx/Clases/ApiClient.java` — `sendMultipart` + `ejecutarMultipart`
+- `src/main/java/com/javafx/DAO/PacienteDAO.java` — `insertar(p, fotoBytes)`, `actualizar(p, dni, fotoBytes)`
+- `src/main/java/com/javafx/service/PacienteService.java` — refactor a constructor injection; `insertar/actualizar` con `byte[]`; helper `leerBytesArchivo`
+- `src/main/java/com/javafx/service/SanitarioService.java` — refactor a constructor injection; JavaDoc atomicidad
+- `src/main/java/com/javafx/Interface/controladorAgregarPaciente.java` — wire de los `txtCalle/txtNumero/txtPiso/txtCodigoPostal/txtLocalidad/txtProvincia` al objeto Paciente; eliminar comentarios engañosos
+- `CLAUDE.md` — marcar las 3 líneas del checklist como `[x]`
 
 ---
 
-## FASE 7: Runbook de arranque local
+## 6. Resumen ejecutivo para el Doer
 
-**Objetivo:** documentar el procedimiento exacto para que cualquier desarrollador (o agente futuro) pueda levantar el stack de desarrollo en menos de 5 minutos.
+| Bloque | Esfuerzo | Riesgo |
+|--------|----------|--------|
+| API: 3 repos nuevos + DireccionDto + extensión PacienteRequest/Response | Bajo | Bajo |
+| API: PacienteService.resolverDireccion + crearConFoto/actualizarConFoto | Medio | Medio (LazyInitException si el mapper no está dentro de TX — ya garantizado) |
+| API: PacienteController @RequestPart multipart | Bajo | Bajo |
+| API: PacienteMapper @Mapping de direccion | Bajo | Bajo (verificar `LazyInitializationException`) |
+| Desktop: DireccionDto + Paciente.java con 6 propiedades + toPacienteRequest | Bajo | Bajo |
+| Desktop: ApiClient.sendMultipart (≈80 líneas) | Medio | Medio (parsing multipart manual) |
+| Desktop: PacienteDAO.insertar/actualizar(p, byte[]) | Bajo | Bajo |
+| Desktop: PacienteService refactor a constructor injection + helper bytes | Bajo | Bajo |
+| Desktop: wire 6 campos en controladorAgregarPaciente | Trivial | Bajo |
+| Tests JUnit 5 + Mockito (refactor inyección + 8 tests aprox.) | Medio | Medio (refactor de constructor puede romper otros tests existentes) |
+| Verificación E2E manual (5 escenarios) | Bajo | Bajo |
+| Marcar checklist | Trivial | — |
 
-### 7.1 Crear seccion "Runbook local" en `/desktop/CLAUDE.md`
+**Total estimado:** 11 fases secuenciales. La fase de mayor riesgo es la 6 (`sendMultipart`) — está parcialmente probada por la lógica reutilizada de `PacienteDAO.insertarFoto`, pero el formato multipart es propenso a bugs sutiles (boundaries, CRLF, content-types).
 
-Anadir al final del archivo (antes de `## Memory`) una seccion nueva:
-
-```markdown
-## RUNBOOK LOCAL
-
-### Levantar el stack completo (orden obligatorio)
-
-1. PostgreSQL (terminal 1):
-   docker compose -f /home/alaslibres/DAM/RehabiAPP/infra/docker-compose.yml up postgres
-
-2. API Spring Boot (terminal 2):
-   cd /home/alaslibres/DAM/RehabiAPP/api
-   set -a && source .env.local && set +a
-   ./mvnw spring-boot:run
-
-   Esperar a "Started ApiApplication".
-
-3. Desktop JavaFX (terminal 3):
-   cd /home/alaslibres/DAM/RehabiAPP/desktop
-   ./gradlew run
-
-### Variables de entorno necesarias (api/.env.local)
-
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/rehabiapp
-SPRING_DATASOURCE_USERNAME=admin
-SPRING_DATASOURCE_PASSWORD=admin
-SPRING_PROFILES_ACTIVE=local
-
-### Credenciales de prueba (seed-dev.sql)
-
-| DNI | Password | Rol |
-|-----|----------|-----|
-| 00000001A | dev1234 | SPECIALIST |
-| 00000002B | nurse1234 | NURSE |
-
-### Health checks
-
-- PG: PGPASSWORD=admin psql -h localhost -U admin -d rehabiapp -c "SELECT 1;"
-- API: curl http://localhost:8080/actuator/health
-- Desktop: pulsar el indicador del login -> debe pintarse verde
-
-### Errores comunes
-
-- "JavaFX runtime components are missing" -> ver historial de plan IntelliJ (commit 17f79c6).
-- "password authentication failed" en logs API -> revisar .env.local; las credenciales deben coincidir con docker-compose.yml.
-- Indicador de login en rojo -> revisar trazas SLF4J de ApiClient en la terminal 3 (busca "Conexion API fallida").
-- 401 al login con credenciales correctas -> ejecutar seed-dev.sql.
-- 401 en GET /api/pacientes despues de login OK -> el JWT no se esta enviando; revisar ApiClient.get() y header Authorization.
-```
-
-### 7.2 Crear `/desktop/scripts/README.md`
-
-Documentar como usar `seed-dev.sql` (creado en FASE 3) y advertir que es solo para desarrollo.
-
-### Criterio de aceptacion de la FASE 7
-
-- [ ] Seccion "RUNBOOK LOCAL" anadida a `desktop/CLAUDE.md`.
-- [ ] `desktop/scripts/README.md` creado.
-- [ ] Un desarrollador siguiendo el runbook desde cero puede levantar el stack y hacer login en menos de 5 minutos.
-
----
-
-## Criterios de exito globales del plan
-
-- [ ] FASE 0: diagnostico entregado y validado por el thinker.
-- [ ] FASE 1: ApiClient con trazas SLF4J en todos los puntos clave.
-- [ ] FASE 2: api.properties verificado en classpath.
-- [ ] FASE 3: usuarios seed disponibles y login curl verde.
-- [ ] FASE 4: login + listado de pacientes funcionando desde la UI con dos roles.
-- [ ] FASE 5: PacienteDAO sin URL hardcoded; tests verdes.
-- [ ] FASE 6: legacy eliminado; CLAUDE.md actualizado.
-- [ ] FASE 7: runbook escrito.
-- [ ] `./gradlew test` -> 74 tests verdes en TODO el plan (anade nuevos tests en FASE 5, no rompe los existentes).
-
----
-
-## Reglas inviolables para el Doer (Sonnet)
-
-1. **No cruzar dominios.** El Doer del Agente 3 SOLO modifica ficheros bajo `/desktop`. Si una causa raiz esta en `/api` o `/infra`, escalar al thinker; el thinker coordinara con el Agente 1 o el Agente 0.
-2. **Una fase, un commit.** Cada fase termina con `./gradlew test` verde y un commit con mensaje descriptivo. NO mezclar fases.
-3. **No hacer git push** sin aprobacion explicita.
-4. **No marcar una tarea como completa** si los tests no estan verdes o si hubo errores no resueltos.
-5. **No silenciar errores.** Si una excepcion aparece en la consola, hay que entenderla, no taparla.
-6. **No tocar la arquitectura del ApiClient ni de los DAOs** mas alla de lo descrito en este plan, sin aprobacion del thinker.
-7. **No commitear .env.local, hashes BCrypt en texto plano, o cualquier secreto.**
-8. **Reportar al thinker** al final de cada fase con: que se cambio, que tests se anadieron, evidencia de que el criterio de aceptacion se cumple.
-9. **Si una fase no se puede completar**, NO seguir a la siguiente. Documentar el bloqueo y devolver al thinker.
-
----
-
-## Orden de ejecucion
-
-| Orden | Fase | Bloquea a | Prerequisito |
-|-------|------|-----------|--------------|
-| 1 | FASE 0 | Todas | Ninguno |
-| 2 | FASE 1 | FASE 4 | FASE 0 reportada |
-| 3 | FASE 2 | FASE 4 | FASE 1 |
-| 4 | FASE 3 | FASE 4 | FASE 0 (saber si hace falta) |
-| 5 | FASE 4 | FASE 5,6,7 | FASE 1+2+3 |
-| 6 | FASE 5 | - | FASE 4 verde |
-| 7 | FASE 6 | - | FASE 4 verde |
-| 8 | FASE 7 | - | Todas las anteriores verdes |
-
-FASE 2 y FASE 3 se pueden hacer en paralelo si dos doers trabajan a la vez. FASE 5, 6, 7 son independientes entre si una vez FASE 4 esta verde.
-
----
-
-*Este plan es responsabilidad del Thinker Agente 3 (Opus). El Doer (Sonnet) lo ejecuta sin alterar la arquitectura. Cualquier desviacion debe ser aprobada por el Thinker antes de continuar.*
+**Garantía clave a entregar:** después de la FASE 7, el flujo "alta de paciente con dirección + foto" debe ser **una sola petición HTTP** desde el desktop a la API, y el rollback server-side debe garantizar que cualquier fallo deja la BD exactamente como estaba antes del intento. Sin esto, los 3 ítems del checklist no se pueden marcar `[x]`.

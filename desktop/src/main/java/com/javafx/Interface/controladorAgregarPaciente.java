@@ -328,6 +328,14 @@ public class controladorAgregarPaciente {
         txtTelefono1.setText(paciente.getTelefono1() != null ? paciente.getTelefono1() : "");
         txtTelefono2.setText(paciente.getTelefono2() != null ? paciente.getTelefono2() : "");
 
+        //Campos de direccion postal
+        txtCalle.setText(paciente.getCalle() != null ? paciente.getCalle() : "");
+        txtNumero.setText(paciente.getNumero() != null ? paciente.getNumero() : "");
+        txtPiso.setText(paciente.getPiso() != null ? paciente.getPiso() : "");
+        txtCodigoPostal.setText(paciente.getCodigoPostal() != null ? paciente.getCodigoPostal() : "");
+        txtLocalidad.setText(paciente.getLocalidad() != null ? paciente.getLocalidad() : "");
+        txtProvincia.setText(paciente.getProvincia() != null ? paciente.getProvincia() : "");
+
         //Protesis
         if (paciente.tieneProtesis()) {
             radioProtesisSi.setSelected(true);
@@ -394,6 +402,14 @@ public class controladorAgregarPaciente {
         //Configurar telefonos
         paciente.setTelefono1(txtTelefono1.getText().trim());
         paciente.setTelefono2(txtTelefono2.getText().trim());
+
+        //Configurar campos de direccion postal
+        paciente.setCalle(txtCalle.getText().trim());
+        paciente.setNumero(txtNumero.getText().trim());
+        paciente.setPiso(txtPiso.getText().trim());
+        paciente.setCodigoPostal(txtCodigoPostal.getText().trim());
+        paciente.setLocalidad(txtLocalidad.getText().trim());
+        paciente.setProvincia(txtProvincia.getText().trim());
 
         //Configurar campos clinicos v2
         paciente.setSexo(cmbSexo.getValue() != null ? cmbSexo.getValue() : "");

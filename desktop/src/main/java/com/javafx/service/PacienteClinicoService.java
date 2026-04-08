@@ -43,12 +43,9 @@ public class PacienteClinicoService {
 
     /**
      * Desasigna una discapacidad del paciente.
-     * TODO: Requiere endpoint DELETE /api/pacientes/{dniPac}/discapacidades/{codDis}
-     * en la API (Agent 1). Actualmente lanza UnsupportedOperationException.
      */
     public void desasignarDiscapacidad(String dniPac, String codDis) {
-        throw new UnsupportedOperationException(
-            "Endpoint DELETE /api/pacientes/{dniPac}/discapacidades/{codDis} pendiente de implementar en la API");
+        asignacionDAO.desasignarDiscapacidad(dniPac, codDis);
     }
 
     /**
@@ -59,13 +56,10 @@ public class PacienteClinicoService {
     }
 
     /**
-     * Actualiza las notas de una discapacidad asignada al paciente.
-     * TODO: Requiere endpoint PATCH /api/pacientes/{dniPac}/discapacidades/{codDis}/notas
-     * en la API. Actualmente lanza UnsupportedOperationException.
+     * Actualiza las notas clinicas de una discapacidad asignada al paciente.
      */
     public void actualizarNotas(String dniPac, String codDis, String notas) {
-        throw new UnsupportedOperationException(
-            "Endpoint PATCH /api/pacientes/{dniPac}/discapacidades/{codDis}/notas pendiente de implementar en la API");
+        asignacionDAO.actualizarNotas(dniPac, codDis, notas);
     }
 
     // ==================== TRATAMIENTOS ====================
@@ -115,21 +109,15 @@ public class PacienteClinicoService {
 
     /**
      * Asigna un tratamiento al paciente con visibilidad inicial activada.
-     * TODO: Requiere endpoint POST /api/pacientes/{dniPac}/tratamientos en la API.
-     * Actualmente lanza UnsupportedOperationException.
      */
     public void asignarTratamiento(String dniPac, String codTrat) {
-        throw new UnsupportedOperationException(
-            "Endpoint POST /api/pacientes/{dniPac}/tratamientos pendiente de implementar en la API");
+        asignacionDAO.asignarTratamiento(dniPac, codTrat);
     }
 
     /**
      * Desasigna un tratamiento del paciente.
-     * TODO: Requiere endpoint DELETE /api/pacientes/{dniPac}/tratamientos/{codTrat} en la API.
-     * Actualmente lanza UnsupportedOperationException.
      */
     public void desasignarTratamiento(String dniPac, String codTrat) {
-        throw new UnsupportedOperationException(
-            "Endpoint DELETE /api/pacientes/{dniPac}/tratamientos/{codTrat} pendiente de implementar en la API");
+        asignacionDAO.desasignarTratamiento(dniPac, codTrat);
     }
 }

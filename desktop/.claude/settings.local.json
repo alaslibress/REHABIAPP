@@ -64,7 +64,12 @@
       "Bash(unzip -l build/libs/REHABIAPP.jar)",
       "Bash(echo \"Desktop PID: $!\")",
       "Bash(git rm:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(./mvnw dependency:tree -q)",
+      "Bash(./mvnw dependency:tree)",
+      "Read(//home/alaslibres/DAM/RehabiAPP/api/src/main/resources/db/migration/**)",
+      "Read(//home/alaslibres/DAM/RehabiAPP/api/**)",
+      "Bash(./mvnw clean:*)"
     ],
     "deny": [],
     "ask": []

@@ -114,19 +114,49 @@ public class PacienteDAO {
     // ==================== ESCRITURA ====================
 
     /**
-     * Inserta un nuevo paciente. Los telefonos se incluyen en el DTO.
+     * Inserta un nuevo paciente con telefonos, direccion y foto opcional en UNA SOLA llamada HTTP atomica.
+     * El servidor garantiza la atomicidad via @Transactional. Si cualquier parte falla, no queda nada persistido.
+     *
+     * @param paciente  Paciente a crear (con telefonos y direccion ya seteados).
+     * @param fotoBytes Bytes de la foto, o null si no hay foto.
      */
+    public void insertar(Paciente paciente, byte[] fotoBytes) {
+        api.sendMultipart(
+                "/api/pacientes", "POST",
+                "paciente", paciente.toPacienteRequest(),
+                "foto", fotoBytes,
+                fotoBytes != null ? "foto.png" : null,
+                fotoBytes != null ? "image/png" : null,
+                PacienteResponse.class
+        );
+    }
+
+    /** Sobrecarga sin foto, llama al multipart con fotoBytes=null. */
     public void insertar(Paciente paciente) {
-        api.post("/api/pacientes", paciente.toPacienteRequest(), PacienteResponse.class);
+        insertar(paciente, null);
     }
 
     /**
-     * Actualiza un paciente existente.
-     * @param paciente Datos nuevos del paciente
-     * @param dniOriginal DNI antes de cualquier cambio (clave de la ruta)
+     * Actualiza un paciente existente con datos, direccion y foto opcional en UNA SOLA llamada HTTP atomica.
+     *
+     * @param paciente    Datos nuevos del paciente.
+     * @param dniOriginal DNI antes de cualquier cambio (clave de la ruta).
+     * @param fotoBytes   Bytes de la nueva foto, o null para mantener la actual.
      */
+    public void actualizar(Paciente paciente, String dniOriginal, byte[] fotoBytes) {
+        api.sendMultipart(
+                "/api/pacientes/" + dniOriginal, "PUT",
+                "paciente", paciente.toPacienteRequest(),
+                "foto", fotoBytes,
+                fotoBytes != null ? "foto.png" : null,
+                fotoBytes != null ? "image/png" : null,
+                PacienteResponse.class
+        );
+    }
+
+    /** Sobrecarga sin foto, llama al multipart con fotoBytes=null. */
     public void actualizar(Paciente paciente, String dniOriginal) {
-        api.put("/api/pacientes/" + dniOriginal, paciente.toPacienteRequest(), PacienteResponse.class);
+        actualizar(paciente, dniOriginal, null);
     }
 
     /**

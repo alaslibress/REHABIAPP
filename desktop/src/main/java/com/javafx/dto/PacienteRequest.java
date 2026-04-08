@@ -19,5 +19,6 @@ public record PacienteRequest(
     String antecedentes,
     String medicacionActual,
     Boolean consentimientoRgpd,
+    DireccionDto direccion,
     List<String> telefonos
 ) {}

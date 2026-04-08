@@ -1,5 +1,6 @@
 package com.javafx.Clases;
 
+import com.javafx.dto.DireccionDto;
 import com.javafx.dto.PacienteRequest;
 import com.javafx.dto.PacienteResponse;
 import javafx.beans.property.*;
@@ -32,6 +33,14 @@ public class Paciente implements Persona {
     private final StringProperty telefono1;
     private final StringProperty telefono2;
 
+    // Propiedades de direccion postal
+    private final StringProperty calle;
+    private final StringProperty numero;
+    private final StringProperty piso;
+    private final StringProperty codigoPostal;
+    private final StringProperty localidad;
+    private final StringProperty provincia;
+
     // Propiedades clinicas y legales (RGPD, Ley 41/2002)
     private final StringProperty sexo;
     private final ObjectProperty<LocalDate> fechaNacimiento;
@@ -62,6 +71,14 @@ public class Paciente implements Persona {
         // Inicializar propiedades de contacto
         this.telefono1 = new SimpleStringProperty("");
         this.telefono2 = new SimpleStringProperty("");
+
+        // Inicializar propiedades de direccion postal con valores vacios
+        this.calle = new SimpleStringProperty("");
+        this.numero = new SimpleStringProperty("");
+        this.piso = new SimpleStringProperty("");
+        this.codigoPostal = new SimpleStringProperty("");
+        this.localidad = new SimpleStringProperty("");
+        this.provincia = new SimpleStringProperty("");
 
         // Inicializar propiedades clinicas y legales con valores por defecto
         this.sexo = new SimpleStringProperty("");
@@ -115,6 +132,15 @@ public class Paciente implements Persona {
                 p.setTelefono2(response.telefonos().get(1));
             }
         }
+
+        if (response.direccion() != null) {
+            p.setCalle(response.direccion().calle() != null ? response.direccion().calle() : "");
+            p.setNumero(response.direccion().numero() != null ? response.direccion().numero() : "");
+            p.setPiso(response.direccion().piso() != null ? response.direccion().piso() : "");
+            p.setCodigoPostal(response.direccion().cp() != null ? response.direccion().cp() : "");
+            p.setLocalidad(response.direccion().nombreLocalidad() != null ? response.direccion().nombreLocalidad() : "");
+            p.setProvincia(response.direccion().provincia() != null ? response.direccion().provincia() : "");
+        }
         return p;
     }
 
@@ -130,6 +156,21 @@ public class Paciente implements Persona {
             telefonos.add(getTelefono2());
         }
 
+        // Construir DireccionDto solo si calle, cp y localidad estan informados
+        DireccionDto direccion = null;
+        if (getCalle() != null && !getCalle().isEmpty()
+                && getCodigoPostal() != null && !getCodigoPostal().isEmpty()
+                && getLocalidad() != null && !getLocalidad().isEmpty()) {
+            direccion = new DireccionDto(
+                    getCalle(),
+                    getNumero(),
+                    getPiso(),
+                    getCodigoPostal(),
+                    getLocalidad(),
+                    getProvincia()
+            );
+        }
+
         return new PacienteRequest(
             getDni(), getDniSanitario(), getNombre(),
             getApellido1(), getApellido2(),
@@ -138,6 +179,7 @@ public class Paciente implements Persona {
             isProtesis(),
             getAlergias(), getAntecedentes(), getMedicacionActual(),
             isConsentimientoRgpd(),
+            direccion,
             telefonos
         );
     }
@@ -233,6 +275,32 @@ public class Paciente implements Persona {
     public boolean isActivo() { return activo.get(); }
     public void setActivo(boolean activo) { this.activo.set(activo); }
     public BooleanProperty activoProperty() { return activo; }
+
+    // ==================== DIRECCION POSTAL ====================
+
+    public String getCalle() { return calle.get(); }
+    public void setCalle(String calle) { this.calle.set(calle); }
+    public StringProperty calleProperty() { return calle; }
+
+    public String getNumero() { return numero.get(); }
+    public void setNumero(String numero) { this.numero.set(numero); }
+    public StringProperty numeroProperty() { return numero; }
+
+    public String getPiso() { return piso.get(); }
+    public void setPiso(String piso) { this.piso.set(piso); }
+    public StringProperty pisoProperty() { return piso; }
+
+    public String getCodigoPostal() { return codigoPostal.get(); }
+    public void setCodigoPostal(String codigoPostal) { this.codigoPostal.set(codigoPostal); }
+    public StringProperty codigoPostalProperty() { return codigoPostal; }
+
+    public String getLocalidad() { return localidad.get(); }
+    public void setLocalidad(String localidad) { this.localidad.set(localidad); }
+    public StringProperty localidadProperty() { return localidad; }
+
+    public String getProvincia() { return provincia.get(); }
+    public void setProvincia(String provincia) { this.provincia.set(provincia); }
+    public StringProperty provinciaProperty() { return provincia; }
 
     @Override
     public String toString() {

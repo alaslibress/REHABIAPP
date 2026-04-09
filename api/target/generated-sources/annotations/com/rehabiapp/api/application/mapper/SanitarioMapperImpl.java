@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-04-09T15:29:50+0200",
-    comments = "version: 1.6.3, compiler: javac, environment: Java 24.0.2 (Oracle Corporation)"
+    date = "2026-04-09T15:35:49+0200",
+    comments = "version: 1.6.3, compiler: javac, environment: Java 26 (Red Hat, Inc.)"
 )
 @Component
 public class SanitarioMapperImpl implements SanitarioMapper {

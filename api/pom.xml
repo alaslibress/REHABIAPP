@@ -179,10 +179,7 @@
                             <version>${mapstruct.version}</version>
                         </path>
                     </annotationProcessorPaths>
-                    <!-- Activa el modo de vista previa de Java 24 si es necesario -->
-                    <compilerArgs>
-                        <arg>--enable-preview</arg>
-                    </compilerArgs>
+
                 </configuration>
             </plugin>
         </plugins>

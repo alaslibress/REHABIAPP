@@ -35,9 +35,9 @@ com/rehabiapp/api/domain/enums/Rol.class
 com/rehabiapp/api/application/service/CitaService.class
 com/rehabiapp/api/application/mapper/DiscapacidadMapperImpl.class
 com/rehabiapp/api/presentation/controller/CatalogoController.class
-com/rehabiapp/api/ApiApplication.class
 com/rehabiapp/api/application/dto/PacienteTratamientoRequest.class
 com/rehabiapp/api/application/mapper/PacienteTratamientoMapper.class
+com/rehabiapp/api/ApiApplication.class
 com/rehabiapp/api/application/service/CatalogoService.class
 com/rehabiapp/api/application/mapper/PacienteDiscapacidadMapper.class
 com/rehabiapp/api/application/dto/NivelProgresionResponse.class
@@ -66,6 +66,7 @@ com/rehabiapp/api/application/dto/SanitarioRequest.class
 com/rehabiapp/api/domain/entity/AuditLog.class
 com/rehabiapp/api/domain/exception/RecursoNoEncontradoException.class
 com/rehabiapp/api/infrastructure/config/SecurityProperties.class
+com/rehabiapp/api/infrastructure/config/FlywayConfig.class
 com/rehabiapp/api/domain/entity/Cita.class
 com/rehabiapp/api/domain/entity/SanitarioRol.class
 com/rehabiapp/api/application/dto/DiscapacidadResponse.class

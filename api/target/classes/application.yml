@@ -34,9 +34,10 @@ spring:
     enabled: true
     locations: classpath:db/migration
     # baseline-on-migrate permite aplicar migraciones sobre una BD ya existente
-    # (compatibilidad con el esquema del ERP de escritorio)
+    # (compatibilidad con el esquema del ERP de escritorio que ya creo todas las tablas via JDBC)
+    # baseline-version: 8 indica que el esquema ya esta en V8 — no re-ejecutar V1 a V8
     baseline-on-migrate: true
-    baseline-version: 0
+    baseline-version: 8
     validate-on-migrate: true
 
 # ======================== SERVIDOR ========================

@@ -77,6 +77,39 @@ En AWS: los mismos secretos se montan via AWS Secrets Manager CSI Driver en `/mn
 
 ---
 
+## Fase 0: Correccion critica — Error de compilacion Java 24
+
+> **Objetivo:** Eliminar la flag `--enable-preview` del `pom.xml` que impide compilar. El JDK instalado es Java 24, y `--enable-preview` solo es valida para Java 26+. La API no usa ninguna feature preview de Java, por lo que la flag es innecesaria.
+> **Prioridad:** BLOQUEANTE. Sin esto ninguna otra fase compila.
+
+### Paso 0.1: Eliminar `--enable-preview` del maven-compiler-plugin
+
+**Archivo:** `pom.xml` (lineas 182-185)
+
+**Estado actual (ELIMINAR):**
+```xml
+                    <!-- Activa el modo de vista previa de Java 24 si es necesario -->
+                    <compilerArgs>
+                        <arg>--enable-preview</arg>
+                    </compilerArgs>
+```
+
+**Accion:** Borrar las 4 lineas anteriores completas (el comentario y el bloque `<compilerArgs>`). No tocar nada mas del `pom.xml`.
+
+### Paso 0.2: Verificar compilacion
+
+**Comando:** `./mvnw compile -q`
+
+**Resultado esperado:** BUILD SUCCESS sin errores. Si falla por otra razon, reportar el error exacto al desarrollador antes de continuar.
+
+### Paso 0.3: Verificar ejecucion
+
+**Comando:** `./mvnw spring-boot:run` (detener con Ctrl+C tras ver "Started ApiApplication")
+
+**Resultado esperado:** La aplicacion arranca sin errores de compilacion. Puede fallar por conexion a BD si no hay PostgreSQL local — eso es aceptable y no bloquea esta fase.
+
+---
+
 ## Fase 1: Migraciones Flyway — Esquema real de la BD
 
 > **Objetivo:** Reemplazar `V0__placeholder.sql` con el esquema completo. Crear las tablas nuevas y las tablas de auditoria de Hibernate Envers. Todas las migraciones se ejecutan contra PostgreSQL 16.

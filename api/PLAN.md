@@ -1026,3 +1026,107 @@ Resumen completo de la arquitectura Kubernetes para referencia del implementador
 - [x] Paso 6.4: Deployment refactorizado con `envFrom` ConfigMap + `env` Secret refs
 - [x] Verificacion: `docker build -t rehabiapp-api:dev -f api/Dockerfile api/` ejecutado con exito
 - [x] Verificacion: `kubectl kustomize infra/k8s/overlays/local/` valida sin errores
+
+---
+
+## Fase 7: Logging — Configuracion Clara y Concisa
+
+**Problema detectado**: `logback-spring.xml` solo define appenders dentro de bloques `<springProfile>`. Al arrancar sin perfil activo, Logback queda sin appenders → warning `No appenders present in context [default]` y logs silenciados.
+
+**Objetivo**: Logs claros, concisos y siempre activos independientemente del perfil Spring.
+
+### Paso 7.1: Fallback appender por defecto en logback-spring.xml
+
+El `logback-spring.xml` actual solo tiene appenders dentro de `<springProfile name="local">` y `<springProfile name="aws,production">`. Cuando no hay perfil activo, cero appenders se cargan.
+
+Tareas:
+- [x] 7.1.1 Añadir bloque `<appender name="CONSOLE">` con `ConsoleAppender` y pattern legible FUERA de todo `<springProfile>`
+- [x] 7.1.2 Añadir `<root level="INFO"><appender-ref ref="CONSOLE"/></root>` FUERA de `<springProfile>` como fallback
+- [x] 7.1.3 Mantener los bloques `<springProfile>` existentes para que sobreescriban el fallback cuando el perfil esta activo
+
+Pattern de desarrollo (claro y conciso):
+```
+%d{HH:mm:ss} %-5level [%thread] %logger{20} - %msg%n
+```
+
+Pattern de produccion: JSON estructurado (LogstashEncoder, ya configurado).
+
+**Archivo**: `src/main/resources/logback-spring.xml`
+
+### Paso 7.2: Corregir condicion del perfil de produccion
+
+La condicion `<springProfile name="aws,production">` requiere AMBOS perfiles activos simultaneamente. `aws` solo no produce appender.
+
+Tareas:
+- [x] 7.2.1 Cambiar `<springProfile name="aws,production">` por `<springProfile name="aws | production">` para que cualquiera de los dos active el appender JSON
+
+**Archivo**: `src/main/resources/logback-spring.xml`
+
+### Paso 7.3: Niveles de log por defecto en application.yml base
+
+Actualmente `application.yml` no tiene propiedades de logging. Las propiedades `logging.level` en los YAMLs de perfil solo funcionan si Logback ya tiene un appender configurado.
+
+Tareas:
+- [x] 7.3.1 Añadir en `application.yml` base las propiedades de logging por defecto:
+```yaml
+logging:
+  level:
+    root: INFO
+    com.rehabiapp: INFO
+```
+
+**Archivo**: `src/main/resources/application.yml`
+
+### Paso 7.4: Introducir Logger SLF4J en clases clave
+
+El codigo NO usa SLF4J Logger directamente. Todo el logging es implicito via logs del framework Spring Boot o via AuditService (escrituras en BD). Los eventos a nivel de aplicacion son invisibles.
+
+Tareas:
+- [x] 7.4.1 `ApiApplication.java` — añadir Logger y log de arranque con perfil activo y puerto
+- [x] 7.4.2 `AuditService.java` — añadir Logger para registrar operaciones de auditoria (complementa el registro en BD)
+- [x] 7.4.3 `AuthApplicationService.java` — añadir Logger para intentos de login (exito/fallo) y operaciones de tokens
+- [x] 7.4.4 `PacienteService.java` — añadir Logger para operaciones CRUD criticas sobre datos de pacientes
+- [x] 7.4.5 `GlobalExceptionHandler` (si existe) — añadir Logger para excepciones no controladas
+
+Patron: `private static final Logger log = LoggerFactory.getLogger(NombreClase.class);`
+
+Regla: logs concisos, en español, sin datos sensibles (nunca loguear passwords, tokens completos, ni datos clinicos).
+
+**Archivos**: clases Java listadas arriba
+
+### Paso 7.5: Verificacion
+
+Tareas:
+- [ ] 7.5.1 Arrancar la API sin perfil activo (`./mvnw spring-boot:run`) — verificar que NO aparece el warning "No appenders present"
+- [ ] 7.5.2 Arrancar con perfil `local` — verificar logs en formato texto legible
+- [ ] 7.5.3 Arrancar con perfil `aws` solo — verificar logs en formato JSON
+- [ ] 7.5.4 Verificar que los nuevos Logger producen salida en cada caso
+- [ ] 7.5.5 Verificar que ningun log contiene datos sensibles (passwords, tokens, datos clinicos)
+
+### Paso 7.6: Perfil local como default de desarrollo
+
+Al arrancar sin perfil activo (`./mvnw spring-boot:run`), el `application.yml` base no define `spring.datasource.url`, provocando el error `Failed to determine a suitable driver class`. La solucion es declarar `local` como perfil por defecto.
+
+Tareas:
+- [ ] 7.6.1 Añadir `spring.profiles.default: local` en `application.yml` bajo el bloque `spring:`
+
+Nota: `spring.profiles.default` solo aplica cuando NO hay ninguna activacion explicita de perfiles. En K8s, `SPRING_PROFILES_ACTIVE=aws,production` sobreescribe el default automaticamente.
+
+**Archivo**: `src/main/resources/application.yml`
+
+### Checklist Fase 7
+
+- [x] Paso 7.1: Fallback CONSOLE appender añadido fuera de `<springProfile>` en `logback-spring.xml`
+- [x] Paso 7.1: Root logger con appender-ref CONSOLE como fallback
+- [x] Paso 7.2: Condicion de perfil corregida de `aws,production` a `aws | production`
+- [x] Paso 7.3: Propiedades `logging.level` añadidas en `application.yml` base
+- [x] Paso 7.4: Logger SLF4J añadido en `ApiApplication.java`
+- [x] Paso 7.4: Logger SLF4J añadido en `AuditService.java`
+- [x] Paso 7.4: Logger SLF4J añadido en `AuthApplicationService.java`
+- [x] Paso 7.4: Logger SLF4J añadido en `PacienteService.java`
+- [x] Paso 7.4: Logger SLF4J añadido en `GlobalExceptionHandler`
+- [x] Paso 7.6: `spring.profiles.default: local` añadido en `application.yml`
+- [ ] Verificacion: Arranque sin perfil activo — sin warning "No appenders present"
+- [ ] Verificacion: Arranque con perfil `local` — logs en texto legible
+- [ ] Verificacion: Arranque con perfil `aws` — logs en JSON
+- [ ] Verificacion: Ningun log contiene datos sensibles

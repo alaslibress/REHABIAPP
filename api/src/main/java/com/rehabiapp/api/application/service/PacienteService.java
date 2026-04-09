@@ -20,6 +20,8 @@ import com.rehabiapp.api.domain.repository.LocalidadRepository;
 import com.rehabiapp.api.domain.repository.PacienteRepository;
 import com.rehabiapp.api.domain.repository.SanitarioRepository;
 import com.rehabiapp.api.infrastructure.audit.AuditService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +44,8 @@ import java.time.LocalDateTime;
 @Service
 @Transactional
 public class PacienteService {
+
+    private static final Logger log = LoggerFactory.getLogger(PacienteService.class);
 
     private final PacienteRepository pacienteRepository;
     private final SanitarioRepository sanitarioRepository;
@@ -176,6 +180,7 @@ public class PacienteService {
 
         Paciente guardado = pacienteRepository.save(paciente);
         auditService.registrar(AccionAuditoria.CREATE, "paciente", request.dniPac(), "Paciente creado");
+        log.info("Paciente creado");
         return pacienteMapper.toResponse(guardado);
     }
 
@@ -226,6 +231,7 @@ public class PacienteService {
         }
 
         auditService.registrar(AccionAuditoria.UPDATE, "paciente", dni, "Paciente actualizado");
+        log.info("Paciente actualizado");
         return pacienteMapper.toResponse(pacienteRepository.save(paciente));
     }
 
@@ -457,5 +463,6 @@ public class PacienteService {
         pacienteRepository.save(paciente);
 
         auditService.registrar(AccionAuditoria.SOFT_DELETE, "paciente", dni, "Paciente dado de baja");
+        log.info("Baja logica de paciente completada");
     }
 }

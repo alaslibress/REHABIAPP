@@ -2,6 +2,11 @@
 # Los perfiles (local, aws, production) sobreescriben o complementan estas propiedades.
 
 spring:
+  # Perfil por defecto cuando no se activa ninguno explicitamente.
+  # En K8s, SPRING_PROFILES_ACTIVE sobreescribe este valor automaticamente.
+  profiles:
+    default: local
+
   application:
     name: rehabiapp-api
 
@@ -80,6 +85,13 @@ management:
       cache:
         # Sin caché de recursos estáticos — evita conflictos con filesystem de solo lectura
         period: 0
+
+# ======================== LOGGING ========================
+logging:
+  level:
+    # Nivel base para toda la aplicacion — perfiles especificos pueden ajustar
+    root: INFO
+    com.rehabiapp: INFO
 
 # ======================== CONFIGURACIÓN ESPECÍFICA DE REHABIAPP ========================
 rehabiapp:

@@ -2,35 +2,52 @@
 <!--
     Configuración de logging de RehabiAPP API.
 
-    Perfil local   -> Salida de texto legible por humanos (consola de desarrollo).
-    Perfiles aws / production -> Salida JSON estructurado (LogstashEncoder) para ingestión
-                                 en ELK Stack o AWS CloudWatch Logs.
+    Sin perfil / perfil local / cualquier otro  -> Consola de texto legible.
+    Perfil aws o production (cualquiera de los dos) -> JSON estructurado (LogstashEncoder)
+                                                       para ELK Stack o AWS CloudWatch Logs.
+
+    La separacion en dos bloques <springProfile> garantiza que siempre haya un appender
+    activo, eliminando el warning "No appenders present in context [default]".
 -->
 <configuration>
 
-    <!-- ===================== PERFIL LOCAL ===================== -->
-    <springProfile name="local">
-        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <!-- Formato legible para desarrollo: hora, hilo, nivel, logger, mensaje -->
-                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-            </encoder>
-        </appender>
+    <!-- ===================== APPENDERS ===================== -->
+
+    <!-- Consola de texto — desarrollo, fallback y cualquier perfil no productivo -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- Formato conciso: hora, nivel, logger abreviado (20 chars), mensaje -->
+            <pattern>%d{HH:mm:ss} %-5level [%thread] %logger{20} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- JSON estructurado — produccion (ELK Stack / AWS CloudWatch Logs) -->
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <!--
+            LogstashEncoder produce JSON estructurado por linea.
+            Cada entrada incluye: @timestamp, level, logger_name, message,
+            stack_trace (si aplica) y campos MDC personalizados.
+        -->
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+    </appender>
+
+    <!-- ===================== ROOT LOGGER POR PERFIL ===================== -->
+
+    <!--
+        Sin perfil, perfil local, test o cualquier perfil no productivo:
+        consola de texto legible. El operador &amp; es el AND de XML.
+    -->
+    <springProfile name="!aws &amp; !production">
         <root level="INFO">
             <appender-ref ref="CONSOLE"/>
         </root>
     </springProfile>
 
-    <!-- ===================== PERFILES AWS / PRODUCTION ===================== -->
-    <springProfile name="aws,production">
-        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
-            <!--
-                LogstashEncoder produce JSON estructurado por línea.
-                Cada entrada incluye: @timestamp, level, logger_name, message,
-                stack_trace (si aplica), y campos MDC personalizados.
-            -->
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
-        </appender>
+    <!--
+        Perfiles aws o production (cualquiera activa el JSON).
+        El operador | evita que sea necesario activar ambos a la vez.
+    -->
+    <springProfile name="aws | production">
         <root level="INFO">
             <appender-ref ref="JSON"/>
         </root>

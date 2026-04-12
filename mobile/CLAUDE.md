@@ -76,7 +76,7 @@ All API calls go through the services/ layer. Screens never call fetch/axios dir
 - [ ] Define folder structure (components, screens, hooks, services, context, utils, types).
 - [ ] Configure navigation (tab-based with bottom navigation).
 - [ ] Set up theming (light/dark mode, accessible color palette).
-- [ ] Configure Axios instance with base URL and JWT interceptor.
+- [ ] Configure graphQL instance with base URL and JWT interceptor.
 
 ### Phase 2: Authentication and shell
 

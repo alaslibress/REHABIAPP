@@ -69,7 +69,9 @@
       "Bash(./mvnw dependency:tree)",
       "Read(//home/alaslibres/DAM/RehabiAPP/api/src/main/resources/db/migration/**)",
       "Read(//home/alaslibres/DAM/RehabiAPP/api/**)",
-      "Bash(./mvnw clean:*)"
+      "Bash(./mvnw clean:*)",
+      "Bash(./mvnw compile:*)",
+      "Bash(ls -lh /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*icono*.png /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*buscar*.png /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*filtrar*.png)"
     ],
     "deny": [],
     "ask": []

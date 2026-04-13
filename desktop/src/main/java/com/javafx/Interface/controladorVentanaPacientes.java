@@ -67,9 +67,6 @@ public class controladorVentanaPacientes {
     private TableColumn<Paciente, String> colDNI;
 
     @FXML
-    private TableColumn<Paciente, String> colDiscapacidad;
-
-    @FXML
     private TableColumn<Paciente, Integer> colEdad;
 
     @FXML
@@ -227,7 +224,6 @@ public class controladorVentanaPacientes {
         colDNI.setCellValueFactory(new PropertyValueFactory<>("dni"));
         colEdad.setCellValueFactory(new PropertyValueFactory<>("edad"));
         colSexo.setCellValueFactory(new PropertyValueFactory<>("sexo"));
-        colDiscapacidad.setCellValueFactory(new PropertyValueFactory<>("discapacidad"));
         colProtesis.setCellValueFactory(new PropertyValueFactory<>("protesis"));
 
         //Asignar la lista observable a la tabla

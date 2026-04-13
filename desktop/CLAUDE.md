@@ -91,65 +91,72 @@ Two user types, both healthcare practitioners:
 
 ## 7. IMPLEMENTATION CHECKLIST
 
-Completed items provide context of what already exists. Uncompleted items are the current work focus. When a task is completed, mark it `[x]`. When a completed task no longer needs explanation, remove it entirely.
+### API prerequisites (Agent 1 scope — must be completed before desktop CRUD tabs)
 
-### Database and schema
+- [x] API: POST /api/catalogo/discapacidades — create disability (codDis, nombreDis, descripcionDis, necesitaProtesis).
+- [x] API: PUT /api/catalogo/discapacidades/{cod} — update disability fields.
+- [x] API: DELETE /api/catalogo/discapacidades/{cod} — delete disability (reject if patients are assigned).
+- [x] API: POST /api/catalogo/tratamientos — create treatment (codTrat, nombreTrat, definicionTrat, idNivel, codDis).
+- [x] API: PUT /api/catalogo/tratamientos/{cod} — update treatment fields.
+- [x] API: DELETE /api/catalogo/tratamientos/{cod} — delete treatment (reject if patients are assigned).
+- [x] API: POST /api/catalogo/tratamientos/{codTrat}/discapacidades/{codDis} — link treatment to disability.
+- [x] API: DELETE /api/catalogo/tratamientos/{codTrat}/discapacidades/{codDis} — unlink treatment from disability.
+- [x] API: GET /api/catalogo/tratamientos/{codTrat}/discapacidades — list disabilities linked to a treatment.
+- [x] API: Add validation — unique codDis/codTrat, unique nombreDis/nombreTrat, required fields, valid FKs.
 
-- [x] Relational schema (12 core tables) in PostgreSQL.
-- [x] Immutable audit_log table with performance indexes.
-- [x] Clinical fields added to patient table: date_of_birth, sex, allergies, medical_history, current_medication, rgpd_consent, consent_date, active, deactivation_date.
-- [x] Soft delete fields (active, deactivation_date) on both patient and practitioner tables.
-- [x] Disability and treatment catalog tables with N:M relationship (discapacidad, tratamiento, discapacidad_tratamiento).
-- [x] Progression level catalog table (nivel_progresion) with 4 clinical phases (acute, subacute, strengthening, functional).
-- [x] Patient-disability assignment table (paciente_discapacidad) with per-disability progression level tracking.
-- [x] Patient-treatment visibility table (paciente_tratamiento) with practitioner-controlled visibility flag.
-- [x] Add id_nivel foreign key to tratamiento table linking treatments to progression levels.
-- [x] Migration script for progression level integration.
-- [x] Deprecate and eventually remove legacy text fields discapacidad_pac and tratamiento_pac from patient table.
+### Disability CRUD tab (desktop)
 
-### Security and encryption
+- [x] Extend CatalogoDAO with crearDiscapacidad(), actualizarDiscapacidad(), eliminarDiscapacidad() calling new API endpoints.
+- [x] Extend CatalogoService to wrap new CatalogoDAO CRUD methods with error handling.
+- [x] Create DTO DiscapacidadRequest record (codDis, nombreDis, descripcionDis, necesitaProtesis) for POST/PUT body.
+- [x] Create VentanaDiscapacidades.fxml following VentanaPacientes/VentanaSanitarios layout pattern (VBox root, header with title + search/add/filter bar, TableView with columns: Codigo, Nombre, Descripcion, Protesis, footer with Eliminar + Editar buttons).
+- [x] Create controladorVentanaDiscapacidades.java (load from CatalogoService, search filter, CRUD button wiring, RBAC specialist-only for write operations).
+- [x] Create VentanaAgregarDiscapacidad.fxml modal form (fields: codDis, nombreDis, descripcionDis, necesitaProtesis checkbox; create/edit mode support).
+- [x] Create controladorAgregarDiscapacidad.java (validate required fields, handle DuplicadoException, refresh parent table on success).
+- [x] Verify VentanaDiscapacidades loads correctly in tab cache system (cargarPestania("Discapacidades") already wired in controladorVentanaPrincipal line 420).
 
-- [x] BCrypt password hashing with lazy migration of plain-text passwords.
-- [x] AES-256-GCM encryption/decryption of clinical fields in PacienteDAO.
-- [x] Encryption key management via cifrado.properties (excluded from Git).
-- [x] Fallback mode: app functions without encryption for development if key is missing.
-- [x] Audit logging for all CRUD operations via AuditService (fire-and-forget pattern).
-- [x] READ audit logging when opening patient records (consultaSensible).
-- [x] SSL/TLS delegado a la API. El desktop usa HTTPS apuntando a URL segura via REHABIAPP_API_URL.
-- [x] Custom exception hierarchy created (RehabiAppException, ConexionException, ValidacionException, AutenticacionException, PermisoException).
-- [x] DAOs ya lanzan excepciones custom (migracion a REST API completada).
+### Treatment CRUD tab (desktop)
 
-### CRUD operations
+- [x] Extend CatalogoDAO with crearTratamiento(), actualizarTratamiento(), eliminarTratamiento(), vincularDiscapacidad(), desvincularDiscapacidad(), listarDiscapacidadesDeTratamiento().
+- [x] Extend CatalogoService to wrap new treatment CRUD methods.
+- [x] Create DTO TratamientoRequest record (codTrat, nombreTrat, definicionTrat, idNivel, codDis).
+- [ ] Create VentanaTratamientos.fxml following same pattern (header + filter bar with ComboBox by disability and by progression level + TableView with columns: Codigo, Nombre, Definicion, Discapacidad, Nivel + footer with Eliminar + Editar buttons).
+- [ ] Create controladorVentanaTratamientos.java (load treatments, populate filter ComboBoxes from catalog, wire filters and CRUD buttons, RBAC specialist-only).
+- [ ] Create VentanaAgregarTratamiento.fxml modal form (fields: codTrat, nombreTrat, definicionTrat, ComboBox discapacidad required, ComboBox nivel progresion required; create/edit mode support).
+- [ ] Create controladorAgregarTratamiento.java (validate required fields including disability + level, handle DuplicadoException, refresh parent table on success).
+- [ ] Verify VentanaTratamientos loads correctly in tab cache system (cargarPestania("Tratamientos") already wired in controladorVentanaPrincipal line 428).
 
-- [x] Full CRUD for patients with AES encryption, soft delete, active=TRUE filtering.
-- [x] Full CRUD for practitioners with BCrypt, soft delete, active=TRUE filtering.
-- [x] Appointment management with calendar view, conflict detection, async loading.
-- [x] PacienteService and SanitarioService wrappers with automatic audit logging.
-- [x] Implement atomic transactions (commit/rollback) in PacienteService for compound operations (patient + phones + address + photo).
-- [x] Implement atomic transactions in SanitarioService for compound operations (practitioner + role + phones).
-- [x] Integrate photo upload within the same transaction as patient INSERT.
+### Custom calendar (replace CalendarFX)
 
-### User interface
+- [ ] Create CalendarioPersonalizado.java — custom GridPane-based monthly calendar (7 columns L-D x 6 rows, cell as VBox with day number + appointment count label, navigation bar with month/year + prev/next buttons, today highlight, weekend distinct style, adjacent month days muted).
+- [ ] Implement cell appointment count rendering: show "{n} cita(s)" badge below day number when appointments exist.
+- [ ] Implement cell tooltip on hover: show patient initials list (e.g., "J.G., M.R., A.L.") for days with appointments.
+- [ ] Implement single-click day selection: highlight cell, load day's appointments in table below, sync with DatePicker.
+- [ ] Implement multi-day selection: Ctrl+Click toggle, Shift+Click range, distinct visual indicator, enable batch deletion.
+- [ ] Implement appointment interaction: double-click day to expand in table, double-click table row for appointment context, "Ver ficha paciente" button to navigate to patient tab.
+- [ ] Fix appointment creation flow: verify ComboBox patient search + DatePicker + Spinners correctly POST to /api/citas, debug if broken.
+- [ ] Remove CalendarFX dependency from build.gradle and all CalendarFX imports from controladorVentanaCitas.java.
+- [ ] Update controladorVentanaCitas.java: replace MonthView initialization with CalendarioPersonalizado, replace CalendarSource with direct appointment Map, keep existing table/form/button logic and async loading.
+- [ ] Remove emoji from btnVerAgenda text in VentanaCitas.fxml (change to "Ver Mi Agenda" without emoji prefix).
+- [ ] Add CSS classes for custom calendar in both tema_claro.css and tema_oscuro.css (.calendario-grid, .calendario-celda, .calendario-celda-hoy, .calendario-celda-fin-semana, .calendario-celda-seleccionada, .calendario-celda-otro-mes, .calendario-badge-citas, .calendario-header, .calendario-nav-button).
 
-- [x] Login screen with database connection indicator.
-- [x] Main window with sidebar navigation and dynamic tab loading.
-- [x] Role-based UI (practitioner tab hidden for nurses).
-- [x] Paginated tables (50 records per page) for patients and practitioners.
-- [x] Text search filtering by DNI, name, surnames, email, social security number.
-- [x] Advanced filters for patients (prosthesis, age range, sorting) and practitioners (role, assigned patients, sorting).
-- [x] Patient form with all clinical fields (sex combo, date picker, allergy/history/medication text areas, RGPD consent checkbox).
-- [x] Patient detail view with clinical data section (read-only).
-- [x] Sex column added to patient table.
-- [x] Patient photo management (BYTEA storage).
-- [x] Light and dark CSS themes (switchable).
-- [x] Configurable font size (12px, 14px, 16px, 18px).
-- [x] Window animations (open/close scale + fade, tab transitions, shake on validation error, hover effects).
-- [x] Informational and confirmation dialog windows.
-- [x] PDF report generation with JasperReports (individual patient, practitioner list).
-- [x] Practitioner agenda in HTML rendered via WebView.
-- [x] Help tab with integrated documentation.
-- [x] User profile view and edit.
-- [x] Quick search bar in header for fast patient report access.
+### CSS visual enhancement (both themes)
+
+- [ ] Enhanced sidebar navigation: left accent border (3px) on active/hover tab, subtle gradient background, smooth color transition between selected/unselected states.
+- [ ] Card-based content panels: wrap content areas in card containers with border-radius 8-12px, soft shadow, slight background elevation, darker header strip.
+- [ ] Improved table styling: left border indicator on hover row, increased row height 36-40px, smooth hover transition 150ms, accent left border on selected row, improved header bottom border.
+- [ ] Enhanced form inputs: inner shadow on focus, left color accent bar 3px on focus, lighter italic placeholder text, validation state borders (green valid, red error).
+- [ ] Button refinements: subtle gradient on primary buttons, deeper shadow + scale 0.98 on press, improved disabled state opacity 0.5.
+- [ ] Enhanced separators: gradient fade (transparent-color-transparent) instead of solid lines, improved spacing.
+- [ ] Typography improvements: letter-spacing 0.3px on titles, section titles 15px semi-bold, text-shadow on dark theme titles.
+- [ ] Tooltip and popover polish: deeper softer shadow, improved styling.
+- [ ] Scrollbar refinement: thinner track 6px, rounded thumb with hover expansion 6px-8px, subtle color transition.
+- [ ] Status indicators and badges: CSS classes .badge-activo, .badge-inactivo, .badge-nivel-* with color-coded progression levels (agudo=red, subagudo=orange, fortalecimiento=blue, funcional=green), pill shape border-radius 12px.
+- [ ] Login screen polish: subtle background gradient, improved connection indicator styling.
+- [ ] Modal window improvements: accent top border on modal header, smooth open animation.
+
+### Progression level UI (existing pending tasks)
+
 - [ ] Implement progression level UI: display patient disabilities with current level, show treatments filtered by matching level, toggle treatment visibility.
 - [ ] Update patient form to assign disabilities from catalog instead of free text.
 - [ ] Update patient detail view to show disability-treatment-progression hierarchy.
@@ -159,7 +166,6 @@ Completed items provide context of what already exists. Uncompleted items are th
 - [ ] OpenAI API integration for automated clinical text processing and chart interpretation.
 - [ ] NFC scanner integration for Spanish health card reading (auto-fill patient forms).
 - [ ] Activar y probar HTTPS hacia la API en produccion (AWS).
-- [x] Architectural migration: JDBC eliminado, desktop consume REST API de /api.
 
 ---
 

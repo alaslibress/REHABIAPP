@@ -1,6 +1,8 @@
 package com.javafx.Interface;
 
+import com.javafx.Clases.Discapacidad;
 import com.javafx.Clases.Paciente;
+import com.javafx.Clases.PacienteDiscapacidad;
 import com.javafx.Clases.Sanitario;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
@@ -9,6 +11,8 @@ import com.javafx.DAO.SanitarioDAO;
 import com.javafx.excepcion.ConexionException;
 import com.javafx.excepcion.DuplicadoException;
 import com.javafx.excepcion.ValidacionException;
+import com.javafx.service.CatalogoService;
+import com.javafx.service.PacienteClinicoService;
 import com.javafx.service.PacienteService;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -17,6 +21,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
@@ -24,11 +29,16 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
@@ -37,7 +47,11 @@ import org.controlsfx.validation.Validator;
 
 import java.io.File;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Controlador para la ventana de agregar y modificar paciente
@@ -134,6 +148,34 @@ public class controladorAgregarPaciente {
     @FXML
     private CheckBox chkConsentimientoRgpd;
 
+    //Seccion de discapacidades (activa solo en modo edicion)
+    @FXML
+    private TitledPane paneDiscapacidades;
+
+    @FXML
+    private Label lblInfoDiscapacidades;
+
+    @FXML
+    private VBox vboxContenidoDiscapacidades;
+
+    @FXML
+    private TableView<PacienteDiscapacidad> tblDiscapacidadesFormulario;
+
+    @FXML
+    private TableColumn<PacienteDiscapacidad, String> colFormDisNombre;
+
+    @FXML
+    private TableColumn<PacienteDiscapacidad, String> colFormDisNivel;
+
+    @FXML
+    private TableColumn<PacienteDiscapacidad, String> colFormDisNotas;
+
+    @FXML
+    private Button btnFormAsignarDis;
+
+    @FXML
+    private Button btnFormDesasignarDis;
+
     //Variables para la gestion de archivos
     private File archivoFoto;
 
@@ -145,6 +187,8 @@ public class controladorAgregarPaciente {
     private PacienteService pacienteService;
     private PacienteDAO pacienteDAO; // TODO: Mover operaciones de foto al servicio
     private SanitarioDAO sanitarioDAO;
+    private PacienteClinicoService pacienteClinicoService;
+    private CatalogoService catalogoService;
 
     //Soporte de validacion de ControlsFX
     private ValidationSupport validationSupport;
@@ -167,6 +211,13 @@ public class controladorAgregarPaciente {
         pacienteService = new PacienteService();
         pacienteDAO = new PacienteDAO(); // Temporal para fotos
         sanitarioDAO = new SanitarioDAO();
+        pacienteClinicoService = new PacienteClinicoService();
+        catalogoService = new CatalogoService();
+
+        //Configurar columnas de la tabla de discapacidades del formulario
+        colFormDisNombre.setCellValueFactory(new PropertyValueFactory<>("nombreDis"));
+        colFormDisNivel.setCellValueFactory(new PropertyValueFactory<>("nombreNivel"));
+        colFormDisNotas.setCellValueFactory(new PropertyValueFactory<>("notas"));
 
         //Configurar el spinner de edad (0-120 años)
         SpinnerValueFactory<Integer> valueFactory =
@@ -355,6 +406,10 @@ public class controladorAgregarPaciente {
 
         //Cargar foto
         cargarFotoDesdeBD(paciente.getDni());
+
+        //Activar seccion de discapacidades en modo edicion
+        activarSeccionDiscapacidades();
+        cargarDiscapacidadesFormulario();
     }
 
     /**
@@ -422,10 +477,24 @@ public class controladorAgregarPaciente {
         try {
             if (modoEdicion) {
                 actualizarPacienteExistente(paciente);
+                cerrarVentana(event);
             } else {
                 insertarNuevoPaciente(paciente);
+                //Ofrecer gestion de discapacidades tras crear el paciente
+                boolean asignar = VentanaUtil.mostrarVentanaPregunta(
+                        "Paciente creado correctamente. ¿Desea asignar discapacidades ahora?");
+                if (asignar) {
+                    modoEdicion = true;
+                    dniOriginal = paciente.getDni();
+                    lblTituloVentana.setText("Editar paciente - " + paciente.getDni());
+                    activarSeccionDiscapacidades();
+                    cargarDiscapacidadesFormulario();
+                    paneDiscapacidades.setExpanded(true);
+                } else {
+                    cerrarVentana(event);
+                }
+                return;
             }
-            cerrarVentana(event);
         } catch (DuplicadoException e) {
             VentanaUtil.mostrarVentanaInformativa(
                     "Dato duplicado: " + e.getMessage(),
@@ -679,5 +748,99 @@ public class controladorAgregarPaciente {
     void cerrarVentana(ActionEvent event) {
         Stage stage = (Stage) btnCancelar.getScene().getWindow();
         stage.close();
+    }
+
+    // ==================== GESTION DE DISCAPACIDADES EN FORMULARIO ====================
+
+    /**
+     * Muestra el contenido de la seccion de discapacidades (solo en modo edicion).
+     */
+    private void activarSeccionDiscapacidades() {
+        lblInfoDiscapacidades.setVisible(false);
+        lblInfoDiscapacidades.setManaged(false);
+        vboxContenidoDiscapacidades.setVisible(true);
+        vboxContenidoDiscapacidades.setManaged(true);
+    }
+
+    /**
+     * Recarga la tabla de discapacidades del formulario desde la API.
+     */
+    private void cargarDiscapacidadesFormulario() {
+        try {
+            List<PacienteDiscapacidad> discapacidades =
+                    pacienteClinicoService.listarDiscapacidadesPaciente(dniOriginal);
+            tblDiscapacidadesFormulario.setItems(FXCollections.observableArrayList(discapacidades));
+        } catch (ConexionException e) {
+            System.err.println("Error al cargar discapacidades en formulario: " + e.getMessage());
+            tblDiscapacidadesFormulario.getItems().clear();
+        }
+    }
+
+    /**
+     * Abre un dialogo de seleccion con el catalogo de discapacidades no asignadas y asigna la elegida.
+     */
+    @FXML
+    void asignarDiscapacidadFormulario(ActionEvent event) {
+        try {
+            List<Discapacidad> catalogo = catalogoService.listarDiscapacidades();
+
+            //Filtrar las ya asignadas al paciente
+            Set<String> yaAsignadas = tblDiscapacidadesFormulario.getItems().stream()
+                    .map(PacienteDiscapacidad::getCodDis)
+                    .collect(Collectors.toSet());
+
+            List<Discapacidad> disponibles = catalogo.stream()
+                    .filter(d -> !yaAsignadas.contains(d.getCodDis()))
+                    .collect(Collectors.toList());
+
+            if (disponibles.isEmpty()) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "Todas las discapacidades del catalogo ya estan asignadas al paciente.",
+                        TipoMensaje.ADVERTENCIA);
+                return;
+            }
+
+            ChoiceDialog<Discapacidad> dialogo = new ChoiceDialog<>(disponibles.get(0), disponibles);
+            dialogo.setTitle("Asignar discapacidad");
+            dialogo.setHeaderText("Seleccione una discapacidad del catalogo:");
+            dialogo.setContentText("Discapacidad:");
+            controladorVentanaOpciones.aplicarConfiguracionAScene(dialogo.getDialogPane().getScene());
+
+            Optional<Discapacidad> resultado = dialogo.showAndWait();
+            if (resultado.isPresent()) {
+                pacienteClinicoService.asignarDiscapacidad(dniOriginal, resultado.get().getCodDis());
+                cargarDiscapacidadesFormulario();
+            }
+
+        } catch (ConexionException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error al asignar discapacidad: " + e.getMessage(), TipoMensaje.ERROR);
+        }
+    }
+
+    /**
+     * Desasigna la discapacidad seleccionada del paciente, previa confirmacion.
+     */
+    @FXML
+    void desasignarDiscapacidadFormulario(ActionEvent event) {
+        PacienteDiscapacidad seleccionada = tblDiscapacidadesFormulario.getSelectionModel().getSelectedItem();
+        if (seleccionada == null) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Seleccione una discapacidad para desasignar.", TipoMensaje.ADVERTENCIA);
+            return;
+        }
+
+        boolean confirmado = VentanaUtil.mostrarVentanaPregunta(
+                "Se desasignara '" + seleccionada.getNombreDis() + "' del paciente. Esta accion no se puede deshacer. ¿Continuar?");
+
+        if (confirmado) {
+            try {
+                pacienteClinicoService.desasignarDiscapacidad(dniOriginal, seleccionada.getCodDis());
+                cargarDiscapacidadesFormulario();
+            } catch (ConexionException e) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "Error al desasignar: " + e.getMessage(), TipoMensaje.ERROR);
+            }
+        }
     }
 }

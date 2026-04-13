@@ -5,8 +5,10 @@ import com.javafx.Clases.ApiClient;
 import com.javafx.Clases.Discapacidad;
 import com.javafx.Clases.NivelProgresion;
 import com.javafx.Clases.Tratamiento;
+import com.javafx.dto.DiscapacidadRequest;
 import com.javafx.dto.DiscapacidadResponse;
 import com.javafx.dto.NivelProgresionResponse;
+import com.javafx.dto.TratamientoRequest;
 import com.javafx.dto.TratamientoResponse;
 
 import java.util.List;
@@ -86,6 +88,90 @@ public class CatalogoDAO {
         );
         return respuestas.stream()
             .map(NivelProgresion::desdeNivelProgresionResponse)
+            .toList();
+    }
+
+    // ==================== DISCAPACIDADES CRUD ====================
+
+    /**
+     * Crea una nueva discapacidad en el catalogo.
+     */
+    public Discapacidad crearDiscapacidad(DiscapacidadRequest request) {
+        DiscapacidadResponse response = api.post(
+            "/api/catalogo/discapacidades", request, DiscapacidadResponse.class);
+        return Discapacidad.desdeDiscapacidadResponse(response);
+    }
+
+    /**
+     * Actualiza una discapacidad existente.
+     */
+    public Discapacidad actualizarDiscapacidad(String codDis, DiscapacidadRequest request) {
+        DiscapacidadResponse response = api.put(
+            "/api/catalogo/discapacidades/" + codDis, request, DiscapacidadResponse.class);
+        return Discapacidad.desdeDiscapacidadResponse(response);
+    }
+
+    /**
+     * Elimina una discapacidad del catalogo.
+     */
+    public void eliminarDiscapacidad(String codDis) {
+        api.delete("/api/catalogo/discapacidades/" + codDis);
+    }
+
+    // ==================== TRATAMIENTOS CRUD ====================
+
+    /**
+     * Crea un nuevo tratamiento en el catalogo.
+     */
+    public Tratamiento crearTratamiento(TratamientoRequest request) {
+        TratamientoResponse response = api.post(
+            "/api/catalogo/tratamientos", request, TratamientoResponse.class);
+        return Tratamiento.desdeTratamientoResponse(response);
+    }
+
+    /**
+     * Actualiza un tratamiento existente.
+     */
+    public Tratamiento actualizarTratamiento(String codTrat, TratamientoRequest request) {
+        TratamientoResponse response = api.put(
+            "/api/catalogo/tratamientos/" + codTrat, request, TratamientoResponse.class);
+        return Tratamiento.desdeTratamientoResponse(response);
+    }
+
+    /**
+     * Elimina un tratamiento del catalogo.
+     */
+    public void eliminarTratamiento(String codTrat) {
+        api.delete("/api/catalogo/tratamientos/" + codTrat);
+    }
+
+    // ==================== VINCULOS TRATAMIENTO-DISCAPACIDAD ====================
+
+    /**
+     * Vincula un tratamiento a una discapacidad.
+     */
+    public void vincularTratamientoDiscapacidad(String codTrat, String codDis) {
+        api.post("/api/catalogo/tratamientos/" + codTrat + "/discapacidades/" + codDis,
+            null, Void.class);
+    }
+
+    /**
+     * Desvincula un tratamiento de una discapacidad.
+     */
+    public void desvincularTratamientoDiscapacidad(String codTrat, String codDis) {
+        api.delete("/api/catalogo/tratamientos/" + codTrat + "/discapacidades/" + codDis);
+    }
+
+    /**
+     * Lista las discapacidades vinculadas a un tratamiento.
+     */
+    public List<Discapacidad> listarDiscapacidadesDeTratamiento(String codTrat) {
+        List<DiscapacidadResponse> respuestas = api.get(
+            "/api/catalogo/tratamientos/" + codTrat + "/discapacidades",
+            new TypeReference<List<DiscapacidadResponse>>() {}
+        );
+        return respuestas.stream()
+            .map(Discapacidad::desdeDiscapacidadResponse)
             .toList();
     }
 }

@@ -956,3 +956,23 @@
 #circuloConexion {
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 3, 0, 0, 1);
 }
+
+/* ====== NIVELES DE PROGRESION CLINICA ====== */
+/* Colores de fondo oscuros y sutiles para las filas de la tabla de discapacidades */
+.nivel-agudo .cell {
+    -fx-background-color: derive(#ff6b6b, -60%);
+}
+.nivel-subagudo .cell {
+    -fx-background-color: derive(#ffd93d, -60%);
+}
+.nivel-fortalecimiento .cell {
+    -fx-background-color: derive(#6bcb77, -60%);
+}
+.nivel-funcional .cell {
+    -fx-background-color: derive(#4d96ff, -60%);
+}
+
+.texto-informativo {
+    -fx-text-fill: #999999;
+    -fx-font-style: italic;
+}

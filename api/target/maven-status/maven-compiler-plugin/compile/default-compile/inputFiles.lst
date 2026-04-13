@@ -3,6 +3,7 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/CitaRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/CitaResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/DireccionDto.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/DiscapacidadRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/DiscapacidadResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/LoginRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/LoginResponse.java
@@ -17,6 +18,7 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/RefreshRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/SanitarioRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/SanitarioResponse.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/TratamientoRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/TratamientoResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/CitaMapper.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/DiscapacidadMapper.java
@@ -64,6 +66,7 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/CodigoPostalRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/DireccionRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/DiscapacidadRepository.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/DiscapacidadTratamientoRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/LocalidadRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/NivelProgresionRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/PacienteDiscapacidadRepository.java

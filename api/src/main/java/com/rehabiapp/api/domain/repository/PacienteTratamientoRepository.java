@@ -21,4 +21,10 @@ public interface PacienteTratamientoRepository extends JpaRepository<PacienteTra
      * @return lista de asignaciones tratamiento-paciente
      */
     List<PacienteTratamiento> findByIdDniPac(String dniPac);
+
+    /**
+     * Comprueba si algun paciente tiene asignado este tratamiento.
+     * Necesario para impedir la eliminacion de tratamientos en uso.
+     */
+    boolean existsByIdCodTrat(String codTrat);
 }

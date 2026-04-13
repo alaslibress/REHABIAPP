@@ -27,4 +27,7 @@ public interface TratamientoRepository extends JpaRepository<Tratamiento, String
     @Query("SELECT t FROM Tratamiento t JOIN DiscapacidadTratamiento dt "
             + "ON dt.id.codTrat = t.codTrat WHERE dt.id.codDis = :codDis")
     List<Tratamiento> findByCodDis(@Param("codDis") String codDis);
+
+    boolean existsByNombreTrat(String nombreTrat);
+    boolean existsByNombreTratAndCodTratNot(String nombreTrat, String codTrat);
 }

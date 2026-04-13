@@ -25,6 +25,7 @@ com/rehabiapp/api/domain/exception/AccesoNoPermitidoException.class
 com/rehabiapp/api/application/dto/TratamientoResponse.class
 com/rehabiapp/api/domain/entity/CitaId.class
 com/rehabiapp/api/application/mapper/PacienteMapper.class
+com/rehabiapp/api/application/dto/DiscapacidadRequest.class
 com/rehabiapp/api/application/mapper/SanitarioMapper.class
 com/rehabiapp/api/infrastructure/encryption/CampoClinicoConverter.class
 com/rehabiapp/api/domain/repository/PacienteDiscapacidadRepository.class
@@ -41,6 +42,7 @@ com/rehabiapp/api/ApiApplication.class
 com/rehabiapp/api/application/service/CatalogoService.class
 com/rehabiapp/api/application/mapper/PacienteDiscapacidadMapper.class
 com/rehabiapp/api/application/dto/NivelProgresionResponse.class
+com/rehabiapp/api/domain/repository/DiscapacidadTratamientoRepository.class
 com/rehabiapp/api/application/mapper/SanitarioMapperImpl.class
 com/rehabiapp/api/application/mapper/NivelProgresionMapperImpl.class
 com/rehabiapp/api/application/mapper/TratamientoMapper.class
@@ -70,6 +72,7 @@ com/rehabiapp/api/infrastructure/config/FlywayConfig.class
 com/rehabiapp/api/domain/entity/Cita.class
 com/rehabiapp/api/domain/entity/SanitarioRol.class
 com/rehabiapp/api/application/dto/DiscapacidadResponse.class
+com/rehabiapp/api/application/dto/TratamientoRequest.class
 com/rehabiapp/api/application/service/PacienteService.class
 com/rehabiapp/api/domain/entity/DiscapacidadTratamientoId.class
 com/rehabiapp/api/application/mapper/PacienteMapperImpl.class

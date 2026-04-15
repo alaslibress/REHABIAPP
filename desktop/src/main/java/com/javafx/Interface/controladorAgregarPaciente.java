@@ -234,10 +234,20 @@ public class controladorAgregarPaciente {
         validationSupport = new ValidationSupport();
 
         //Cargar lista de sanitarios en el ComboBox
-        cargarSanitarios();
+        try {
+            cargarSanitarios();
+        } catch (Exception e) {
+            System.err.println("Error al cargar sanitarios: " + e.getMessage());
+            e.printStackTrace();
+        }
 
         //Configurar validaciones en un hilo separado
-        Platform.runLater(this::configurarValidaciones);
+        try {
+            Platform.runLater(this::configurarValidaciones);
+        } catch (Exception e) {
+            System.err.println("Error al configurar validaciones: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -508,7 +518,7 @@ public class controladorAgregarPaciente {
             );
         } catch (ConexionException e) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Error de conexion con la base de datos.",
+                    "No se pudo comunicar con el servidor: " + e.getMessage(),
                     TipoMensaje.ERROR
             );
         }

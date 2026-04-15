@@ -71,7 +71,9 @@
       "Read(//home/alaslibres/DAM/RehabiAPP/api/**)",
       "Bash(./mvnw clean:*)",
       "Bash(./mvnw compile:*)",
-      "Bash(ls -lh /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*icono*.png /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*buscar*.png /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*filtrar*.png)"
+      "Bash(ls -lh /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*icono*.png /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*buscar*.png /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*filtrar*.png)",
+      "Bash(ls /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/VentanaFiltro*.fxml)",
+      "Bash(ls /home/alaslibres/DAM/RehabiAPP/desktop/src/main/java/com/javafx/Interface/controladorFiltro*.java)"
     ],
     "deny": [],
     "ask": []

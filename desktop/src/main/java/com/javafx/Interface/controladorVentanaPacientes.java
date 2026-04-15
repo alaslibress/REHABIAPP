@@ -110,6 +110,9 @@ public class controladorVentanaPacientes {
     private static final int REGISTROS_POR_PAGINA = 50; // Mostrar 50 pacientes por pagina
     private List<Paciente> todosPacientes; // Cache de todos los pacientes
 
+    // Texto de busqueda pendiente de aplicar (usado por navegacion desde Citas)
+    private String textoBusquedaPendiente;
+
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML
      */
@@ -138,6 +141,29 @@ public class controladorVentanaPacientes {
 
         //Cargar pacientes automaticamente
         cargarPacientes();
+
+        // Aplicar busqueda pendiente si fue establecida antes de initialize (caso improbable)
+        if (textoBusquedaPendiente != null && !textoBusquedaPendiente.isBlank()) {
+            txfBuscarPacientes.setText(textoBusquedaPendiente);
+            buscarPacientes(null);
+            textoBusquedaPendiente = null;
+        }
+    }
+
+    /**
+     * Establece un texto de busqueda pendiente para aplicar al cargar la pestaña.
+     * Si el FXML ya esta inicializado, aplica la busqueda de inmediato.
+     * Llamado desde controladorVentanaPrincipal al navegar desde la pestaña de Citas.
+     * @param texto DNI u otro texto de busqueda
+     */
+    public void setTextoBusquedaPendiente(String texto) {
+        this.textoBusquedaPendiente = texto;
+        // Si el FXML ya esta cargado, aplicar de inmediato
+        if (txfBuscarPacientes != null && texto != null && !texto.isBlank()) {
+            txfBuscarPacientes.setText(texto);
+            buscarPacientes(null);
+            this.textoBusquedaPendiente = null;
+        }
     }
 
     /**
@@ -295,8 +321,12 @@ public class controladorVentanaPacientes {
             stage.showAndWait();
 
             //Recargar la lista si hubo cambios
-            if (controlador.hayCambiosRealizados()) {
-                cargarPacientes();
+            try {
+                if (controlador.hayCambiosRealizados()) {
+                    cargarPacientes();
+                }
+            } catch (Exception e) {
+                System.err.println("Error al recargar datos: " + e.getMessage());
             }
 
         } catch (Exception e) {
@@ -337,7 +367,11 @@ public class controladorVentanaPacientes {
             stage.showAndWait();
 
             //Recargar la lista de pacientes
-            cargarPacientes();
+            try {
+                cargarPacientes();
+            } catch (Exception e) {
+                System.err.println("Error al recargar datos: " + e.getMessage());
+            }
 
         } catch (Exception e) {
             System.err.println("Error al abrir formulario de nuevo paciente: " + e.getMessage());
@@ -501,7 +535,7 @@ public class controladorVentanaPacientes {
 
             } catch (ConexionException e) {
                 VentanaUtil.mostrarVentanaInformativa(
-                        "Error de conexion con la base de datos.",
+                        "No se pudo comunicar con el servidor: " + e.getMessage(),
                         TipoMensaje.ERROR
                 );
             } catch (RehabiAppException e) {

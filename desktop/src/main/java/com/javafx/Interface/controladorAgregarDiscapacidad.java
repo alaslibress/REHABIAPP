@@ -163,7 +163,7 @@ public class controladorAgregarDiscapacidad {
             );
         } catch (ConexionException e) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Error de conexion con el servidor.",
+                    "No se pudo comunicar con el servidor: " + e.getMessage(),
                     TipoMensaje.ERROR
             );
         } catch (RehabiAppException e) {

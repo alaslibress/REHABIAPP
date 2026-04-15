@@ -152,6 +152,20 @@ public class Sanitario implements Persona {
     // ==================== METODOS AUXILIARES ====================
 
     /**
+     * Devuelve el cargo traducido al espanol para mostrar en la interfaz.
+     * Convierte los valores de la API ("SPECIALIST", "NURSE") a texto legible.
+     */
+    public String getCargoTraducido() {
+        String c = getCargo();
+        if (c == null) return "-";
+        return switch (c.toUpperCase()) {
+            case "SPECIALIST" -> "Especialista";
+            case "NURSE" -> "Enfermero/a";
+            default -> c;
+        };
+    }
+
+    /**
      * Comprueba si el sanitario es medico especialista.
      * Acepta tanto el formato de la API ("SPECIALIST") como el formato legado.
      */

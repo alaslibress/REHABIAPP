@@ -120,40 +120,40 @@ Two user types, both healthcare practitioners:
 - [x] Extend CatalogoDAO with crearTratamiento(), actualizarTratamiento(), eliminarTratamiento(), vincularDiscapacidad(), desvincularDiscapacidad(), listarDiscapacidadesDeTratamiento().
 - [x] Extend CatalogoService to wrap new treatment CRUD methods.
 - [x] Create DTO TratamientoRequest record (codTrat, nombreTrat, definicionTrat, idNivel, codDis).
-- [ ] Create VentanaTratamientos.fxml following same pattern (header + filter bar with ComboBox by disability and by progression level + TableView with columns: Codigo, Nombre, Definicion, Discapacidad, Nivel + footer with Eliminar + Editar buttons).
-- [ ] Create controladorVentanaTratamientos.java (load treatments, populate filter ComboBoxes from catalog, wire filters and CRUD buttons, RBAC specialist-only).
-- [ ] Create VentanaAgregarTratamiento.fxml modal form (fields: codTrat, nombreTrat, definicionTrat, ComboBox discapacidad required, ComboBox nivel progresion required; create/edit mode support).
-- [ ] Create controladorAgregarTratamiento.java (validate required fields including disability + level, handle DuplicadoException, refresh parent table on success).
-- [ ] Verify VentanaTratamientos loads correctly in tab cache system (cargarPestania("Tratamientos") already wired in controladorVentanaPrincipal line 428).
+- [x] Create VentanaTratamientos.fxml following same pattern (header + filter bar with ComboBox by disability and by progression level + TableView with columns: Codigo, Nombre, Definicion, Discapacidad, Nivel + footer with Eliminar + Editar buttons).
+- [x] Create controladorVentanaTratamientos.java (load treatments, populate filter ComboBoxes from catalog, wire filters and CRUD buttons, RBAC specialist-only).
+- [x] Create VentanaAgregarTratamiento.fxml modal form (fields: codTrat, nombreTrat, definicionTrat, ComboBox discapacidad required, ComboBox nivel progresion required; create/edit mode support).
+- [x] Create controladorAgregarTratamiento.java (validate required fields including disability + level, handle DuplicadoException, refresh parent table on success).
+- [x] Verify VentanaTratamientos loads correctly in tab cache system (cargarPestania("Tratamientos") already wired in controladorVentanaPrincipal line 428).
 
 ### Custom calendar (replace CalendarFX)
 
-- [ ] Create CalendarioPersonalizado.java — custom GridPane-based monthly calendar (7 columns L-D x 6 rows, cell as VBox with day number + appointment count label, navigation bar with month/year + prev/next buttons, today highlight, weekend distinct style, adjacent month days muted).
-- [ ] Implement cell appointment count rendering: show "{n} cita(s)" badge below day number when appointments exist.
-- [ ] Implement cell tooltip on hover: show patient initials list (e.g., "J.G., M.R., A.L.") for days with appointments.
-- [ ] Implement single-click day selection: highlight cell, load day's appointments in table below, sync with DatePicker.
-- [ ] Implement multi-day selection: Ctrl+Click toggle, Shift+Click range, distinct visual indicator, enable batch deletion.
-- [ ] Implement appointment interaction: double-click day to expand in table, double-click table row for appointment context, "Ver ficha paciente" button to navigate to patient tab.
-- [ ] Fix appointment creation flow: verify ComboBox patient search + DatePicker + Spinners correctly POST to /api/citas, debug if broken.
-- [ ] Remove CalendarFX dependency from build.gradle and all CalendarFX imports from controladorVentanaCitas.java.
-- [ ] Update controladorVentanaCitas.java: replace MonthView initialization with CalendarioPersonalizado, replace CalendarSource with direct appointment Map, keep existing table/form/button logic and async loading.
-- [ ] Remove emoji from btnVerAgenda text in VentanaCitas.fxml (change to "Ver Mi Agenda" without emoji prefix).
-- [ ] Add CSS classes for custom calendar in both tema_claro.css and tema_oscuro.css (.calendario-grid, .calendario-celda, .calendario-celda-hoy, .calendario-celda-fin-semana, .calendario-celda-seleccionada, .calendario-celda-otro-mes, .calendario-badge-citas, .calendario-header, .calendario-nav-button).
+- [x] Create CalendarioPersonalizado.java — custom GridPane-based monthly calendar (7 columns L-D x 6 rows, cell as VBox with day number + appointment count label, navigation bar with month/year + prev/next buttons, today highlight, weekend distinct style, adjacent month days muted).
+- [x] Implement cell appointment count rendering: show "{n} cita(s)" badge below day number when appointments exist.
+- [x] Implement cell tooltip on hover: show patient initials list (e.g., "J.G., M.R., A.L.") for days with appointments.
+- [x] Implement single-click day selection: highlight cell, load day's appointments in table below, sync with DatePicker.
+- [x] Implement multi-day selection: Ctrl+Click toggle, Shift+Click range, distinct visual indicator, enable batch deletion.
+- [x] Implement appointment interaction: double-click day to expand in table, double-click table row for appointment context, "Ver ficha paciente" button to navigate to patient tab.
+- [x] Fix appointment creation flow: verify ComboBox patient search + DatePicker + Spinners correctly POST to /api/citas, debug if broken.
+- [x] Remove CalendarFX dependency from build.gradle and all CalendarFX imports from controladorVentanaCitas.java.
+- [x] Update controladorVentanaCitas.java: replace MonthView initialization with CalendarioPersonalizado, replace CalendarSource with direct appointment Map, keep existing table/form/button logic and async loading.
+- [x] Remove emoji from btnVerAgenda text in VentanaCitas.fxml (change to "Ver Mi Agenda" without emoji prefix).
+- [x] Add CSS classes for custom calendar in both tema_claro.css and tema_oscuro.css (.calendario-grid, .calendario-celda, .calendario-celda-hoy, .calendario-celda-fin-semana, .calendario-celda-seleccionada, .calendario-celda-otro-mes, .calendario-badge-citas, .calendario-header, .calendario-nav-button).
 
 ### CSS visual enhancement (both themes)
 
-- [ ] Enhanced sidebar navigation: left accent border (3px) on active/hover tab, subtle gradient background, smooth color transition between selected/unselected states.
-- [ ] Card-based content panels: wrap content areas in card containers with border-radius 8-12px, soft shadow, slight background elevation, darker header strip.
-- [ ] Improved table styling: left border indicator on hover row, increased row height 36-40px, smooth hover transition 150ms, accent left border on selected row, improved header bottom border.
-- [ ] Enhanced form inputs: inner shadow on focus, left color accent bar 3px on focus, lighter italic placeholder text, validation state borders (green valid, red error).
-- [ ] Button refinements: subtle gradient on primary buttons, deeper shadow + scale 0.98 on press, improved disabled state opacity 0.5.
-- [ ] Enhanced separators: gradient fade (transparent-color-transparent) instead of solid lines, improved spacing.
-- [ ] Typography improvements: letter-spacing 0.3px on titles, section titles 15px semi-bold, text-shadow on dark theme titles.
-- [ ] Tooltip and popover polish: deeper softer shadow, improved styling.
-- [ ] Scrollbar refinement: thinner track 6px, rounded thumb with hover expansion 6px-8px, subtle color transition.
-- [ ] Status indicators and badges: CSS classes .badge-activo, .badge-inactivo, .badge-nivel-* with color-coded progression levels (agudo=red, subagudo=orange, fortalecimiento=blue, funcional=green), pill shape border-radius 12px.
-- [ ] Login screen polish: subtle background gradient, improved connection indicator styling.
-- [ ] Modal window improvements: accent top border on modal header, smooth open animation.
+- [x] Enhanced sidebar navigation: left accent border (3px) on active/hover tab, subtle gradient background, smooth color transition between selected/unselected states.
+- [x] Card-based content panels: wrap content areas in card containers with border-radius 8-12px, soft shadow, slight background elevation, darker header strip.
+- [x] Improved table styling: left border indicator on hover row, increased row height 36-40px, smooth hover transition 150ms, accent left border on selected row, improved header bottom border.
+- [x] Enhanced form inputs: inner shadow on focus, left color accent bar 3px on focus, lighter italic placeholder text, validation state borders (green valid, red error).
+- [x] Button refinements: subtle gradient on primary buttons, deeper shadow + scale 0.98 on press, improved disabled state opacity 0.5.
+- [x] Enhanced separators: gradient fade (transparent-color-transparent) instead of solid lines, improved spacing.
+- [x] Typography improvements: letter-spacing 0.3px on titles, section titles 15px semi-bold, text-shadow on dark theme titles.
+- [x] Tooltip and popover polish: deeper softer shadow, improved styling.
+- [x] Scrollbar refinement: thinner track 6px, rounded thumb with hover expansion 6px-8px, subtle color transition.
+- [x] Status indicators and badges: CSS classes .badge-activo, .badge-inactivo, .badge-nivel-* with color-coded progression levels (agudo=red, subagudo=orange, fortalecimiento=blue, funcional=green), pill shape border-radius 12px.
+- [x] Login screen polish: subtle background gradient, improved connection indicator styling.
+- [x] Modal window improvements: accent top border on modal header, smooth open animation.
 
 ### Progression level UI (existing pending tasks)
 

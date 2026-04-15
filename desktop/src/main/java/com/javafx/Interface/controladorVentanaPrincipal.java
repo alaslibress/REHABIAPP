@@ -86,6 +86,9 @@ public class controladorVentanaPrincipal {
     @FXML
     private VBox vboxMenuLateral;
     
+    // Referencia estatica para permitir navegacion desde otros controladores
+    private static controladorVentanaPrincipal instanciaActiva;
+
     // Pestaña actualmente cargada
     private String pestaniaActual = "";
 
@@ -104,6 +107,9 @@ public class controladorVentanaPrincipal {
      */
     @FXML
     public void initialize() {
+        // Registrar esta instancia para que otros controladores puedan navegar entre pestanas
+        instanciaActiva = this;
+
         // Crear menu contextual
         crearMenuContextual();
 
@@ -203,7 +209,7 @@ public class controladorVentanaPrincipal {
 
         if (sesion.haySesionActiva()) {
             lblNombreTemporal.setText(sesion.getNombreCompleto());
-            lblCargoTemporal.setText(sesion.getCargo());
+            lblCargoTemporal.setText(sesion.getCargoTraducido());
 
             // Ocultar pestanas de gestion si no es especialista
             if (!sesion.esEspecialista()) {
@@ -257,6 +263,8 @@ public class controladorVentanaPrincipal {
                 ((controladorVentanaPacientes) controlador).configurarPermisos();
             } else if (controlador instanceof controladorVentanaDiscapacidades) {
                 ((controladorVentanaDiscapacidades) controlador).configurarPermisos();
+            } else if (controlador instanceof controladorVentanaTratamientos) {
+                ((controladorVentanaTratamientos) controlador).configurarPermisos();
             }
 
             // Cargar contenido en el centro del BorderPane
@@ -375,6 +383,25 @@ public class controladorVentanaPrincipal {
                     "Error al cargar la pestaña de citas.",
                     TipoMensaje.ERROR
             );
+        }
+    }
+
+    /**
+     * Carga la pestaña de pacientes y aplica un filtro de busqueda (por DNI u otro texto).
+     * Patron simetrico a cargarPestaniaCitasConFiltro para navegar desde Citas a Pacientes.
+     * @param textoBusqueda Texto a aplicar como filtro al cargar la pestaña
+     */
+    private void cargarPestaniaPacientesConFiltro(String textoBusqueda) {
+        // Forzar recarga para que el controlador de pacientes reciba el filtro limpio
+        limpiarCachePestania("Pacientes");
+        pestaniaActual = "";
+        cargarPestania("Pacientes");
+        marcarPestaniaSeleccionada(btnPestaniaPacientes);
+
+        // Recuperar el controlador recien creado y establecer el texto pendiente
+        Object ctrl = cacheControladores.get("Pacientes");
+        if (ctrl instanceof controladorVentanaPacientes cvp && textoBusqueda != null && !textoBusqueda.isBlank()) {
+            cvp.setTextoBusquedaPendiente(textoBusqueda);
         }
     }
 
@@ -574,6 +601,33 @@ public class controladorVentanaPrincipal {
                 e.printStackTrace();
             }
         }
+    }
+
+    /**
+     * Devuelve la instancia activa del controlador principal.
+     * Permite que otros controladores naveguen a pestanas desde fuera.
+     *
+     * @return instancia activa, o null si la ventana principal no esta cargada
+     */
+    public static controladorVentanaPrincipal getInstanciaActiva() {
+        return instanciaActiva;
+    }
+
+    /**
+     * Navega a la pestana de Pacientes desde la pestana de Citas.
+     * Fuerza recarga de la pestana para reflejar el estado actual.
+     *
+     * @param dniPac DNI del paciente cuya ficha se quiere consultar
+     */
+    public void abrirFichaPacienteDesdeCita(String dniPac) {
+        if (dniPac == null || dniPac.isBlank()) {
+            // Sin DNI: navegar a Pacientes sin filtro
+            cargarPestania("Pacientes");
+            marcarPestaniaSeleccionada(btnPestaniaPacientes);
+            return;
+        }
+        // Con DNI: cargar pestaña y aplicar filtro de busqueda
+        cargarPestaniaPacientesConFiltro(dniPac);
     }
 
     /**

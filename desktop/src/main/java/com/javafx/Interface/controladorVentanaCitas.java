@@ -14,11 +14,6 @@ import com.javafx.excepcion.DuplicadoException;
 import com.javafx.excepcion.RehabiAppException;
 import com.javafx.util.ConstantesApp;
 
-import com.calendarfx.model.Calendar;
-import com.calendarfx.model.CalendarSource;
-import com.calendarfx.model.Entry;
-import com.calendarfx.view.MonthView;
-
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -45,9 +40,11 @@ import javafx.stage.Stage;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -88,12 +85,8 @@ public class controladorVentanaCitas {
     @FXML private Button btnRestablecer;
     @FXML private Button btnAniadirCita;
 
-    // ========== CALENDARFX ==========
-    private MonthView monthView;
-    private Calendar calendarioDiasNormales;
-    private Calendar calendarioFinesSemana;
-    private Calendar calendarioHoy;
-    private CalendarSource calendarSource;
+    // ========== CALENDARIO PERSONALIZADO ==========
+    private CalendarioPersonalizado calendario;
 
     // ========== DAOs ==========
     private CitaDAO citaDAO;
@@ -145,53 +138,34 @@ public class controladorVentanaCitas {
     }
 
     /**
-     * Configura CalendarFX MonthView de forma LIMPIA y OPTIMIZADA
-     * Usa TRES calendarios para aplicar diferentes colores según el tipo de día
+     * Inicializa el calendario personalizado y lo conecta al contenedor FXML.
+     * Suscribe listeners para sincronizar la seleccion con el DatePicker y la tabla.
      */
     private void configurarCalendario() {
-        // Crear MonthView
-        monthView = new MonthView();
+        calendario = new CalendarioPersonalizado();
+        contenedorCalendario.getChildren().setAll(calendario);
+        calendario.prefWidthProperty().bind(contenedorCalendario.widthProperty());
+        calendario.prefHeightProperty().bind(contenedorCalendario.heightProperty());
 
-        // Crear tres calendarios para diferentes tipos de días
-        calendarioDiasNormales = new Calendar("Citas - Días Normales");
-        calendarioDiasNormales.setStyle(Calendar.Style.STYLE1); // Azul - definido en CSS
-        calendarioDiasNormales.setReadOnly(true);
-
-        calendarioFinesSemana = new Calendar("Citas - Fines de Semana");
-        calendarioFinesSemana.setStyle(Calendar.Style.STYLE4); // Rojo - definido en CSS
-        calendarioFinesSemana.setReadOnly(true);
-
-        calendarioHoy = new Calendar("Citas - Hoy");
-        calendarioHoy.setStyle(Calendar.Style.STYLE2); // Verde/Azul claro - definido en CSS
-        calendarioHoy.setReadOnly(true);
-
-        // Crear source y añadir calendarios
-        calendarSource = new CalendarSource("RehabiAPP");
-        calendarSource.getCalendars().addAll(calendarioDiasNormales, calendarioFinesSemana, calendarioHoy);
-
-        // Configurar MonthView
-        monthView.getCalendarSources().add(calendarSource);
-        monthView.setDate(LocalDate.now());
-        monthView.setShowToday(true);
-        monthView.setShowWeekNumbers(false);
-
-        // Desactivar la creación de entradas por click (usamos formulario)
-        monthView.setEntryFactory(param -> null);
-
-        // Listener para cambio de fecha seleccionada
-        monthView.dateProperty().addListener((obs, oldDate, newDate) -> {
-            if (newDate != null && !newDate.equals(fechaSeleccionada)) {
-                fechaSeleccionada = newDate;
-                dtpFechaCita.setValue(newDate); // Sincronizar con DatePicker
+        // Seleccion simple: sincroniza DatePicker y filtra la tabla de citas del dia
+        calendario.fechaSeleccionadaProperty().addListener((obs, oldV, newV) -> {
+            if (newV != null && !newV.equals(fechaSeleccionada)) {
+                fechaSeleccionada = newV;
+                dtpFechaCita.setValue(newV);
                 actualizarLabelFecha();
-                filtrarCitasPorFecha(newDate);
+                filtrarCitasPorFecha(newV);
             }
         });
 
-        // Añadir al contenedor y hacer responsive
-        contenedorCalendario.getChildren().add(monthView);
-        monthView.prefWidthProperty().bind(contenedorCalendario.widthProperty());
-        monthView.prefHeightProperty().bind(contenedorCalendario.heightProperty());
+        // Doble click sobre un dia: carga en tabla las citas de ese dia (misma logica que click simple)
+        calendario.fechaDobleClickProperty().addListener((obs, oldV, newV) -> {
+            if (newV != null) {
+                fechaSeleccionada = newV;
+                dtpFechaCita.setValue(newV);
+                actualizarLabelFecha();
+                filtrarCitasPorFecha(newV);
+            }
+        });
     }
 
     /**
@@ -226,55 +200,44 @@ public class controladorVentanaCitas {
     }
 
     /**
-     * Actualiza las entradas del calendario desde la caché
-     * Usa entradas FULL-DAY para evitar el problema "1 más..."
-     * Asigna cada entrada al calendario correcto según el tipo de día
+     * Actualiza el calendario personalizado con los datos del cache de citas.
+     * Calcula el conteo por dia y las iniciales de cada paciente para los tooltips.
      */
     private void actualizarEntradasCalendario() {
-        // Limpiar entradas existentes de todos los calendarios
-        calendarioDiasNormales.clear();
-        calendarioFinesSemana.clear();
-        calendarioHoy.clear();
+        // Mapa de fecha -> numero de citas ese dia
+        Map<LocalDate, Integer> conteo = cacheCitas.stream()
+                .collect(Collectors.groupingBy(Cita::getFecha, Collectors.summingInt(c -> 1)));
 
-        // Agrupar citas por fecha para mostrar contador
-        var citasPorFecha = cacheCitas.stream()
-            .collect(Collectors.groupingBy(Cita::getFecha));
+        // Mapa de fecha -> lista de iniciales de paciente para el tooltip
+        Map<LocalDate, List<String>> iniciales = cacheCitas.stream()
+                .collect(Collectors.groupingBy(
+                        Cita::getFecha,
+                        Collectors.mapping(this::inicialesDePaciente, Collectors.toList())
+                ));
 
-        // Crear una entrada por cada día que tiene citas
-        for (var entry : citasPorFecha.entrySet()) {
-            LocalDate fecha = entry.getKey();
-            int numCitas = entry.getValue().size();
-
-            // Crear entrada full-day (sin hora específica)
-            Entry<String> calEntry = new Entry<>(numCitas + (numCitas == 1 ? " cita" : " citas"));
-            calEntry.setFullDay(true);
-            calEntry.setInterval(fecha, fecha);
-
-            // Asignar al calendario correcto según el tipo de día
-            Calendar calendarioDestino = seleccionarCalendario(fecha);
-            calEntry.setCalendar(calendarioDestino);
-        }
+        calendario.setCitasPorDia(conteo);
+        calendario.setInicialesPorDia(iniciales);
+        calendario.refrescar();
     }
 
     /**
-     * Selecciona el calendario apropiado según la fecha
-     * @param fecha La fecha a evaluar
-     * @return El calendario correcto (hoy, fin de semana, o día normal)
+     * Genera las iniciales del nombre del paciente de una cita.
+     * Por ejemplo: "Juan Garcia Lopez" -> "J.G."
+     *
+     * @param cita cita de la que extraer las iniciales del paciente
+     * @return cadena con las iniciales separadas por punto
      */
-    private Calendar seleccionarCalendario(LocalDate fecha) {
-        // Verificar si es hoy (prioridad máxima)
-        if (fecha.equals(LocalDate.now())) {
-            return calendarioHoy;
+    private String inicialesDePaciente(Cita cita) {
+        String nombre = cita.getNombrePaciente() != null ? cita.getNombrePaciente() : "";
+        if (nombre.isBlank()) return "??";
+        String[] partes = nombre.trim().split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < Math.min(partes.length, 2); i++) {
+            if (!partes[i].isEmpty()) {
+                sb.append(Character.toUpperCase(partes[i].charAt(0))).append('.');
+            }
         }
-
-        // Verificar si es fin de semana (sábado=6, domingo=7)
-        int diaSemana = fecha.getDayOfWeek().getValue();
-        if (diaSemana == 6 || diaSemana == 7) {
-            return calendarioFinesSemana;
-        }
-
-        // Día normal
-        return calendarioDiasNormales;
+        return sb.toString();
     }
 
     /**
@@ -304,14 +267,14 @@ public class controladorVentanaCitas {
     }
 
     /**
-     * Maneja el evento de clic en la tabla de citas
-     * Si es doble clic, abre los detalles de la cita
+     * Maneja el evento de clic en la tabla de citas.
+     * Doble click: navega a la ficha del paciente de la cita seleccionada.
      */
     private void manejarDobleClicTabla(MouseEvent event) {
         if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
             Cita citaSeleccionada = tblCitas.getSelectionModel().getSelectedItem();
             if (citaSeleccionada != null) {
-                verCitaSeleccionada(null);
+                verFichaPaciente(null);
             }
         }
     }
@@ -361,7 +324,8 @@ public class controladorVentanaCitas {
         dtpFechaCita.valueProperty().addListener((obs, oldDate, newDate) -> {
             if (newDate != null) {
                 fechaSeleccionada = newDate;
-                monthView.setDate(newDate);
+                calendario.setFechaSeleccionada(newDate);
+                calendario.setMesActual(YearMonth.from(newDate));
                 actualizarLabelFecha();
                 filtrarCitasPorFecha(newDate);
             }
@@ -532,7 +496,8 @@ public class controladorVentanaCitas {
         try {
             LocalDate fecha = LocalDate.parse(texto, ConstantesApp.FORMATO_FECHA);
             fechaSeleccionada = fecha;
-            monthView.setDate(fecha);
+            calendario.setFechaSeleccionada(fecha);
+            calendario.setMesActual(YearMonth.from(fecha));
             actualizarLabelFecha();
             filtrarCitasPorFecha(fecha);
             int numResultados = listaCitas.size();
@@ -584,8 +549,9 @@ public class controladorVentanaCitas {
     @FXML
     void irAHoy(ActionEvent event) {
         fechaSeleccionada = LocalDate.now();
-        dtpFechaCita.setValue(LocalDate.now()); // Actualizar DatePicker
-        monthView.setDate(LocalDate.now());
+        dtpFechaCita.setValue(LocalDate.now());
+        calendario.setFechaSeleccionada(LocalDate.now());
+        calendario.setMesActual(YearMonth.now());
         actualizarLabelFecha();
         filtrarCitasPorFecha(LocalDate.now());
     }
@@ -598,45 +564,94 @@ public class controladorVentanaCitas {
 
     @FXML
     void eliminarCitaSeleccionada(ActionEvent event) {
-        Cita cita = tblCitas.getSelectionModel().getSelectedItem();
-        if (cita == null) {
-            VentanaUtil.mostrarVentanaInformativa("Seleccione una cita.", TipoMensaje.ADVERTENCIA);
-            return;
-        }
+        // Verificar si hay seleccion multiple de dias en el calendario
+        var diasSeleccionados = calendario.getFechasSeleccionadas();
 
-        boolean confirmado = VentanaUtil.mostrarVentanaPregunta(
-            "¿Eliminar cita?\n\nPaciente: " + cita.getNombrePaciente() +
-            "\nFecha: " + cita.getFechaFormateada() +
-            "\nHora: " + cita.getHoraFormateada()
-        );
+        if (diasSeleccionados.size() > 1) {
+            // Eliminacion en lote: todas las citas de los dias seleccionados
+            List<Cita> citasAEliminar = cacheCitas.stream()
+                    .filter(c -> diasSeleccionados.contains(c.getFecha()))
+                    .collect(Collectors.toList());
 
-        if (confirmado) {
-            Task<Void> task = new Task<>() {
-                @Override
-                protected Void call() {
-                    citaDAO.eliminar(cita.getDniPaciente(), dniSanitarioActual,
-                                    cita.getFecha(), cita.getHora());
-                    return null;
-                }
-            };
+            if (citasAEliminar.isEmpty()) {
+                VentanaUtil.mostrarVentanaInformativa(
+                        "No hay citas en los dias seleccionados.", TipoMensaje.ADVERTENCIA);
+                return;
+            }
 
-            task.setOnSucceeded(e -> {
-                VentanaUtil.mostrarVentanaInformativa("Cita eliminada.", TipoMensaje.EXITO);
-                recargarDatos();
-            });
+            boolean confirmado = VentanaUtil.mostrarVentanaPregunta(
+                    "¿Eliminar " + citasAEliminar.size() + " citas de los dias seleccionados?\n"
+                    + "Esta accion no se puede deshacer."
+            );
 
-            task.setOnFailed(e -> {
-                Throwable ex = task.getException();
-                if (ex instanceof ConexionException) {
+            if (confirmado) {
+                Task<Void> task = new Task<>() {
+                    @Override
+                    protected Void call() {
+                        for (Cita c : citasAEliminar) {
+                            citaDAO.eliminar(c.getDniPaciente(), dniSanitarioActual,
+                                    c.getFecha(), c.getHora());
+                        }
+                        return null;
+                    }
+                };
+
+                task.setOnSucceeded(e -> {
                     VentanaUtil.mostrarVentanaInformativa(
-                            "Error de conexion con la base de datos.", TipoMensaje.ERROR);
-                } else {
-                    VentanaUtil.mostrarVentanaInformativa(
-                            "Error: " + ex.getMessage(), TipoMensaje.ERROR);
-                }
-            });
+                            citasAEliminar.size() + " citas eliminadas.", TipoMensaje.EXITO);
+                    recargarDatos();
+                });
 
-            executor.submit(task);
+                task.setOnFailed(e -> {
+                    Throwable ex = task.getException();
+                    VentanaUtil.mostrarVentanaInformativa(
+                            "Error al eliminar: " + ex.getMessage(), TipoMensaje.ERROR);
+                });
+
+                executor.submit(task);
+            }
+        } else {
+            // Eliminacion individual: cita seleccionada en la tabla
+            Cita cita = tblCitas.getSelectionModel().getSelectedItem();
+            if (cita == null) {
+                VentanaUtil.mostrarVentanaInformativa("Seleccione una cita.", TipoMensaje.ADVERTENCIA);
+                return;
+            }
+
+            boolean confirmado = VentanaUtil.mostrarVentanaPregunta(
+                "¿Eliminar cita?\n\nPaciente: " + cita.getNombrePaciente() +
+                "\nFecha: " + cita.getFechaFormateada() +
+                "\nHora: " + cita.getHoraFormateada()
+            );
+
+            if (confirmado) {
+                Task<Void> task = new Task<>() {
+                    @Override
+                    protected Void call() {
+                        citaDAO.eliminar(cita.getDniPaciente(), dniSanitarioActual,
+                                        cita.getFecha(), cita.getHora());
+                        return null;
+                    }
+                };
+
+                task.setOnSucceeded(e -> {
+                    VentanaUtil.mostrarVentanaInformativa("Cita eliminada.", TipoMensaje.EXITO);
+                    recargarDatos();
+                });
+
+                task.setOnFailed(e -> {
+                    Throwable ex = task.getException();
+                    if (ex instanceof ConexionException) {
+                        VentanaUtil.mostrarVentanaInformativa(
+                                "Error de conexion con la base de datos.", TipoMensaje.ERROR);
+                    } else {
+                        VentanaUtil.mostrarVentanaInformativa(
+                                "Error: " + ex.getMessage(), TipoMensaje.ERROR);
+                    }
+                });
+
+                executor.submit(task);
+            }
         }
     }
 
@@ -689,8 +704,9 @@ public class controladorVentanaCitas {
         pacienteSeleccionado = null;
 
         fechaSeleccionada = LocalDate.now();
-        dtpFechaCita.setValue(LocalDate.now()); // Actualizar DatePicker
-        monthView.setDate(LocalDate.now());
+        dtpFechaCita.setValue(LocalDate.now());
+        calendario.setFechaSeleccionada(LocalDate.now());
+        calendario.setMesActual(YearMonth.now());
         actualizarLabelFecha();
         filtrarCitasPorFecha(LocalDate.now());
     }
@@ -810,6 +826,29 @@ public class controladorVentanaCitas {
                 "Por favor, revise la consola para más detalles.",
                 TipoMensaje.ERROR
             );
+        }
+    }
+
+    /**
+     * Navega a la pestana de Pacientes mostrando la ficha del paciente
+     * de la cita actualmente seleccionada en la tabla.
+     * Vinculado al boton "Ver ficha paciente" del FXML.
+     */
+    @FXML
+    void verFichaPaciente(ActionEvent event) {
+        Cita cita = tblCitas.getSelectionModel().getSelectedItem();
+        if (cita == null) {
+            VentanaUtil.mostrarVentanaInformativa("Seleccione una cita.", TipoMensaje.ADVERTENCIA);
+            return;
+        }
+        controladorVentanaPrincipal principal = controladorVentanaPrincipal.getInstanciaActiva();
+        if (principal != null) {
+            principal.abrirFichaPacienteDesdeCita(cita.getDniPaciente());
+        } else {
+            // Fallback: la ventana principal no esta disponible en este contexto
+            VentanaUtil.mostrarVentanaInformativa(
+                    "No se puede navegar a la ficha del paciente en este momento.",
+                    TipoMensaje.ADVERTENCIA);
         }
     }
 

@@ -14,6 +14,7 @@ public class Tratamiento {
     private final StringProperty definicionTrat;
     private final IntegerProperty idNivel;
     private final StringProperty nombreNivel;
+    private final StringProperty discapacidadesAsociadas;
 
     public Tratamiento(String codTrat, String nombreTrat, String definicionTrat,
                        Integer idNivel, String nombreNivel) {
@@ -22,6 +23,7 @@ public class Tratamiento {
         this.definicionTrat = new SimpleStringProperty(definicionTrat != null ? definicionTrat : "");
         this.idNivel = new SimpleIntegerProperty(idNivel != null ? idNivel : 0);
         this.nombreNivel = new SimpleStringProperty(nombreNivel != null ? nombreNivel : "");
+        this.discapacidadesAsociadas = new SimpleStringProperty("");
     }
 
     /**
@@ -56,6 +58,10 @@ public class Tratamiento {
     public String getNombreNivel() { return nombreNivel.get(); }
     public void setNombreNivel(String nombreNivel) { this.nombreNivel.set(nombreNivel); }
     public StringProperty nombreNivelProperty() { return nombreNivel; }
+
+    public String getDiscapacidadesAsociadas() { return discapacidadesAsociadas.get(); }
+    public void setDiscapacidadesAsociadas(String valor) { this.discapacidadesAsociadas.set(valor); }
+    public StringProperty discapacidadesAsociadasProperty() { return discapacidadesAsociadas; }
 
     @Override
     public String toString() {

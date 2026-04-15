@@ -195,6 +195,20 @@ public class SesionUsuario {
     }
 
     /**
+     * Devuelve el cargo traducido al espanol para mostrar en la interfaz.
+     * Prioriza el rol de la API ("SPECIALIST", "NURSE") sobre el campo cargo legado.
+     */
+    public String getCargoTraducido() {
+        String c = rolApi != null ? rolApi : cargo;
+        if (c == null) return "-";
+        return switch (c.toUpperCase()) {
+            case "SPECIALIST" -> "Especialista";
+            case "NURSE" -> "Enfermero/a";
+            default -> c;
+        };
+    }
+
+    /**
      * Obtiene el nombre completo del usuario.
      */
     public String getNombreCompleto() {

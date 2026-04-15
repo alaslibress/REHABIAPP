@@ -81,28 +81,42 @@ public class controladorSesion {
             }
         };
 
+        // Estado inicial: esperando
+        setEstadoIndicador("indicador-conexion-wait");
+
         tarea.setOnSucceeded(e -> {
             boolean conectado = tarea.getValue();
             if (conectado) {
-                circuloConexion.setFill(Color.web("#27AE60"));
+                setEstadoIndicador("indicador-conexion-ok");
                 lblEstadoConexion.setText("Conectado");
-                lblEstadoConexion.setStyle("-fx-text-fill: #27AE60; -fx-font-size: 11px;");
             } else {
-                circuloConexion.setFill(Color.web("#E74C3C"));
+                setEstadoIndicador("indicador-conexion-ko");
                 lblEstadoConexion.setText("Sin conexion");
-                lblEstadoConexion.setStyle("-fx-text-fill: #E74C3C; -fx-font-size: 11px;");
             }
         });
 
         tarea.setOnFailed(e -> {
-            circuloConexion.setFill(Color.web("#E74C3C"));
+            setEstadoIndicador("indicador-conexion-ko");
             lblEstadoConexion.setText("Sin conexion");
-            lblEstadoConexion.setStyle("-fx-text-fill: #E74C3C; -fx-font-size: 11px;");
         });
 
         Thread hilo = new Thread(tarea);
         hilo.setDaemon(true);
         hilo.start();
+    }
+
+    /**
+     * Alterna la clase CSS del indicador de conexion sin estilos en linea.
+     * Las clases disponibles son: indicador-conexion-ok, indicador-conexion-ko, indicador-conexion-wait.
+     * @param claseEstado Clase CSS a aplicar
+     */
+    private void setEstadoIndicador(String claseEstado) {
+        circuloConexion.getStyleClass().removeAll(
+                "indicador-conexion-ok",
+                "indicador-conexion-ko",
+                "indicador-conexion-wait"
+        );
+        circuloConexion.getStyleClass().add(claseEstado);
     }
 
     @FXML

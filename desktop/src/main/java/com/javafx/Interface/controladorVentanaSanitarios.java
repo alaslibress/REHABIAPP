@@ -19,6 +19,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -169,6 +170,18 @@ public class controladorVentanaSanitarios {
         colApellidos.setCellValueFactory(new PropertyValueFactory<>("apellidos"));
         colDNI.setCellValueFactory(new PropertyValueFactory<>("dni"));
         colCargo.setCellValueFactory(new PropertyValueFactory<>("cargo"));
+        // Mostrar cargo traducido al espanol en lugar del valor crudo de la API
+        colCargo.setCellFactory(col -> new TableCell<Sanitario, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getTableRow() == null || getTableRow().getItem() == null) {
+                    setText(null);
+                } else {
+                    setText(((Sanitario) getTableRow().getItem()).getCargoTraducido());
+                }
+            }
+        });
 
         //IMPORTANTE: Vincular la tabla con la lista observable paginada
         tblSanitarios.setItems(listaSanitarios);
@@ -242,7 +255,11 @@ public class controladorVentanaSanitarios {
             stage.showAndWait();
 
             //Refrescar la tabla por si se modifico algo
-            cargarSanitarios();
+            try {
+                cargarSanitarios();
+            } catch (Exception e) {
+                System.err.println("Error al recargar datos: " + e.getMessage());
+            }
 
         } catch (Exception e) {
             VentanaUtil.mostrarVentanaInformativa(
@@ -381,7 +398,11 @@ public class controladorVentanaSanitarios {
             stage.showAndWait();
 
             //Refrescar la tabla despues de agregar
-            cargarSanitarios();
+            try {
+                cargarSanitarios();
+            } catch (Exception e) {
+                System.err.println("Error al recargar datos: " + e.getMessage());
+            }
 
         } catch (Exception e) {
             VentanaUtil.mostrarVentanaInformativa(

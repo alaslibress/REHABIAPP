@@ -9,7 +9,7 @@ import com.javafx.excepcion.ConexionException;
 import com.javafx.excepcion.DuplicadoException;
 import com.javafx.excepcion.RehabiAppException;
 import com.javafx.service.CatalogoService;
-import javafx.collections.FXCollections;
+import com.javafx.util.PaginacionUtil;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -27,6 +27,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -81,7 +82,7 @@ public class controladorVentanaDiscapacidades {
     @FXML
     private VBox vboxContenedorPrinDiscapacidades;
 
-    // Lista observable de discapacidades
+    // Lista observable de discapacidades (paginada)
     private ObservableList<Discapacidad> listaDiscapacidades;
 
     // Servicio del catalogo
@@ -90,13 +91,18 @@ public class controladorVentanaDiscapacidades {
     // Cache de todas las discapacidades
     private List<Discapacidad> todasDiscapacidades;
 
+    // Paginacion
+    private PaginacionUtil<Discapacidad> paginacion;
+    private static final int REGISTROS_POR_PAGINA = 50;
+
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML
      */
     @FXML
     public void initialize() {
         catalogoService = new CatalogoService();
-        listaDiscapacidades = FXCollections.observableArrayList();
+        paginacion = new PaginacionUtil<>(REGISTROS_POR_PAGINA);
+        listaDiscapacidades = paginacion.getDatosPaginados();
 
         configurarTabla();
 
@@ -107,6 +113,10 @@ public class controladorVentanaDiscapacidades {
         tblDiscapacidades.setOnMouseClicked(this::manejarDobleClicTabla);
 
         cargarDiscapacidades();
+
+        // Agregar controles de paginacion al contenedor principal
+        HBox controlesPaginacion = paginacion.crearControlesPaginacion();
+        vboxContenedorPrinDiscapacidades.getChildren().add(controlesPaginacion);
     }
 
     /**
@@ -186,8 +196,7 @@ public class controladorVentanaDiscapacidades {
     private void cargarDiscapacidades() {
         try {
             todasDiscapacidades = catalogoService.listarDiscapacidades();
-            listaDiscapacidades.clear();
-            listaDiscapacidades.addAll(todasDiscapacidades);
+            paginacion.setDatos(todasDiscapacidades);
             System.out.println("Discapacidades cargadas: " + todasDiscapacidades.size());
         } catch (ConexionException e) {
             VentanaUtil.mostrarVentanaInformativa(
@@ -211,11 +220,9 @@ public class controladorVentanaDiscapacidades {
     void buscarDiscapacidades(ActionEvent event) {
         String textoBusqueda = txfBuscarDiscapacidades.getText().trim().toLowerCase();
 
-        listaDiscapacidades.clear();
-
         if (textoBusqueda.isEmpty()) {
             if (todasDiscapacidades != null) {
-                listaDiscapacidades.addAll(todasDiscapacidades);
+                paginacion.setDatos(todasDiscapacidades);
             } else {
                 cargarDiscapacidades();
             }
@@ -224,7 +231,7 @@ public class controladorVentanaDiscapacidades {
                     .filter(d -> d.getCodDis().toLowerCase().contains(textoBusqueda)
                               || d.getNombreDis().toLowerCase().contains(textoBusqueda))
                     .toList();
-            listaDiscapacidades.addAll(filtradas);
+            paginacion.setDatos(filtradas);
         }
     }
 
@@ -248,7 +255,11 @@ public class controladorVentanaDiscapacidades {
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
-            cargarDiscapacidades();
+            try {
+                cargarDiscapacidades();
+            } catch (Exception e) {
+                System.err.println("Error al recargar datos: " + e.getMessage());
+            }
 
         } catch (Exception e) {
             System.err.println("Error al abrir formulario de nueva discapacidad: " + e.getMessage());
@@ -293,7 +304,11 @@ public class controladorVentanaDiscapacidades {
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
-            cargarDiscapacidades();
+            try {
+                cargarDiscapacidades();
+            } catch (Exception e) {
+                System.err.println("Error al recargar datos: " + e.getMessage());
+            }
 
         } catch (Exception e) {
             System.err.println("Error al abrir formulario de edicion: " + e.getMessage());

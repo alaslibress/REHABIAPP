@@ -4,12 +4,16 @@ import com.javafx.Clases.AnimacionUtil;
 import com.javafx.Interface.controladorVentanaInformativa;
 import com.javafx.Interface.controladorVentanaOpciones;
 import com.javafx.Interface.controladorVentanaPregunta;
+import javafx.animation.FadeTransition;
+import javafx.animation.ParallelTransition;
+import javafx.animation.ScaleTransition;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 /**
  * Clase de utilidad para mostrar ventanas informativas y de pregunta
@@ -218,5 +222,26 @@ public class VentanaUtil {
             default:
                 return "Informacion";
         }
+    }
+
+    /**
+     * Anima la apertura de una ventana modal con efecto fade + escala suave.
+     * Llamar desde VentanaHelper.abrirVentanaModal para todas las modales.
+     * @param root Nodo raiz de la escena de la ventana modal
+     */
+    public static void animarAperturaModal(Parent root) {
+        if (root == null) return;
+        root.setOpacity(0);
+        root.setScaleX(0.97);
+        root.setScaleY(0.97);
+
+        FadeTransition fade = new FadeTransition(Duration.millis(160), root);
+        fade.setToValue(1.0);
+
+        ScaleTransition scale = new ScaleTransition(Duration.millis(160), root);
+        scale.setToX(1.0);
+        scale.setToY(1.0);
+
+        new ParallelTransition(fade, scale).play();
     }
 }

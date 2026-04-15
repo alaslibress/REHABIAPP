@@ -104,7 +104,7 @@ public final class ConstantesApp {
     /**
      * Mensaje de error al conectar con BD
      */
-    public static final String MSG_ERROR_BD = "Error al conectar con la base de datos";
+    public static final String MSG_ERROR_BD = "No se pudo comunicar con el servidor";
 
     /**
      * Mensaje campos vacios

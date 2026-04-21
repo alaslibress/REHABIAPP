@@ -80,10 +80,10 @@ CREATE TABLE cita_audit (
     dni_pac    VARCHAR(20) NOT NULL,
     dni_san    VARCHAR(20) NOT NULL,
     fecha_cita DATE        NOT NULL,
-    hora_cita  TIME        NOT NULL,
+    hora       TIME        NOT NULL,
     rev        INTEGER     NOT NULL REFERENCES revinfo(rev),
     rev_type   SMALLINT,
-    PRIMARY KEY (dni_pac, dni_san, fecha_cita, hora_cita, rev)
+    PRIMARY KEY (dni_pac, dni_san, fecha_cita, hora, rev)
 );
 
 -- --------------------------------------------------------

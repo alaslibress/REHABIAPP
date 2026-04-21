@@ -41,7 +41,7 @@ public class CitaId implements Serializable {
     /**
      * Hora de inicio de la cita.
      */
-    @Column(name = "hora_cita")
+    @Column(name = "hora")
     private LocalTime horaCita;
 
     public CitaId() {}

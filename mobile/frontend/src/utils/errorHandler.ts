@@ -6,6 +6,14 @@ const ERROR_MESSAGES: Record<ErrorCode, { subtitle: string; message: string }> =
     subtitle: 'Credenciales invalidas',
     message: 'El DNI/correo o la contrasena introducidos no son correctos. Por favor, intentelo de nuevo.',
   },
+  INVALID_IDENTIFIER: {
+    subtitle: 'Usuario no encontrado',
+    message: 'El DNI o correo introducido no corresponde a ningun paciente registrado. Por favor, verifique sus datos.',
+  },
+  WRONG_PASSWORD: {
+    subtitle: 'Contrasena incorrecta',
+    message: 'La contrasena introducida no es correcta. Por favor, intentelo de nuevo.',
+  },
   ACCOUNT_DEACTIVATED: {
     subtitle: 'Cuenta desactivada',
     message: 'Su cuenta ha sido desactivada. Contacte con su centro de rehabilitacion para mas informacion.',
@@ -44,27 +52,66 @@ const ERROR_MESSAGES: Record<ErrorCode, { subtitle: string; message: string }> =
   },
 };
 
-// Convierte un error GraphQL en un AppError estructurado
+// Convierte un error GraphQL en un AppError estructurado.
+// Sigue una cadena de prioridad para extraer la maxima informacion posible:
+// 1. Codigo conocido del BFF en extensions.code -> mensaje del mapa local
+// 2. Estructura del BFF (extensions.subtitulo + extensions.texto) -> usar directamente
+// 3. Mensaje del error GraphQL sin estructura del BFF -> usar message crudo
+// 4. Error de red (networkError) -> mensaje de error de conexion
+// 5. Caso generico -> INTERNAL_ERROR
 export function parseGraphQLError(error: unknown): AppError {
-  // Intentar extraer el codigo del error GraphQL
+  // Registrar el codigo y mensaje en desarrollo (sin JSON.stringify para evitar errores con referencias circulares de Apollo)
+  if (__DEV__) {
+    const code = (error as any)?.graphQLErrors?.[0]?.extensions?.code ?? (error as any)?.networkError?.message ?? 'desconocido';
+    console.warn('[parseGraphQLError] Codigo de error recibido:', code);
+  }
+
+  // Caso 1 y 2: errores GraphQL del BFF
   if (error && typeof error === 'object' && 'graphQLErrors' in error) {
     const gqlErrors = (error as any).graphQLErrors;
     if (Array.isArray(gqlErrors) && gqlErrors.length > 0) {
-      const code = gqlErrors[0]?.extensions?.code as ErrorCode;
-      const mapped = ERROR_MESSAGES[code];
-      if (mapped) {
+      const primerError = gqlErrors[0];
+      const code = primerError?.extensions?.code as string | undefined;
+
+      // Caso 1: codigo conocido en el mapa local del frontend
+      if (code && ERROR_MESSAGES[code as ErrorCode]) {
+        const mapped = ERROR_MESSAGES[code as ErrorCode];
         return {
           title: 'Error',
           subtitle: mapped.subtitle,
           message: mapped.message,
-          code: code,
+          code: code as ErrorCode,
+        };
+      }
+
+      // Caso 2: estructura del BFF con subtitulo y texto (codigo desconocido para el frontend)
+      if (primerError?.extensions?.subtitulo && primerError?.extensions?.texto) {
+        return {
+          title: primerError.extensions.titulo || 'Error',
+          subtitle: primerError.extensions.subtitulo,
+          message: primerError.extensions.texto,
+          code: (code as ErrorCode) || 'INTERNAL_ERROR',
+        };
+      }
+
+      // Caso 3: error GraphQL sin estructura del BFF — usar el mensaje crudo
+      if (primerError?.message) {
+        return {
+          title: 'Error',
+          subtitle: 'Error del servidor',
+          message: primerError.message,
+          code: 'INTERNAL_ERROR',
         };
       }
     }
   }
 
-  // Error de red
+  // Caso 4: error de red (servidor inalcanzable, timeout, CORS, etc.)
   if (error && typeof error === 'object' && 'networkError' in error) {
+    const networkError = (error as any).networkError;
+    if (__DEV__) {
+      console.warn('[parseGraphQLError] Error de red:', networkError?.message, networkError?.statusCode);
+    }
     return {
       title: 'Error',
       subtitle: ERROR_MESSAGES.NETWORK_ERROR.subtitle,
@@ -73,7 +120,10 @@ export function parseGraphQLError(error: unknown): AppError {
     };
   }
 
-  // Error generico
+  // Caso 5: error completamente desconocido
+  if (__DEV__) {
+    console.warn('[parseGraphQLError] Error no clasificado, devolviendo INTERNAL_ERROR');
+  }
   return {
     title: 'Error',
     subtitle: ERROR_MESSAGES.INTERNAL_ERROR.subtitle,

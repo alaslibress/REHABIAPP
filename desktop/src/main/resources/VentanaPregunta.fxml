@@ -8,14 +8,14 @@
 <?import javafx.scene.layout.VBox?>
 
 
-<VBox fx:id="vboxVentanaPregunta" alignment="CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" spacing="30.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaPregunta">
+<VBox fx:id="vboxVentanaPregunta" alignment="CENTER" minHeight="300.0" minWidth="500.0" prefHeight="420.0" prefWidth="700.0" spacing="30.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaPregunta">
    <children>
-      <ImageView fx:id="imgPregunta" fitHeight="100.0" fitWidth="100.0" pickOnBounds="true" preserveRatio="true">
+      <ImageView fx:id="imgPregunta" fitHeight="80.0" fitWidth="80.0" pickOnBounds="true" preserveRatio="true">
          <image>
             <Image url="@pregunta.png" />
          </image>
       </ImageView>
-      <Label fx:id="lblPregunta" textAlignment="CENTER" />
+      <Label fx:id="lblPregunta" textAlignment="CENTER" wrapText="true" maxWidth="600.0" />
       <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" spacing="20.0">
          <children>
             <Button fx:id="btnCancelarPregunta" mnemonicParsing="false" onAction="#cerrarVentana" styleClass="button-peligro" text="Cancelar" />

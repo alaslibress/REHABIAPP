@@ -73,7 +73,10 @@
       "Bash(./mvnw compile:*)",
       "Bash(ls -lh /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*icono*.png /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*buscar*.png /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/*filtrar*.png)",
       "Bash(ls /home/alaslibres/DAM/RehabiAPP/desktop/src/main/resources/VentanaFiltro*.fxml)",
-      "Bash(ls /home/alaslibres/DAM/RehabiAPP/desktop/src/main/java/com/javafx/Interface/controladorFiltro*.java)"
+      "Bash(ls /home/alaslibres/DAM/RehabiAPP/desktop/src/main/java/com/javafx/Interface/controladorFiltro*.java)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(jobs *)",
+      "Bash(pkill -f \"ApiApplication\")"
     ],
     "deny": [],
     "ask": []

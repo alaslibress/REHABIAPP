@@ -94,11 +94,14 @@ public class Sanitario implements Persona {
             telefonos.add(telefono2);
         }
 
+        // Mapear cargo espanol al enum que espera la API (SPECIALIST / NURSE)
+        String cargoEnum = esEspecialista() ? "SPECIALIST" : "NURSE";
+
         return new SanitarioRequest(
             getDni(), getNombre(),
             getApellido1(), getApellido2(),
             getEmail(), contrasena,
-            getCargo(), telefonos
+            cargoEnum, telefonos
         );
     }
 

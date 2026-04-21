@@ -157,9 +157,9 @@ Two user types, both healthcare practitioners:
 
 ### Progression level UI (existing pending tasks)
 
-- [ ] Implement progression level UI: display patient disabilities with current level, show treatments filtered by matching level, toggle treatment visibility.
-- [ ] Update patient form to assign disabilities from catalog instead of free text.
-- [ ] Update patient detail view to show disability-treatment-progression hierarchy.
+- [x] Implement progression level UI: display patient disabilities with current level, show treatments filtered by matching level, toggle treatment visibility.
+- [x] Update patient form to assign disabilities from catalog instead of free text.
+- [x] Update patient detail view to show disability-treatment-progression hierarchy.
 
 ### Advanced integrations (future phases)
 

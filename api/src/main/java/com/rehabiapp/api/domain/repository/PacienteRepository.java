@@ -4,6 +4,8 @@ import com.rehabiapp.api.domain.entity.Paciente;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -45,4 +47,27 @@ public interface PacienteRepository extends JpaRepository<Paciente, String> {
      * @return página de pacientes activos
      */
     Page<Paciente> findAllByActivoTrue(Pageable pageable);
+
+    /**
+     * Busca pacientes activos por texto libre (case-insensitive) en los campos
+     * dni_pac, nombre_pac, apellido1_pac, apellido2_pac, email_pac y num_ss.
+     *
+     * <p>Equivalente al LIKE del desktop ERP para el buscador de pacientes.
+     * LOWER + LIKE se traduce a ILIKE en PostgreSQL por el dialecto de Hibernate.</p>
+     *
+     * @param texto    Término de búsqueda libre
+     * @param pageable Configuración de paginación y ordenación
+     * @return Página de pacientes activos cuyo texto coincide
+     */
+    @Query("""
+            SELECT p FROM Paciente p
+            WHERE p.activo = true
+              AND (LOWER(p.dniPac)       LIKE LOWER(CONCAT('%', :texto, '%'))
+                OR LOWER(p.nombrePac)    LIKE LOWER(CONCAT('%', :texto, '%'))
+                OR LOWER(p.apellido1Pac) LIKE LOWER(CONCAT('%', :texto, '%'))
+                OR LOWER(p.apellido2Pac) LIKE LOWER(CONCAT('%', :texto, '%'))
+                OR LOWER(p.emailPac)     LIKE LOWER(CONCAT('%', :texto, '%'))
+                OR LOWER(p.numSs)        LIKE LOWER(CONCAT('%', :texto, '%')))
+            """)
+    Page<Paciente> buscarPorTexto(@Param("texto") String texto, Pageable pageable);
 }

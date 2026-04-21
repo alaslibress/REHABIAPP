@@ -135,16 +135,7 @@ npm test                  # Run tests
 - [ ] Define folder structure (components, services, store, types, utils).
 - [ ] Configure navigation (tab-based with bottom navigation).
 - [ ] Set up theming (light/dark mode, accessible color palette).
-- [ ] Configure Apollo Client with BFF GraphQL endpoint.
 
-### Phase 2: Backend BFF (GraphQL layer)
-
-- [x] Node.js project initialized with Express and infrastructure endpoints.
-- [ ] GraphQL API with Apollo Server 4 integrated.
-- [ ] Authentication service with BFF JWT.
-- [ ] All GraphQL queries and mutations implemented.
-- [ ] Error standardization and greeting middleware.
-- [ ] Tests passing.
 
 ### Phase 3: Authentication and shell
 

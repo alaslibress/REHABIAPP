@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox fx:id="vboxContenedorPrinTratamientos" maxHeight="Infinity" maxWidth="Infinity" spacing="15.0" styleClass="panel-card" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaTratamientos">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+    <children>
+        <HBox prefHeight="100.0" prefWidth="200.0" styleClass="panel-card-header">
+            <children>
+                <Label fx:id="lblTituloPestaniaTratamientos" prefHeight="18.0" prefWidth="200.0" styleClass="label-titulo" text="Tratamientos" />
+                <VBox prefHeight="100.0" prefWidth="802.0" HBox.hgrow="ALWAYS">
+                    <children>
+                        <Button fx:id="btnSeleccionarTodoTratamientos" mnemonicParsing="false" onAction="#seleccionarTodosTratamientos" text="Seleccionar todo">
+                            <VBox.margin>
+                                <Insets bottom="20.0" left="150.0" />
+                            </VBox.margin>
+                        </Button>
+                        <HBox alignment="CENTER_LEFT" prefHeight="74.0" prefWidth="103.0">
+                            <children>
+                                <Label fx:id="lblBuscarTratamientos" text="Buscar:">
+                                    <HBox.margin>
+                                        <Insets right="10.0" />
+                                    </HBox.margin>
+                                </Label>
+                                <Button fx:id="btnBuscarTratamientos" mnemonicParsing="false" onAction="#buscarTratamientos" prefHeight="30.0" prefWidth="30.0" styleClass="button-icono">
+                                    <graphic>
+                                        <ImageView fitHeight="18.0" fitWidth="25.0" pickOnBounds="true" preserveRatio="true">
+                                            <image>
+                                                <Image url="@buscar.png" />
+                                            </image>
+                                        </ImageView>
+                                    </graphic>
+                                    <tooltip>
+                                        <Tooltip text="Buscar" />
+                                    </tooltip>
+                                </Button>
+                                <TextField fx:id="txfBuscarTratamientos" onAction="#buscarTratamientos" prefHeight="30.0" prefWidth="250.0" promptText="Buscar:">
+                                    <padding>
+                                        <Insets left="5.0" right="10.0" />
+                                    </padding>
+                                    <HBox.margin>
+                                        <Insets right="50.0" />
+                                    </HBox.margin>
+                                </TextField>
+                                <Button fx:id="btnAnadirTratamiento" mnemonicParsing="false" onAction="#abrirFormularioNuevoTratamiento" prefHeight="40.0" prefWidth="40.0" styleClass="button-primario">
+                                    <graphic>
+                                        <ImageView fitHeight="18.0" fitWidth="74.0" pickOnBounds="true" preserveRatio="true">
+                                            <image>
+                                                <Image url="@iconoAgregar.png" />
+                                            </image>
+                                        </ImageView>
+                                    </graphic>
+                                    <tooltip>
+                                        <Tooltip text="Anadir nuevo tratamiento" />
+                                    </tooltip>
+                                    <HBox.margin>
+                                        <Insets right="10.0" />
+                                    </HBox.margin>
+                                </Button>
+                                <Button fx:id="btnFiltrarTratamientos" mnemonicParsing="false" onAction="#abrirFiltrosTratamientos" prefHeight="40.0" prefWidth="40.0" styleClass="button-icono">
+                                    <graphic>
+                                        <ImageView fitHeight="18.0" fitWidth="25.0" pickOnBounds="true" preserveRatio="true">
+                                            <image>
+                                                <Image url="@iconoFiltrar.png" />
+                                            </image>
+                                        </ImageView>
+                                    </graphic>
+                                    <tooltip>
+                                        <Tooltip text="Filtrar resultados" />
+                                    </tooltip>
+                                    <HBox.margin>
+                                        <Insets right="20.0" />
+                                    </HBox.margin>
+                                </Button>
+                            </children>
+                        </HBox>
+                    </children>
+                </VBox>
+            </children>
+        </HBox>
+        <HBox alignment="TOP_CENTER" spacing="10.0" VBox.vgrow="ALWAYS">
+            <children>
+                <TableView fx:id="tblTratamientos" maxHeight="Infinity" maxWidth="Infinity" prefHeight="479.0" HBox.hgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colCodigo" prefWidth="100.0" text="Codigo" />
+                        <TableColumn fx:id="colNombre" prefWidth="180.0" text="Nombre" />
+                        <TableColumn fx:id="colDefinicion" prefWidth="220.0" text="Definicion" />
+                        <TableColumn fx:id="colDiscapacidad" prefWidth="160.0" text="Discapacidad" />
+                        <TableColumn fx:id="colNivel" prefWidth="130.0" text="Nivel" />
+                    </columns>
+                    <columnResizePolicy>
+                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                    </columnResizePolicy>
+                </TableView>
+            </children>
+        </HBox>
+        <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
+            <children>
+                <Button fx:id="btnEliminarTratamiento" mnemonicParsing="false" onAction="#eliminarTratamientoSeleccionado" prefHeight="26.0" prefWidth="126.0" styleClass="button-peligro" text="Eliminar" textAlignment="CENTER" />
+                <Button fx:id="btnEditarTratamiento" mnemonicParsing="false" onAction="#editarTratamientoSeleccionado" prefHeight="26.0" prefWidth="126.0" styleClass="button-primario" text="Editar" />
+            </children>
+        </HBox>
+    </children>
+</VBox>

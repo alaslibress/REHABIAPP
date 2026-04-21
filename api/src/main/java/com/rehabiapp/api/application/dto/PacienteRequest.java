@@ -1,5 +1,6 @@
 package com.rehabiapp.api.application.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -33,5 +34,6 @@ public record PacienteRequest(
         String antecedentes,
         String medicacionActual,
         Boolean consentimientoRgpd,
+        @Valid DireccionDto direccion,
         List<String> telefonos
 ) {}

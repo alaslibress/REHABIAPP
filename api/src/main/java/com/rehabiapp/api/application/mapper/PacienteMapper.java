@@ -1,5 +1,6 @@
 package com.rehabiapp.api.application.mapper;
 
+import com.rehabiapp.api.application.dto.DireccionDto;
 import com.rehabiapp.api.application.dto.PacienteResponse;
 import com.rehabiapp.api.domain.entity.Paciente;
 import org.mapstruct.Mapper;
@@ -36,5 +37,13 @@ public interface PacienteMapper {
     @Mapping(target = "activo", expression = "java(paciente.isActivo())")
     @Mapping(target = "protesis", expression = "java(paciente.isProtesis())")
     @Mapping(target = "consentimientoRgpd", expression = "java(paciente.isConsentimientoRgpd())")
+    @Mapping(target = "direccion", expression =
+            "java(paciente.getDireccion() == null ? null : new DireccionDto(" +
+            "paciente.getDireccion().getCalle(), " +
+            "paciente.getDireccion().getNumero(), " +
+            "paciente.getDireccion().getPiso(), " +
+            "paciente.getDireccion().getCodigoPostal().getCp(), " +
+            "paciente.getDireccion().getCodigoPostal().getLocalidad().getNombreLocalidad(), " +
+            "paciente.getDireccion().getCodigoPostal().getLocalidad().getProvincia()))")
     PacienteResponse toResponse(Paciente paciente);
 }

@@ -1,6 +1,6 @@
 plugins {
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.13'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
 }
 
 repositories {
@@ -10,8 +10,8 @@ repositories {
 }
 
 javafx {
-    // Actualizado a v23 (compatible con JDK 24) para mayor estabilidad
-    version = "23"
+    // JavaFX 24 es la version que acompaña a JDK 24 (mismo ciclo de releases)
+    version = "24"
     modules = ['javafx.controls', 'javafx.graphics', 'javafx.fxml', 'javafx.web', 'javafx.base', 'javafx.swing', 'javafx.media']
 }
 
@@ -19,19 +19,9 @@ dependencies {
     // JavaFX Controls - v11.2.2 es estable, pero para Java 24 usamos la rama compatible
     implementation 'org.controlsfx:controlsfx:11.2.2'
 
-    // PostgreSQL Driver
-    implementation 'org.postgresql:postgresql:42.7.2'
-
-    // BCrypt para hash de contraseñas
-    implementation 'org.mindrot:jbcrypt:0.4'
-
-    // HikariCP - Pool de conexiones thread-safe
-    implementation 'com.zaxxer:HikariCP:5.1.0'
-
-    // CalendarFX - Mantenemos la exclusión para evitar conflictos de versiones de JFX
-    implementation('com.calendarfx:view:11.12.7') {
-        exclude group: 'org.openjfx'
-    }
+    // Jackson para serializar/deserializar JSON con la API REST
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0'
 
     // JasperReports 7.0.1
     implementation 'net.sf.jasperreports:jasperreports:7.0.1'
@@ -46,18 +36,27 @@ dependencies {
     // Logging SLF4J
     implementation 'org.slf4j:slf4j-api:2.0.9'
     implementation 'org.slf4j:slf4j-simple:2.0.9'
+
+    // Tests
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.14.2'
+    // ByteBuddy 1.15.x soporta Java 24 (class file major version 68)
+    testImplementation 'net.bytebuddy:byte-buddy:1.15.10'
+    testImplementation 'net.bytebuddy:byte-buddy-agent:1.15.10'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 // Forzar versiones para evitar el error de mezcla de versiones de JFX
 configurations.all {
     resolutionStrategy {
-        force 'org.openjfx:javafx-base:23'
-        force 'org.openjfx:javafx-graphics:23'
-        force 'org.openjfx:javafx-controls:23'
-        force 'org.openjfx:javafx-fxml:23'
-        force 'org.openjfx:javafx-web:23'
-        force 'org.openjfx:javafx-swing:23'
-        force 'org.openjfx:javafx-media:23'
+        force 'org.openjfx:javafx-base:24'
+        force 'org.openjfx:javafx-graphics:24'
+        force 'org.openjfx:javafx-controls:24'
+        force 'org.openjfx:javafx-fxml:24'
+        force 'org.openjfx:javafx-web:24'
+        force 'org.openjfx:javafx-swing:24'
+        force 'org.openjfx:javafx-media:24'
     }
 }
 
@@ -103,7 +102,23 @@ tasks.jar {
 }
 
 // BLOQUE DE ACCESO NATIVO - Crucial para que JasperReports funcione en Java 24
+tasks.named('test') {
+    useJUnitPlatform()
+    jvmArgs += [
+            "--add-opens=java.base/java.lang=ALL-UNNAMED",
+            "--add-opens=java.base/java.util=ALL-UNNAMED",
+            "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+            "--add-opens=java.base/java.text=ALL-UNNAMED",
+            "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
+            // Requerido para Mockito inline mock maker con Java 24
+            "-XX:+EnableDynamicAgentLoading",
+            "-Xshare:off",
+            "--enable-native-access=ALL-UNNAMED"
+    ]
+}
+
 tasks.withType(JavaExec).configureEach {
+    // Apertura de modulos internos para JasperReports y otras libs en Java 24
     jvmArgs += [
             "--add-opens=java.base/java.lang=ALL-UNNAMED",
             "--add-opens=java.base/java.util=ALL-UNNAMED",
@@ -111,6 +126,22 @@ tasks.withType(JavaExec).configureEach {
             "--add-opens=java.base/java.text=ALL-UNNAMED",
             "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
             "--add-opens=java.desktop/java.awt.geom=ALL-UNNAMED",
-            "--add-opens=java.base/java.io=ALL-UNNAMED"
+            "--add-opens=java.base/java.io=ALL-UNNAMED",
+            "--enable-native-access=ALL-UNNAMED"
     ]
+
+    // Propagacion de --module-path y --add-modules a TODAS las tareas JavaExec,
+    // incluidas las generadas automaticamente por IntelliJ IDEA.
+    // Sin esto, IntelliJ falla con "JavaFX runtime components are missing".
+    doFirst {
+        def fxJars = configurations.runtimeClasspath.files
+                .findAll { it.name.startsWith('javafx-') && it.name.endsWith('.jar') }
+                .collect { it.absolutePath }
+        if (!fxJars.isEmpty()) {
+            jvmArgs += [
+                    '--module-path', fxJars.join(File.pathSeparator),
+                    '--add-modules', 'javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.base,javafx.swing,javafx.media'
+            ]
+        }
+    }
 }

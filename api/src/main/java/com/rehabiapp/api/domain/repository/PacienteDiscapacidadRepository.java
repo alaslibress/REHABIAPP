@@ -21,4 +21,10 @@ public interface PacienteDiscapacidadRepository extends JpaRepository<PacienteDi
      * @return lista de asignaciones discapacidad-paciente
      */
     List<PacienteDiscapacidad> findByIdDniPac(String dniPac);
+
+    /**
+     * Comprueba si algun paciente tiene asignada esta discapacidad.
+     * Necesario para impedir la eliminacion de discapacidades en uso.
+     */
+    boolean existsByIdCodDis(String codDis);
 }

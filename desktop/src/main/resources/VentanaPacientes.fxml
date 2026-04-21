@@ -12,12 +12,12 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox fx:id="vboxContenedorPrinPacientes" maxHeight="Infinity" maxWidth="Infinity" spacing="15.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaPacientes">
+<VBox fx:id="vboxContenedorPrinPacientes" maxHeight="Infinity" maxWidth="Infinity" spacing="15.0" styleClass="panel-card" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaPacientes">
     <padding>
         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
     <children>
-        <HBox prefHeight="100.0" prefWidth="200.0">
+        <HBox prefHeight="100.0" prefWidth="200.0" styleClass="panel-card-header">
             <children>
                 <Label fx:id="lblTituloPestaniaPacientes" prefHeight="18.0" prefWidth="200.0" styleClass="label-titulo" text="Pacientes" />
                 <VBox prefHeight="100.0" prefWidth="802.0" HBox.hgrow="ALWAYS">
@@ -91,13 +91,12 @@
             <children>
                 <TableView fx:id="tblPacientes" maxHeight="Infinity" maxWidth="Infinity" prefHeight="479.0" HBox.hgrow="ALWAYS">
                     <columns>
-                        <TableColumn fx:id="colNombre" prefWidth="150.0" text="Nombre" />
-                        <TableColumn fx:id="colApellidos" prefWidth="200.0" text="Apellidos" />
-                        <TableColumn fx:id="colDNI" prefWidth="120.0" text="DNI" />
-                        <TableColumn fx:id="colEdad" prefWidth="60.0" text="Edad" />
-                        <TableColumn fx:id="colSexo" prefWidth="80.0" text="Sexo" />
-                        <TableColumn fx:id="colDiscapacidad" prefWidth="200.0" text="Discapacidad" />
-                        <TableColumn fx:id="colProtesis" prefWidth="100.0" text="Protesis" />
+                        <TableColumn fx:id="colNombre" prefWidth="180.0" text="Nombre" />
+                        <TableColumn fx:id="colApellidos" prefWidth="230.0" text="Apellidos" />
+                        <TableColumn fx:id="colDNI" prefWidth="130.0" text="DNI" />
+                        <TableColumn fx:id="colEdad" prefWidth="70.0" text="Edad" />
+                        <TableColumn fx:id="colSexo" prefWidth="100.0" text="Sexo" />
+                        <TableColumn fx:id="colProtesis" prefWidth="110.0" text="Protesis" />
                     </columns>
                     <columnResizePolicy>
                         <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />

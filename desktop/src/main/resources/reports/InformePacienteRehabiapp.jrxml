@@ -28,9 +28,6 @@
     p.email_pac,
     p.num_ss,
     p.edad_pac,
-    p.discapacidad_pac,
-    p.tratamiento_pac,
-    p.estado_tratamiento,
     p.protesis,
     p.fecha_alta,
     p.foto,
@@ -46,8 +43,7 @@ LEFT JOIN telefono_paciente tp ON p.dni_pac = tp.dni_pac
 WHERE p.dni_pac = $P{dni_paciente_param}
 GROUP BY
     p.dni_pac, p.nombre_pac, p.apellido1_pac, p.apellido2_pac,
-    p.email_pac, p.num_ss, p.edad_pac, p.discapacidad_pac,
-    p.tratamiento_pac, p.estado_tratamiento, p.protesis,
+    p.email_pac, p.num_ss, p.edad_pac, p.protesis,
     p.fecha_alta, p.foto, d.calle, d.numero, d.piso, d.cp,
     l.nombre_localidad, l.provincia]]></query>
 	<field name="dni_pac" class="java.lang.String"/>
@@ -57,9 +53,6 @@ GROUP BY
 	<field name="email_pac" class="java.lang.String"/>
 	<field name="num_ss" class="java.lang.String"/>
 	<field name="edad_pac" class="java.lang.Integer"/>
-	<field name="discapacidad_pac" class="java.lang.String"/>
-	<field name="tratamiento_pac" class="java.lang.String"/>
-	<field name="estado_tratamiento" class="java.lang.String"/>
 	<field name="protesis" class="java.lang.Integer"/>
 	<field name="fecha_alta" class="java.sql.Timestamp"/>
 	<field name="foto" class="java.lang.Object"/>
@@ -128,18 +121,6 @@ GROUP BY
 			</element>
 			<element kind="line" uuid="12345678-1234-1234-1234-123456789019" x="20" y="190" width="760" height="1">
 				<pen lineWidth="1.0" lineStyle="Dashed" lineColor="#999999"/>
-			</element>
-			<element kind="staticText" uuid="a73a6da3-8312-41b7-b0d8-abb3732f9c0a" x="20" y="210" width="100" height="20" style="Etiqueta">
-				<text><![CDATA[Tratamiento:]]></text>
-			</element>
-			<element kind="textField" uuid="59343119-243c-47b3-ad1c-c5f0fd632b2a" x="120" y="210" width="280" height="20" style="Valor">
-				<expression><![CDATA[$F{tratamiento_pac}]]></expression>
-			</element>
-			<element kind="staticText" uuid="2321261b-54b3-4935-90d1-a12e3a0a9bf5" x="420" y="210" width="60" height="20" style="Etiqueta">
-				<text><![CDATA[Estado:]]></text>
-			</element>
-			<element kind="textField" uuid="1d8bc1f3-96b6-48a1-8b07-08407e5fd7e0" x="480" y="210" width="100" height="20" style="Valor">
-				<expression><![CDATA[$F{estado_tratamiento}]]></expression>
 			</element>
 			<element kind="chart" chartType="bar" uuid="12345678-1234-1234-1234-123456789028" x="40" y="260" width="720" height="180" evaluationTime="Report">
 				<dataset kind="category">

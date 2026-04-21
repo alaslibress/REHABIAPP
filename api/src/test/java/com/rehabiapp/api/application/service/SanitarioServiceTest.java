@@ -65,7 +65,7 @@ class SanitarioServiceTest {
         assertEquals(expectedResponse, result);
         // Debe registrar la lectura en el log de auditoría (Ley 41/2002)
         verify(auditService).registrar(
-                eq(AccionAuditoria.LEER),
+                eq(AccionAuditoria.READ),
                 eq("sanitario"),
                 eq("12345678A"),
                 anyString()
@@ -101,7 +101,7 @@ class SanitarioServiceTest {
 
         // Debe registrar la operación en el log de auditoría
         verify(auditService).registrar(
-                eq(AccionAuditoria.ELIMINAR),
+                eq(AccionAuditoria.SOFT_DELETE),
                 eq("sanitario"),
                 eq("12345678A"),
                 anyString()

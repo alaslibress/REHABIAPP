@@ -1,17 +1,24 @@
 package com.javafx.Clases;
 
+import com.javafx.dto.DireccionDto;
+import com.javafx.dto.PacienteRequest;
+import com.javafx.dto.PacienteResponse;
 import javafx.beans.property.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Clase modelo que representa un Paciente en el sistema
- * Utiliza propiedades JavaFX para facilitar el binding con TableView
+ * Clase modelo que representa un Paciente en el sistema.
+ * Utiliza propiedades JavaFX para facilitar el binding con TableView.
+ * Los campos legacy discapacidad, tratamiento y estadoTratamiento han sido eliminados.
+ * El cifrado clinico es responsabilidad de la API (CampoClinicoConverter).
  */
 public class Paciente implements Persona {
 
-    //Propiedades principales del paciente
+    // Propiedades principales del paciente
     private final StringProperty dni;
     private final StringProperty nombre;
     private final StringProperty apellido1;
@@ -19,17 +26,14 @@ public class Paciente implements Persona {
     private final IntegerProperty edad;
     private final StringProperty email;
     private final StringProperty numSS;
-    private final StringProperty discapacidad;
-    private final StringProperty tratamiento;
-    private final StringProperty estadoTratamiento;
-    private final IntegerProperty protesis;
+    private final BooleanProperty protesis;
     private final StringProperty dniSanitario;
 
-    //Propiedades de contacto
+    // Propiedades de contacto
     private final StringProperty telefono1;
     private final StringProperty telefono2;
 
-    //Propiedades de direccion
+    // Propiedades de direccion postal
     private final StringProperty calle;
     private final StringProperty numero;
     private final StringProperty piso;
@@ -37,7 +41,7 @@ public class Paciente implements Persona {
     private final StringProperty localidad;
     private final StringProperty provincia;
 
-    //Propiedades clinicas y legales (RGPD, Ley 41/2002)
+    // Propiedades clinicas y legales (RGPD, Ley 41/2002)
     private final StringProperty sexo;
     private final ObjectProperty<LocalDate> fechaNacimiento;
     private final StringProperty alergias;
@@ -48,11 +52,10 @@ public class Paciente implements Persona {
     private final BooleanProperty activo;
 
     /**
-     * Constructor completo con todos los campos principales
+     * Constructor completo (sin campos legacy).
      */
     public Paciente(String dni, String nombre, String apellido1, String apellido2,
-                    int edad, String email, String numSS, String discapacidad,
-                    String tratamiento, String estadoTratamiento, int protesis,
+                    int edad, String email, String numSS, boolean protesis,
                     String dniSanitario) {
 
         this.dni = new SimpleStringProperty(dni);
@@ -62,17 +65,14 @@ public class Paciente implements Persona {
         this.edad = new SimpleIntegerProperty(edad);
         this.email = new SimpleStringProperty(email);
         this.numSS = new SimpleStringProperty(numSS);
-        this.discapacidad = new SimpleStringProperty(discapacidad);
-        this.tratamiento = new SimpleStringProperty(tratamiento);
-        this.estadoTratamiento = new SimpleStringProperty(estadoTratamiento);
-        this.protesis = new SimpleIntegerProperty(protesis);
+        this.protesis = new SimpleBooleanProperty(protesis);
         this.dniSanitario = new SimpleStringProperty(dniSanitario);
 
-        //Inicializar propiedades de contacto
+        // Inicializar propiedades de contacto
         this.telefono1 = new SimpleStringProperty("");
         this.telefono2 = new SimpleStringProperty("");
 
-        //Inicializar propiedades de direccion
+        // Inicializar propiedades de direccion postal con valores vacios
         this.calle = new SimpleStringProperty("");
         this.numero = new SimpleStringProperty("");
         this.piso = new SimpleStringProperty("");
@@ -80,7 +80,7 @@ public class Paciente implements Persona {
         this.localidad = new SimpleStringProperty("");
         this.provincia = new SimpleStringProperty("");
 
-        //Inicializar propiedades clinicas y legales con valores por defecto
+        // Inicializar propiedades clinicas y legales con valores por defecto
         this.sexo = new SimpleStringProperty("");
         this.fechaNacimiento = new SimpleObjectProperty<>(null);
         this.alergias = new SimpleStringProperty("");
@@ -92,429 +92,215 @@ public class Paciente implements Persona {
     }
 
     /**
-     * Constructor simplificado sin campos opcionales
+     * Constructor simplificado sin campos opcionales.
      */
     public Paciente(String dni, String nombre, String apellido1, String apellido2,
                     int edad, String email, String numSS, String dniSanitario) {
+        this(dni, nombre, apellido1, apellido2, edad, email, numSS, false, dniSanitario);
+    }
 
-        this(dni, nombre, apellido1, apellido2, edad, email, numSS,
-                "", "", "", 0, dniSanitario);
+    // ==================== FACTORY METHODS ====================
+
+    /**
+     * Crea un Paciente a partir de la respuesta JSON de la API.
+     * La API devuelve los campos clinicos ya descifrados.
+     */
+    public static Paciente desdePacienteResponse(PacienteResponse response) {
+        Paciente p = new Paciente(
+            response.dniPac(),
+            response.nombrePac(),
+            response.apellido1Pac(),
+            response.apellido2Pac() != null ? response.apellido2Pac() : "",
+            response.edadPac() != null ? response.edadPac() : 0,
+            response.emailPac(),
+            response.numSs(),
+            Boolean.TRUE.equals(response.protesis()),
+            response.dniSan()
+        );
+
+        p.setSexo(response.sexo() != null ? response.sexo() : "");
+        p.setFechaNacimiento(response.fechaNacimiento());
+        p.setAlergias(response.alergias() != null ? response.alergias() : "");
+        p.setAntecedentes(response.antecedentes() != null ? response.antecedentes() : "");
+        p.setMedicacionActual(response.medicacionActual() != null ? response.medicacionActual() : "");
+        p.setConsentimientoRgpd(Boolean.TRUE.equals(response.consentimientoRgpd()));
+        p.setActivo(Boolean.TRUE.equals(response.activo()));
+
+        if (response.telefonos() != null && !response.telefonos().isEmpty()) {
+            p.setTelefono1(response.telefonos().get(0));
+            if (response.telefonos().size() > 1) {
+                p.setTelefono2(response.telefonos().get(1));
+            }
+        }
+
+        if (response.direccion() != null) {
+            p.setCalle(response.direccion().calle() != null ? response.direccion().calle() : "");
+            p.setNumero(response.direccion().numero() != null ? response.direccion().numero() : "");
+            p.setPiso(response.direccion().piso() != null ? response.direccion().piso() : "");
+            p.setCodigoPostal(response.direccion().cp() != null ? response.direccion().cp() : "");
+            p.setLocalidad(response.direccion().nombreLocalidad() != null ? response.direccion().nombreLocalidad() : "");
+            p.setProvincia(response.direccion().provincia() != null ? response.direccion().provincia() : "");
+        }
+        return p;
+    }
+
+    /**
+     * Convierte este Paciente a un PacienteRequest para enviar a la API.
+     */
+    public PacienteRequest toPacienteRequest() {
+        List<String> telefonos = new ArrayList<>();
+        if (getTelefono1() != null && !getTelefono1().isEmpty()) {
+            telefonos.add(getTelefono1());
+        }
+        if (getTelefono2() != null && !getTelefono2().isEmpty()) {
+            telefonos.add(getTelefono2());
+        }
+
+        // Construir DireccionDto solo si calle, cp y localidad estan informados
+        DireccionDto direccion = null;
+        if (getCalle() != null && !getCalle().isEmpty()
+                && getCodigoPostal() != null && !getCodigoPostal().isEmpty()
+                && getLocalidad() != null && !getLocalidad().isEmpty()) {
+            direccion = new DireccionDto(
+                    getCalle(),
+                    getNumero(),
+                    getPiso(),
+                    getCodigoPostal(),
+                    getLocalidad(),
+                    getProvincia()
+            );
+        }
+
+        return new PacienteRequest(
+            getDni(), getDniSanitario(), getNombre(),
+            getApellido1(), getApellido2(),
+            getEdad(), getEmail(), getNumSS(),
+            getSexo(), getFechaNacimiento(),
+            isProtesis(),
+            getAlergias(), getAntecedentes(), getMedicacionActual(),
+            isConsentimientoRgpd(),
+            direccion,
+            telefonos
+        );
     }
 
     // ==================== GETTERS Y SETTERS ====================
 
-    //DNI
-    public String getDni() {
-        return dni.get();
-    }
+    public String getDni() { return dni.get(); }
+    public void setDni(String dni) { this.dni.set(dni); }
+    public StringProperty dniProperty() { return dni; }
 
-    public void setDni(String dni) {
-        this.dni.set(dni);
-    }
+    public String getNombre() { return nombre.get(); }
+    public void setNombre(String nombre) { this.nombre.set(nombre); }
+    public StringProperty nombreProperty() { return nombre; }
 
-    public StringProperty dniProperty() {
-        return dni;
-    }
+    public String getApellido1() { return apellido1.get(); }
+    public void setApellido1(String apellido1) { this.apellido1.set(apellido1); }
+    public StringProperty apellido1Property() { return apellido1; }
 
-    //Nombre
-    public String getNombre() {
-        return nombre.get();
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre.set(nombre);
-    }
-
-    public StringProperty nombreProperty() {
-        return nombre;
-    }
-
-    //Apellido 1
-    public String getApellido1() {
-        return apellido1.get();
-    }
-
-    public void setApellido1(String apellido1) {
-        this.apellido1.set(apellido1);
-    }
-
-    public StringProperty apellido1Property() {
-        return apellido1;
-    }
-
-    //Apellido 2
-    public String getApellido2() {
-        return apellido2.get();
-    }
-
-    public void setApellido2(String apellido2) {
-        this.apellido2.set(apellido2);
-    }
-
-    public StringProperty apellido2Property() {
-        return apellido2;
-    }
+    public String getApellido2() { return apellido2.get(); }
+    public void setApellido2(String apellido2) { this.apellido2.set(apellido2); }
+    public StringProperty apellido2Property() { return apellido2; }
 
     /**
-     * Property para los apellidos concatenados (para TableView)
-     * Usa el metodo getApellidos() heredado de la interface Persona
+     * Property para los apellidos concatenados (para TableView).
      */
     public StringProperty apellidosProperty() {
         return new SimpleStringProperty(getApellidos());
     }
 
-    //Edad
-    public int getEdad() {
-        return edad.get();
-    }
+    public int getEdad() { return edad.get(); }
+    public void setEdad(int edad) { this.edad.set(edad); }
+    public IntegerProperty edadProperty() { return edad; }
 
-    public void setEdad(int edad) {
-        this.edad.set(edad);
-    }
+    public String getEmail() { return email.get(); }
+    public void setEmail(String email) { this.email.set(email); }
+    public StringProperty emailProperty() { return email; }
 
-    public IntegerProperty edadProperty() {
-        return edad;
-    }
+    public String getNumSS() { return numSS.get(); }
+    public void setNumSS(String numSS) { this.numSS.set(numSS); }
+    public StringProperty numSSProperty() { return numSS; }
 
-    //Email
-    public String getEmail() {
-        return email.get();
-    }
-
-    public void setEmail(String email) {
-        this.email.set(email);
-    }
-
-    public StringProperty emailProperty() {
-        return email;
-    }
-
-    //Numero de Seguridad Social
-    public String getNumSS() {
-        return numSS.get();
-    }
-
-    public void setNumSS(String numSS) {
-        this.numSS.set(numSS);
-    }
-
-    public StringProperty numSSProperty() {
-        return numSS;
-    }
-
-    //Discapacidad
-    public String getDiscapacidad() {
-        return discapacidad.get();
-    }
-
-    public void setDiscapacidad(String discapacidad) {
-        this.discapacidad.set(discapacidad);
-    }
-
-    public StringProperty discapacidadProperty() {
-        return discapacidad;
-    }
-
-    //Tratamiento
-    public String getTratamiento() {
-        return tratamiento.get();
-    }
-
-    public void setTratamiento(String tratamiento) {
-        this.tratamiento.set(tratamiento);
-    }
-
-    public StringProperty tratamientoProperty() {
-        return tratamiento;
-    }
-
-    //Estado del tratamiento
-    public String getEstadoTratamiento() {
-        return estadoTratamiento.get();
-    }
-
-    public void setEstadoTratamiento(String estadoTratamiento) {
-        this.estadoTratamiento.set(estadoTratamiento);
-    }
-
-    public StringProperty estadoTratamientoProperty() {
-        return estadoTratamiento;
-    }
-
-    //Protesis
-    public int getProtesis() {
-        return protesis.get();
-    }
-
-    public void setProtesis(int protesis) {
-        this.protesis.set(protesis);
-    }
-
-    public IntegerProperty protesisProperty() {
-        return protesis;
-    }
+    public boolean isProtesis() { return protesis.get(); }
+    public void setProtesis(boolean protesis) { this.protesis.set(protesis); }
+    public BooleanProperty protesisProperty() { return protesis; }
 
     /**
-     * Indica si el paciente tiene protesis
-     * @return true si tiene al menos una protesis
+     * Indica si el paciente tiene protesis (alias de isProtesis para compatibilidad).
      */
-    public boolean tieneProtesis() {
-        return protesis.get() > 0;
-    }
+    public boolean tieneProtesis() { return protesis.get(); }
 
-    //DNI del sanitario asignado
-    public String getDniSanitario() {
-        return dniSanitario.get();
-    }
+    public String getDniSanitario() { return dniSanitario.get(); }
+    public void setDniSanitario(String dniSanitario) { this.dniSanitario.set(dniSanitario); }
+    public StringProperty dniSanitarioProperty() { return dniSanitario; }
 
-    public void setDniSanitario(String dniSanitario) {
-        this.dniSanitario.set(dniSanitario);
-    }
+    public String getTelefono1() { return telefono1.get(); }
+    public void setTelefono1(String telefono1) { this.telefono1.set(telefono1); }
+    public StringProperty telefono1Property() { return telefono1; }
 
-    public StringProperty dniSanitarioProperty() {
-        return dniSanitario;
-    }
-
-    //Telefono 1
-    public String getTelefono1() {
-        return telefono1.get();
-    }
-
-    public void setTelefono1(String telefono1) {
-        this.telefono1.set(telefono1);
-    }
-
-    public StringProperty telefono1Property() {
-        return telefono1;
-    }
-
-    //Telefono 2
-    public String getTelefono2() {
-        return telefono2.get();
-    }
-
-    public void setTelefono2(String telefono2) {
-        this.telefono2.set(telefono2);
-    }
-
-    public StringProperty telefono2Property() {
-        return telefono2;
-    }
-
-    //Calle
-    public String getCalle() {
-        return calle.get();
-    }
-
-    public void setCalle(String calle) {
-        this.calle.set(calle);
-    }
-
-    public StringProperty calleProperty() {
-        return calle;
-    }
-
-    //Numero
-    public String getNumero() {
-        return numero.get();
-    }
-
-    public void setNumero(String numero) {
-        this.numero.set(numero);
-    }
-
-    public StringProperty numeroProperty() {
-        return numero;
-    }
-
-    //Piso
-    public String getPiso() {
-        return piso.get();
-    }
-
-    public void setPiso(String piso) {
-        this.piso.set(piso);
-    }
-
-    public StringProperty pisoProperty() {
-        return piso;
-    }
-
-    //Codigo Postal
-    public String getCodigoPostal() {
-        return codigoPostal.get();
-    }
-
-    public void setCodigoPostal(String codigoPostal) {
-        this.codigoPostal.set(codigoPostal);
-    }
-
-    public StringProperty codigoPostalProperty() {
-        return codigoPostal;
-    }
-
-    //Localidad
-    public String getLocalidad() {
-        return localidad.get();
-    }
-
-    public void setLocalidad(String localidad) {
-        this.localidad.set(localidad);
-    }
-
-    public StringProperty localidadProperty() {
-        return localidad;
-    }
-
-    //Provincia
-    public String getProvincia() {
-        return provincia.get();
-    }
-
-    public void setProvincia(String provincia) {
-        this.provincia.set(provincia);
-    }
-
-    public StringProperty provinciaProperty() {
-        return provincia;
-    }
-
-    /**
-     * Obtiene la direccion completa formateada
-     * @return Direccion completa como texto
-     */
-    public String getDireccionCompleta() {
-        StringBuilder sb = new StringBuilder();
-
-        if (calle.get() != null && !calle.get().isEmpty()) {
-            sb.append(calle.get());
-        }
-        if (numero.get() != null && !numero.get().isEmpty()) {
-            sb.append(" ").append(numero.get());
-        }
-        if (piso.get() != null && !piso.get().isEmpty()) {
-            sb.append(", ").append(piso.get());
-        }
-        if (codigoPostal.get() != null && !codigoPostal.get().isEmpty()) {
-            sb.append(", ").append(codigoPostal.get());
-        }
-        if (localidad.get() != null && !localidad.get().isEmpty()) {
-            sb.append(" ").append(localidad.get());
-        }
-        if (provincia.get() != null && !provincia.get().isEmpty()) {
-            sb.append(" (").append(provincia.get()).append(")");
-        }
-
-        return sb.toString();
-    }
+    public String getTelefono2() { return telefono2.get(); }
+    public void setTelefono2(String telefono2) { this.telefono2.set(telefono2); }
+    public StringProperty telefono2Property() { return telefono2; }
 
     // ==================== CAMPOS CLINICOS Y LEGALES ====================
 
-    //Sexo
-    public String getSexo() {
-        return sexo.get();
-    }
+    public String getSexo() { return sexo.get(); }
+    public void setSexo(String sexo) { this.sexo.set(sexo); }
+    public StringProperty sexoProperty() { return sexo; }
 
-    public void setSexo(String sexo) {
-        this.sexo.set(sexo);
-    }
+    public LocalDate getFechaNacimiento() { return fechaNacimiento.get(); }
+    public void setFechaNacimiento(LocalDate fechaNacimiento) { this.fechaNacimiento.set(fechaNacimiento); }
+    public ObjectProperty<LocalDate> fechaNacimientoProperty() { return fechaNacimiento; }
 
-    public StringProperty sexoProperty() {
-        return sexo;
-    }
+    public String getAlergias() { return alergias.get(); }
+    public void setAlergias(String alergias) { this.alergias.set(alergias); }
+    public StringProperty alergiasProperty() { return alergias; }
 
-    //Fecha de nacimiento
-    public LocalDate getFechaNacimiento() {
-        return fechaNacimiento.get();
-    }
+    public String getAntecedentes() { return antecedentes.get(); }
+    public void setAntecedentes(String antecedentes) { this.antecedentes.set(antecedentes); }
+    public StringProperty antecedentesProperty() { return antecedentes; }
 
-    public void setFechaNacimiento(LocalDate fechaNacimiento) {
-        this.fechaNacimiento.set(fechaNacimiento);
-    }
+    public String getMedicacionActual() { return medicacionActual.get(); }
+    public void setMedicacionActual(String medicacionActual) { this.medicacionActual.set(medicacionActual); }
+    public StringProperty medicacionActualProperty() { return medicacionActual; }
 
-    public ObjectProperty<LocalDate> fechaNacimientoProperty() {
-        return fechaNacimiento;
-    }
+    public boolean isConsentimientoRgpd() { return consentimientoRgpd.get(); }
+    public void setConsentimientoRgpd(boolean consentimientoRgpd) { this.consentimientoRgpd.set(consentimientoRgpd); }
+    public BooleanProperty consentimientoRgpdProperty() { return consentimientoRgpd; }
 
-    //Alergias
-    public String getAlergias() {
-        return alergias.get();
-    }
+    public LocalDateTime getFechaConsentimiento() { return fechaConsentimiento.get(); }
+    public void setFechaConsentimiento(LocalDateTime fechaConsentimiento) { this.fechaConsentimiento.set(fechaConsentimiento); }
+    public ObjectProperty<LocalDateTime> fechaConsentimientoProperty() { return fechaConsentimiento; }
 
-    public void setAlergias(String alergias) {
-        this.alergias.set(alergias);
-    }
+    public boolean isActivo() { return activo.get(); }
+    public void setActivo(boolean activo) { this.activo.set(activo); }
+    public BooleanProperty activoProperty() { return activo; }
 
-    public StringProperty alergiasProperty() {
-        return alergias;
-    }
+    // ==================== DIRECCION POSTAL ====================
 
-    //Antecedentes
-    public String getAntecedentes() {
-        return antecedentes.get();
-    }
+    public String getCalle() { return calle.get(); }
+    public void setCalle(String calle) { this.calle.set(calle); }
+    public StringProperty calleProperty() { return calle; }
 
-    public void setAntecedentes(String antecedentes) {
-        this.antecedentes.set(antecedentes);
-    }
+    public String getNumero() { return numero.get(); }
+    public void setNumero(String numero) { this.numero.set(numero); }
+    public StringProperty numeroProperty() { return numero; }
 
-    public StringProperty antecedentesProperty() {
-        return antecedentes;
-    }
+    public String getPiso() { return piso.get(); }
+    public void setPiso(String piso) { this.piso.set(piso); }
+    public StringProperty pisoProperty() { return piso; }
 
-    //Medicacion actual
-    public String getMedicacionActual() {
-        return medicacionActual.get();
-    }
+    public String getCodigoPostal() { return codigoPostal.get(); }
+    public void setCodigoPostal(String codigoPostal) { this.codigoPostal.set(codigoPostal); }
+    public StringProperty codigoPostalProperty() { return codigoPostal; }
 
-    public void setMedicacionActual(String medicacionActual) {
-        this.medicacionActual.set(medicacionActual);
-    }
+    public String getLocalidad() { return localidad.get(); }
+    public void setLocalidad(String localidad) { this.localidad.set(localidad); }
+    public StringProperty localidadProperty() { return localidad; }
 
-    public StringProperty medicacionActualProperty() {
-        return medicacionActual;
-    }
-
-    //Consentimiento RGPD
-    public boolean isConsentimientoRgpd() {
-        return consentimientoRgpd.get();
-    }
-
-    public void setConsentimientoRgpd(boolean consentimientoRgpd) {
-        this.consentimientoRgpd.set(consentimientoRgpd);
-    }
-
-    public BooleanProperty consentimientoRgpdProperty() {
-        return consentimientoRgpd;
-    }
-
-    //Fecha de consentimiento
-    public LocalDateTime getFechaConsentimiento() {
-        return fechaConsentimiento.get();
-    }
-
-    public void setFechaConsentimiento(LocalDateTime fechaConsentimiento) {
-        this.fechaConsentimiento.set(fechaConsentimiento);
-    }
-
-    public ObjectProperty<LocalDateTime> fechaConsentimientoProperty() {
-        return fechaConsentimiento;
-    }
-
-    //Activo (soft delete)
-    public boolean isActivo() {
-        return activo.get();
-    }
-
-    public void setActivo(boolean activo) {
-        this.activo.set(activo);
-    }
-
-    public BooleanProperty activoProperty() {
-        return activo;
-    }
-
-    // ==================== METODOS AUXILIARES ====================
+    public String getProvincia() { return provincia.get(); }
+    public void setProvincia(String provincia) { this.provincia.set(provincia); }
+    public StringProperty provinciaProperty() { return provincia; }
 
     @Override
     public String toString() {

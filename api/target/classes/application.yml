@@ -2,8 +2,19 @@
 # Los perfiles (local, aws, production) sobreescriben o complementan estas propiedades.
 
 spring:
+  # Perfil por defecto cuando no se activa ninguno explicitamente.
+  # En K8s, SPRING_PROFILES_ACTIVE sobreescribe este valor automaticamente.
+  profiles:
+    default: local
+
   application:
     name: rehabiapp-api
+
+  # Multipart — limite de tamaño para subida de fotos de pacientes (max 5 MB por archivo)
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
 
   # JPA — configuración base; perfiles específicos añaden propiedades adicionales
   jpa:
@@ -16,21 +27,23 @@ spring:
       hibernate:
         # Dialecto PostgreSQL moderno
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        # Envers — tablas de auditoría controladas por Flyway, no auto-generadas
-        envers:
-          audit_table_suffix: _audit
-          revision_field_name: rev
-          revision_type_field_name: rev_type
-          store_data_at_delete: true
+      # Envers — namespace completo requerido para que Spring pase las claves correctamente a Hibernate
+      # Clave resultante: org.hibernate.envers.audit_table_suffix (no hibernate.envers.*)
+      org.hibernate.envers:
+        audit_table_suffix: _audit
+        revision_field_name: rev
+        revision_type_field_name: rev_type
+        store_data_at_delete: true
 
   # Flyway — migraciones versionadas; falla el arranque si la migración no es limpia
   flyway:
     enabled: true
     locations: classpath:db/migration
     # baseline-on-migrate permite aplicar migraciones sobre una BD ya existente
-    # (compatibilidad con el esquema del ERP de escritorio)
+    # (compatibilidad con el esquema del ERP de escritorio que ya creo todas las tablas via JDBC)
+    # baseline-version: 8 indica que el esquema ya esta en V8 — no re-ejecutar V1 a V8
     baseline-on-migrate: true
-    baseline-version: 0
+    baseline-version: 8
     validate-on-migrate: true
 
 # ======================== SERVIDOR ========================
@@ -73,6 +86,13 @@ management:
       cache:
         # Sin caché de recursos estáticos — evita conflictos con filesystem de solo lectura
         period: 0
+
+# ======================== LOGGING ========================
+logging:
+  level:
+    # Nivel base para toda la aplicacion — perfiles especificos pueden ajustar
+    root: INFO
+    com.rehabiapp: INFO
 
 # ======================== CONFIGURACIÓN ESPECÍFICA DE REHABIAPP ========================
 rehabiapp:

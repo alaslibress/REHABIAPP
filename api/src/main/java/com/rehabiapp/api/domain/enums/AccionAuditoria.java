@@ -14,15 +14,33 @@ package com.rehabiapp.api.domain.enums;
  */
 public enum AccionAuditoria {
 
-    /** Creación de un nuevo registro en el sistema. */
-    CREAR,
+    /** Inicio de sesion de un usuario en el sistema. */
+    LOGIN,
+
+    /** Cierre de sesion de un usuario. */
+    LOGOUT,
+
+    /** Creacion de un nuevo registro en el sistema. */
+    CREATE,
 
     /** Lectura o consulta de un registro existente. */
-    LEER,
+    READ,
 
-    /** Modificación de un registro existente. */
-    ACTUALIZAR,
+    /** Modificacion de un registro existente. */
+    UPDATE,
 
-    /** Baja lógica (soft delete) de un registro. */
-    ELIMINAR
+    /** Eliminacion fisica de un registro (desasignacion). */
+    DELETE,
+
+    /** Baja logica (soft delete) de un registro. */
+    SOFT_DELETE,
+
+    /** Exportacion de datos (PDF, CSV, etc.). */
+    EXPORT,
+
+    /** Impresion de datos. */
+    PRINT,
+
+    /** Cambio de contrasena de un usuario. */
+    CAMBIO_CONTRASENA
 }

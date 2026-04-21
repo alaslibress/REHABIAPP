@@ -4,6 +4,8 @@ import com.rehabiapp.api.domain.entity.AuditLog;
 import com.rehabiapp.api.domain.enums.AccionAuditoria;
 import com.rehabiapp.api.domain.repository.AuditLogRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ import java.time.LocalDateTime;
 @Service
 public class AuditService {
 
+    private static final Logger log = LoggerFactory.getLogger(AuditService.class);
+
     private final AuditLogRepository auditLogRepository;
 
     public AuditService(AuditLogRepository auditLogRepository) {
@@ -43,17 +47,17 @@ public class AuditService {
      * @param detalle   Descripción adicional de la operación.
      */
     public void registrar(AccionAuditoria accion, String entidad, String idEntidad, String detalle) {
-        AuditLog log = new AuditLog();
-        log.setFechaHora(LocalDateTime.now());
-        log.setAccion(accion);
-        log.setEntidad(entidad);
-        log.setIdEntidad(idEntidad);
-        log.setDetalle(detalle);
+        AuditLog entrada = new AuditLog();
+        entrada.setFechaHora(LocalDateTime.now());
+        entrada.setAccion(accion);
+        entrada.setEntidad(entidad);
+        entrada.setIdEntidad(idEntidad);
+        entrada.setDetalle(detalle);
 
         // Obtener DNI del usuario autenticado desde el SecurityContext
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
-            log.setDniUsuario(auth.getName());
+            entrada.setDniUsuario(auth.getName());
         }
 
         // Obtener IP de origen — en K8s detrás de ALB de AWS viene en X-Forwarded-For
@@ -63,7 +67,7 @@ public class AuditService {
             if (attrs != null) {
                 HttpServletRequest request = attrs.getRequest();
                 String xForwardedFor = request.getHeader("X-Forwarded-For");
-                log.setIpOrigen(
+                entrada.setIpOrigen(
                         xForwardedFor != null
                                 ? xForwardedFor.split(",")[0].trim()
                                 : request.getRemoteAddr()
@@ -73,6 +77,52 @@ public class AuditService {
             // Contexto de request no disponible (ej: en tests unitarios o tareas programadas)
         }
 
-        auditLogRepository.save(log);
+        auditLogRepository.save(entrada);
+        log.debug("Auditoria registrada — accion={} entidad={} id={}", accion, entidad, idEntidad);
+    }
+
+    /**
+     * Registra una entrada de auditoría con DNI y nombre de usuario proporcionados explicitamente.
+     *
+     * <p>Util para operaciones previas a la autenticacion (ej: login) donde
+     * el SecurityContext todavia no tiene al usuario. En esos casos el llamador
+     * conoce el DNI y puede pasarlo directamente.</p>
+     *
+     * @param accion         Tipo de operacion realizada.
+     * @param entidad        Nombre de la entidad afectada.
+     * @param idEntidad      Identificador del registro afectado.
+     * @param detalle        Descripcion adicional de la operacion.
+     * @param dniUsuario     DNI del usuario que realiza la accion.
+     * @param nombreUsuario  Nombre completo del usuario (puede ser null).
+     */
+    public void registrar(AccionAuditoria accion, String entidad, String idEntidad,
+                          String detalle, String dniUsuario, String nombreUsuario) {
+        AuditLog entrada = new AuditLog();
+        entrada.setFechaHora(LocalDateTime.now());
+        entrada.setAccion(accion);
+        entrada.setEntidad(entidad);
+        entrada.setIdEntidad(idEntidad);
+        entrada.setDetalle(detalle);
+        entrada.setDniUsuario(dniUsuario);
+        entrada.setNombreUsuario(nombreUsuario);
+
+        try {
+            ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                HttpServletRequest request = attrs.getRequest();
+                String xForwardedFor = request.getHeader("X-Forwarded-For");
+                entrada.setIpOrigen(
+                        xForwardedFor != null
+                                ? xForwardedFor.split(",")[0].trim()
+                                : request.getRemoteAddr()
+                );
+            }
+        } catch (Exception e) {
+            // Contexto de request no disponible
+        }
+
+        auditLogRepository.save(entrada);
+        log.debug("Auditoria registrada — accion={} entidad={} id={}", accion, entidad, idEntidad);
     }
 }

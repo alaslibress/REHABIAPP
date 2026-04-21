@@ -94,24 +94,6 @@ public class Paciente {
     private String numSs;
 
     /**
-     * Descripción de la discapacidad principal (campo de texto libre heredado).
-     */
-    @Column(name = "discapacidad_pac", length = 200)
-    private String discapacidadPac;
-
-    /**
-     * Descripción del tratamiento principal (campo de texto libre heredado).
-     */
-    @Column(name = "tratamiento_pac", length = 200)
-    private String tratamientoPac;
-
-    /**
-     * Estado actual del tratamiento (texto libre).
-     */
-    @Column(name = "estado_tratamiento", length = 100)
-    private String estadoTratamiento;
-
-    /**
      * Indica si el paciente usa prótesis.
      */
     @Column(name = "protesis")
@@ -268,30 +250,6 @@ public class Paciente {
 
     public void setNumSs(String numSs) {
         this.numSs = numSs;
-    }
-
-    public String getDiscapacidadPac() {
-        return discapacidadPac;
-    }
-
-    public void setDiscapacidadPac(String discapacidadPac) {
-        this.discapacidadPac = discapacidadPac;
-    }
-
-    public String getTratamientoPac() {
-        return tratamientoPac;
-    }
-
-    public void setTratamientoPac(String tratamientoPac) {
-        this.tratamientoPac = tratamientoPac;
-    }
-
-    public String getEstadoTratamiento() {
-        return estadoTratamiento;
-    }
-
-    public void setEstadoTratamiento(String estadoTratamiento) {
-        this.estadoTratamiento = estadoTratamiento;
     }
 
     public boolean isProtesis() {

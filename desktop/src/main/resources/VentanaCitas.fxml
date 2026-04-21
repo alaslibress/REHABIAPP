@@ -14,7 +14,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.StackPane?>
 
-<VBox fx:id="vboxContenedorPrincipal" prefHeight="700.0" prefWidth="1100.0" spacing="15.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaCitas">
+<VBox fx:id="vboxContenedorPrincipal" prefHeight="700.0" prefWidth="1100.0" spacing="15.0" styleClass="root panel-card" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaCitas">
     <padding>
         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
@@ -33,7 +33,7 @@
                                 <Label style="-fx-font-weight: bold;" text="Calendario:" />
                                 <Button fx:id="btnHoy" onAction="#irAHoy" text="Hoy" styleClass="button-primario" />
                                 <Button fx:id="btnVerTodas" onAction="#verTodasLasCitas" text="Ver todas las citas" />
-                                <Button fx:id="btnVerAgenda" onAction="#verAgendaSanitario" text="📅 Ver Mi Agenda" styleClass="button-exito" />
+                                <Button fx:id="btnVerAgenda" onAction="#verAgendaSanitario" text="Ver Mi Agenda" styleClass="button-exito" />
                             </children>
                         </HBox>
 
@@ -59,6 +59,7 @@
                             <children>
                                 <Button fx:id="btnEliminarCita" onAction="#eliminarCitaSeleccionada" prefWidth="100.0" styleClass="button-peligro" text="Eliminar" />
                                 <Button fx:id="btnVerCita" onAction="#verCitaSeleccionada" prefWidth="100.0" styleClass="button-primario" text="Ver cita" />
+                                <Button fx:id="btnVerFichaPaciente" onAction="#verFichaPaciente" prefWidth="160.0" styleClass="button-primario" text="Ver ficha paciente" />
                             </children>
                         </HBox>
                     </children>
@@ -109,7 +110,7 @@
                             </VBox.margin>
                             <children>
                                 <Button fx:id="btnRestablecer" onAction="#restablecerFormulario" prefWidth="100.0" text="Limpiar" />
-                                <Button fx:id="btnAniadirCita" onAction="#aniadirCita" prefWidth="100.0" styleClass="button-primario" text="Crear cita" />
+                                <Button fx:id="btnAniadirCita" onAction="#aniadirCita" prefWidth="140.0" styleClass="button-primario" text="Crear cita" />
                             </children>
                         </HBox>
                     </children>

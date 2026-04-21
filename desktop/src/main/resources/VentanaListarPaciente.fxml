@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
@@ -122,11 +123,17 @@
                                 <Insets top="5.0" />
                             </VBox.margin>
                         </Label>
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                            <children>
+                                <Label fx:id="lblNivelActual" text="Nivel actual: -" />
+                                <CheckBox fx:id="chkFiltrarPorNivel" text="Solo tratamientos del nivel actual" />
+                            </children>
+                        </HBox>
 
                         <TableView fx:id="tblTratamientosPaciente" prefHeight="130.0" prefWidth="430.0">
                             <columns>
                                 <TableColumn fx:id="colTratNombre" prefWidth="150.0" text="Tratamiento" />
-                                <TableColumn fx:id="colTratDefinicion" prefWidth="180.0" text="Definicion" />
+                                <TableColumn fx:id="colTratNivel" prefWidth="180.0" text="Nivel" />
                                 <TableColumn fx:id="colTratVisible" prefWidth="90.0" text="Visible" />
                             </columns>
                         </TableView>

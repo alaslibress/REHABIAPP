@@ -7,7 +7,6 @@ import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.SanitarioDAO;
 import com.javafx.excepcion.ConexionException;
 import com.javafx.excepcion.RehabiAppException;
-import com.javafx.service.AuditService;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -86,10 +85,20 @@ public class controladorPerfil {
         }
 
         //Obtener datos completos del sanitario
-        usuarioActual = sanitarioDAO.buscarPorDni(sesion.getDniUsuario());
+        try {
+            usuarioActual = sanitarioDAO.buscarPorDni(sesion.getDniUsuario());
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Si falla la llamada, usuarioActual queda null y se muestra lo que haya en sesion
+        }
 
         if (usuarioActual != null) {
             mostrarDatosEnLabels();
+        } else {
+            // Fallback: mostrar datos minimos de la sesion activa
+            if (lblDNIValor != null) lblDNIValor.setText(sesion.getDniUsuario() != null ? sesion.getDniUsuario() : "-");
+            if (lblNombreValor != null) lblNombreValor.setText(sesion.getNombreUsuario() != null ? sesion.getNombreUsuario() : "-");
+            if (lblCargoValor != null) lblCargoValor.setText(sesion.getCargo() != null ? sesion.getCargo() : "-");
         }
     }
 
@@ -118,7 +127,7 @@ public class controladorPerfil {
         }
 
         if (lblCargoValor != null) {
-            lblCargoValor.setText(usuarioActual.getCargo() != null ? usuarioActual.getCargo() : "-");
+            lblCargoValor.setText(usuarioActual.getCargoTraducido());
         }
 
         if (lblNumPacientesValor != null) {
@@ -235,7 +244,9 @@ public class controladorPerfil {
         lblError.setVisible(false);
 
         Button btnGuardar = new Button("Guardar");
+        btnGuardar.getStyleClass().add("button-primario");
         Button btnCancelar = new Button("Cancelar");
+        btnCancelar.getStyleClass().add("button-peligro");
 
         javafx.scene.layout.HBox hboxBotones = new javafx.scene.layout.HBox(10);
         hboxBotones.setAlignment(javafx.geometry.Pos.CENTER);
@@ -278,7 +289,6 @@ public class controladorPerfil {
             //Cambiar contraseña
             try {
                 sanitarioDAO.cambiarContrasena(sesion.getDniUsuario(), nueva);
-                AuditService.cambioContrasena(sesion.getDniUsuario());
                 dialog.close();
                 VentanaUtil.mostrarVentanaInformativa(
                         "Contraseña cambiada correctamente.",

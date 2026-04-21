@@ -10,8 +10,11 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
@@ -19,7 +22,7 @@
 
 <ScrollPane fitToWidth="true" prefHeight="600.0" prefWidth="750.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorAgregarPaciente">
     <content>
-        <VBox alignment="TOP_CENTER" spacing="10.0" styleClass="root">
+        <VBox alignment="TOP_CENTER" spacing="10.0" styleClass="root modal-root">
             <padding>
                 <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
             </padding>
@@ -160,9 +163,7 @@
 
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
-                                        <Label prefWidth="140.0" text="Discapacidad:" />
-                                        <TextField fx:id="txtDiscapacidad" prefWidth="150.0" promptText="Tipo" />
-                                        <Label prefWidth="60.0" text="Protesis:" />
+                                        <Label prefWidth="140.0" text="Protesis:" />
                                         <RadioButton fx:id="radioProtesisSi" text="Si">
                                             <toggleGroup>
                                                 <ToggleGroup fx:id="grupoProtesis" />
@@ -172,19 +173,7 @@
                                     </children>
                                 </HBox>
 
-                                <VBox spacing="3.0">
-                                    <children>
-                                        <Label text="Estado del paciente:" />
-                                        <TextArea fx:id="txtAreaEstado" prefHeight="50.0" prefWidth="480.0" promptText="Describe el estado actual del paciente" wrapText="true" />
-                                    </children>
-                                </VBox>
-
-                                <VBox spacing="3.0">
-                                    <children>
-                                        <Label text="Tratamiento:" />
-                                        <TextArea fx:id="txtAreaTratamiento" prefHeight="50.0" prefWidth="480.0" promptText="Describe el tratamiento del paciente" wrapText="true" />
-                                    </children>
-                                </VBox>
+                                <Label styleClass="label-info" text="Las discapacidades y tratamientos se gestionan desde la ficha del paciente." />
 
                             </children>
                         </VBox>
@@ -201,6 +190,33 @@
 
                 <Separator />
 
+                <!-- Seccion de discapacidades: activa solo en modo edicion -->
+                <TitledPane fx:id="paneDiscapacidades" collapsible="true" expanded="true" text="Discapacidades">
+                    <VBox spacing="10.0">
+                        <padding>
+                            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                        </padding>
+                        <Label fx:id="lblInfoDiscapacidades" managed="true" styleClass="label-info"
+                               text="Guarde el paciente primero para gestionar sus discapacidades." visible="true" />
+                        <VBox fx:id="vboxContenidoDiscapacidades" managed="false" spacing="10.0" visible="false">
+                            <TableView fx:id="tblDiscapacidadesFormulario" prefHeight="150.0" prefWidth="650.0">
+                                <columns>
+                                    <TableColumn fx:id="colFormDisNombre" prefWidth="220.0" text="Discapacidad" />
+                                    <TableColumn fx:id="colFormDisNivel" prefWidth="130.0" text="Nivel actual" />
+                                    <TableColumn fx:id="colFormDisNotas" prefWidth="180.0" text="Notas" />
+                                </columns>
+                            </TableView>
+                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                <children>
+                                    <Button fx:id="btnFormAsignarDis" onAction="#asignarDiscapacidadFormulario" text="Asignar discapacidad" />
+                                    <Button fx:id="btnFormDesasignarDis" onAction="#desasignarDiscapacidadFormulario" text="Desasignar" />
+                                </children>
+                            </HBox>
+                        </VBox>
+                    </VBox>
+                </TitledPane>
+
+                <Separator />
 
                 <HBox alignment="CENTER" spacing="10.0">
                     <children>

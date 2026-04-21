@@ -10,4 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * para este catálogo de sólo lectura frecuente.</p>
  */
 public interface DiscapacidadRepository extends JpaRepository<Discapacidad, String> {
+
+    boolean existsByNombreDis(String nombreDis);
+    boolean existsByNombreDisAndCodDisNot(String nombreDis, String codDis);
 }

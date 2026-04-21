@@ -95,6 +95,39 @@ No circular dependencies between layers. Domain has zero framework imports.
 - [x] Patient-disability assignment endpoints (GET, POST assign, PUT update level).
 - [x] Patient-treatment visibility endpoints (GET, PUT toggle visibility).
 
+### Bugfix: Envers audit tables not found (cita_aud does not exist)
+
+**Diagnostico:** `application.yml` lineas 27-35 declaran propiedades Envers bajo `properties.hibernate.envers.*`, que genera claves como `hibernate.envers.audit_table_suffix`. Pero Hibernate Envers requiere namespace completo `org.hibernate.envers.*`. Al ignorarse la config, Envers usa defaults (`_aud` suffix, `revtype` columna) y no encuentra las tablas V9 creadas con `_audit` suffix y `rev_type` columna.
+
+**Fix prescriptivo (1 archivo, 1 cambio):**
+
+En `application.yml`, cambiar el bloque bajo `spring.jpa.properties`:
+
+```yaml
+# ANTES (INCORRECTO — Envers ignora estas propiedades):
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        envers:
+          audit_table_suffix: _audit
+          revision_field_name: rev
+          revision_type_field_name: rev_type
+          store_data_at_delete: true
+
+# DESPUES (CORRECTO — namespace completo org.hibernate.envers):
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+      org.hibernate.envers:
+        audit_table_suffix: _audit
+        revision_field_name: rev
+        revision_type_field_name: rev_type
+        store_data_at_delete: true
+```
+
+- [x] Fix namespace Envers en `application.yml` (`hibernate.envers.*` → `org.hibernate.envers.*`)
+- [x] Verificar E2E: POST/PUT paciente y POST sanitario → audit rows creadas sin error
+
 ### Phase 4: Ecosystem integration
 
 - [ ] Game telemetry ingestion endpoint (POST, routes data to /data pipeline).

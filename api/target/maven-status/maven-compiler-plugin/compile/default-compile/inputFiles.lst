@@ -1,6 +1,9 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/ApiApplication.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/ActualizarNotasRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/CitaRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/CitaResponse.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/DireccionDto.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/DiscapacidadRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/DiscapacidadResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/LoginRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/LoginResponse.java
@@ -9,11 +12,13 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/PacienteDiscapacidadResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/PacienteRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/PacienteResponse.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/PacienteTratamientoRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/PacienteTratamientoResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/PageResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/RefreshRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/SanitarioRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/SanitarioResponse.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/TratamientoRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/TratamientoResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/CitaMapper.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/DiscapacidadMapper.java
@@ -58,7 +63,11 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/exception/RecursoNoEncontradoException.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/AuditLogRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/CitaRepository.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/CodigoPostalRepository.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/DireccionRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/DiscapacidadRepository.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/DiscapacidadTratamientoRepository.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/LocalidadRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/NivelProgresionRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/PacienteDiscapacidadRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/PacienteRepository.java
@@ -67,6 +76,7 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/TratamientoRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/infrastructure/audit/AuditReadInterceptor.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/infrastructure/audit/AuditService.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/infrastructure/config/FlywayConfig.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/infrastructure/config/SecurityConfig.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/infrastructure/config/SecurityProperties.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/infrastructure/config/WebMvcConfig.java

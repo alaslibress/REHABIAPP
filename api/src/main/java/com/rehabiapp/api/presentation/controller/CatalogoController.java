@@ -1,27 +1,31 @@
 package com.rehabiapp.api.presentation.controller;
 
+import com.rehabiapp.api.application.dto.DiscapacidadRequest;
 import com.rehabiapp.api.application.dto.DiscapacidadResponse;
 import com.rehabiapp.api.application.dto.NivelProgresionResponse;
+import com.rehabiapp.api.application.dto.TratamientoRequest;
 import com.rehabiapp.api.application.dto.TratamientoResponse;
 import com.rehabiapp.api.application.service.CatalogoService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 /**
- * Controlador REST para los catálogos clínicos de solo lectura.
+ * Controlador REST para los catalogos clinicos.
  *
- * <p>Los catálogos (discapacidades, tratamientos, niveles de progresión) son
- * de solo lectura desde la API REST. Las operaciones de escritura se realizan
- * actualmente desde el desktop ERP con acceso JDBC directo.</p>
- *
- * <p>Todos los endpoints requieren autenticación pero no restricción de rol —
- * tanto SPECIALIST como NURSE pueden consultar los catálogos clínicos.</p>
+ * <p>Operaciones de lectura accesibles a todos los usuarios autenticados.
+ * Operaciones de escritura restringidas al rol SPECIALIST.</p>
  */
 @RestController
 @RequestMapping("/api/catalogo")
@@ -33,12 +37,11 @@ public class CatalogoController {
         this.catalogoService = catalogoService;
     }
 
+    // ==================== DISCAPACIDADES GET ====================
+
     /**
-     * Lista todas las discapacidades del catálogo clínico.
-     *
-     * <p>GET /api/catalogo/discapacidades</p>
-     *
-     * @return 200 OK con la lista completa de discapacidades.
+     * Lista todas las discapacidades del catalogo clinico.
+     * GET /api/catalogo/discapacidades
      */
     @GetMapping("/discapacidades")
     @PreAuthorize("isAuthenticated()")
@@ -47,12 +50,8 @@ public class CatalogoController {
     }
 
     /**
-     * Devuelve una discapacidad por su código CIE-10.
-     *
-     * <p>GET /api/catalogo/discapacidades/{cod}</p>
-     *
-     * @param cod Código de la discapacidad.
-     * @return 200 OK con los datos de la discapacidad, 404 si no existe.
+     * Devuelve una discapacidad por su codigo.
+     * GET /api/catalogo/discapacidades/{cod}
      */
     @GetMapping("/discapacidades/{cod}")
     @PreAuthorize("isAuthenticated()")
@@ -60,12 +59,52 @@ public class CatalogoController {
         return ResponseEntity.ok(catalogoService.obtenerDiscapacidad(cod));
     }
 
+    // ==================== DISCAPACIDADES CRUD ====================
+
     /**
-     * Lista todos los tratamientos del catálogo terapéutico.
-     *
-     * <p>GET /api/catalogo/tratamientos</p>
-     *
-     * @return 200 OK con la lista completa de tratamientos.
+     * Crea una nueva discapacidad.
+     * POST /api/catalogo/discapacidades
+     * Solo SPECIALIST.
+     */
+    @PostMapping("/discapacidades")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<DiscapacidadResponse> crearDiscapacidad(
+            @Valid @RequestBody DiscapacidadRequest request) {
+        DiscapacidadResponse response = catalogoService.crearDiscapacidad(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Actualiza una discapacidad existente.
+     * PUT /api/catalogo/discapacidades/{cod}
+     * Solo SPECIALIST.
+     */
+    @PutMapping("/discapacidades/{cod}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<DiscapacidadResponse> actualizarDiscapacidad(
+            @PathVariable String cod,
+            @Valid @RequestBody DiscapacidadRequest request) {
+        DiscapacidadResponse response = catalogoService.actualizarDiscapacidad(cod, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Elimina una discapacidad. Rechaza con 409 si hay pacientes asignados.
+     * DELETE /api/catalogo/discapacidades/{cod}
+     * Solo SPECIALIST.
+     */
+    @DeleteMapping("/discapacidades/{cod}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<Void> eliminarDiscapacidad(@PathVariable String cod) {
+        catalogoService.eliminarDiscapacidad(cod);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ==================== TRATAMIENTOS GET ====================
+
+    /**
+     * Lista todos los tratamientos del catalogo terapeutico.
+     * GET /api/catalogo/tratamientos
      */
     @GetMapping("/tratamientos")
     @PreAuthorize("isAuthenticated()")
@@ -74,12 +113,8 @@ public class CatalogoController {
     }
 
     /**
-     * Devuelve un tratamiento por su código.
-     *
-     * <p>GET /api/catalogo/tratamientos/{cod}</p>
-     *
-     * @param cod Código del tratamiento.
-     * @return 200 OK con los datos del tratamiento, 404 si no existe.
+     * Devuelve un tratamiento por su codigo.
+     * GET /api/catalogo/tratamientos/{cod}
      */
     @GetMapping("/tratamientos/{cod}")
     @PreAuthorize("isAuthenticated()")
@@ -89,12 +124,7 @@ public class CatalogoController {
 
     /**
      * Lista los tratamientos aplicables a una discapacidad concreta.
-     * Usado para filtrar la selección terapéutica según el perfil del paciente.
-     *
-     * <p>GET /api/catalogo/tratamientos/discapacidad/{codDis}</p>
-     *
-     * @param codDis Código de la discapacidad para filtrar tratamientos.
-     * @return 200 OK con la lista de tratamientos de esa discapacidad.
+     * GET /api/catalogo/tratamientos/discapacidad/{codDis}
      */
     @GetMapping("/tratamientos/discapacidad/{codDis}")
     @PreAuthorize("isAuthenticated()")
@@ -102,12 +132,91 @@ public class CatalogoController {
         return ResponseEntity.ok(catalogoService.listarTratamientosPorDiscapacidad(codDis));
     }
 
+    // ==================== TRATAMIENTOS CRUD ====================
+
     /**
-     * Lista todos los niveles de progresión clínica ordenados.
-     *
-     * <p>GET /api/catalogo/niveles-progresion</p>
-     *
-     * @return 200 OK con la lista de niveles ordenados de menor a mayor progresión.
+     * Crea un nuevo tratamiento.
+     * POST /api/catalogo/tratamientos
+     * Solo SPECIALIST.
+     */
+    @PostMapping("/tratamientos")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<TratamientoResponse> crearTratamiento(
+            @Valid @RequestBody TratamientoRequest request) {
+        TratamientoResponse response = catalogoService.crearTratamiento(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Actualiza un tratamiento existente.
+     * PUT /api/catalogo/tratamientos/{cod}
+     * Solo SPECIALIST.
+     */
+    @PutMapping("/tratamientos/{cod}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<TratamientoResponse> actualizarTratamiento(
+            @PathVariable String cod,
+            @Valid @RequestBody TratamientoRequest request) {
+        TratamientoResponse response = catalogoService.actualizarTratamiento(cod, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Elimina un tratamiento. Rechaza con 409 si hay pacientes asignados.
+     * DELETE /api/catalogo/tratamientos/{cod}
+     * Solo SPECIALIST.
+     */
+    @DeleteMapping("/tratamientos/{cod}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<Void> eliminarTratamiento(@PathVariable String cod) {
+        catalogoService.eliminarTratamiento(cod);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ==================== VINCULOS TRATAMIENTO-DISCAPACIDAD ====================
+
+    /**
+     * Lista las discapacidades vinculadas a un tratamiento.
+     * GET /api/catalogo/tratamientos/{codTrat}/discapacidades
+     */
+    @GetMapping("/tratamientos/{codTrat}/discapacidades")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<DiscapacidadResponse>> listarDiscapacidadesDeTratamiento(
+            @PathVariable String codTrat) {
+        return ResponseEntity.ok(catalogoService.listarDiscapacidadesDeTratamiento(codTrat));
+    }
+
+    /**
+     * Vincula un tratamiento a una discapacidad.
+     * POST /api/catalogo/tratamientos/{codTrat}/discapacidades/{codDis}
+     * Solo SPECIALIST.
+     */
+    @PostMapping("/tratamientos/{codTrat}/discapacidades/{codDis}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<Void> vincularTratamientoDiscapacidad(
+            @PathVariable String codTrat, @PathVariable String codDis) {
+        catalogoService.vincularTratamientoDiscapacidad(codTrat, codDis);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    /**
+     * Desvincula un tratamiento de una discapacidad.
+     * DELETE /api/catalogo/tratamientos/{codTrat}/discapacidades/{codDis}
+     * Solo SPECIALIST.
+     */
+    @DeleteMapping("/tratamientos/{codTrat}/discapacidades/{codDis}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<Void> desvincularTratamientoDiscapacidad(
+            @PathVariable String codTrat, @PathVariable String codDis) {
+        catalogoService.desvincularTratamientoDiscapacidad(codTrat, codDis);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ==================== NIVELES DE PROGRESION ====================
+
+    /**
+     * Lista todos los niveles de progresion clinica ordenados.
+     * GET /api/catalogo/niveles-progresion
      */
     @GetMapping("/niveles-progresion")
     @PreAuthorize("isAuthenticated()")

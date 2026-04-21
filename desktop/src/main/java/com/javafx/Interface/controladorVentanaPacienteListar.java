@@ -12,9 +12,9 @@ import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.PacienteDAO;
 import com.javafx.excepcion.ConexionException;
 import com.javafx.excepcion.ValidacionException;
-import com.javafx.service.AuditService;
 import com.javafx.service.CatalogoService;
 import com.javafx.service.PacienteClinicoService;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -22,10 +22,12 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
@@ -41,10 +43,12 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Controlador para la ventana de ficha/informacion de un paciente.
@@ -95,8 +99,10 @@ public class controladorVentanaPacienteListar {
 
     @FXML private TableView<PacienteTratamiento> tblTratamientosPaciente;
     @FXML private TableColumn<PacienteTratamiento, String> colTratNombre;
-    @FXML private TableColumn<PacienteTratamiento, String> colTratDefinicion;
+    @FXML private TableColumn<PacienteTratamiento, String> colTratNivel;
     @FXML private TableColumn<PacienteTratamiento, Boolean> colTratVisible;
+    @FXML private Label lblNivelActual;
+    @FXML private CheckBox chkFiltrarPorNivel;
     @FXML private HBox hboxBotonesTratamiento;
     @FXML private Button btnAsignarTratamiento;
     @FXML private Button btnDesasignarTratamiento;
@@ -119,13 +125,19 @@ public class controladorVentanaPacienteListar {
     //Mapa de niveles para tooltips informativos
     private Map<String, NivelProgresion> mapaNiveles;
 
+    //Mapa de tratamientos del catalogo para consultar su nivel por codTrat
+    private Map<String, Tratamiento> mapaTratamientos;
+
     @FXML
     public void initialize() {
         pacienteDAO = new PacienteDAO();
+        mapaTratamientos = new HashMap<>();
         cargarMapaNiveles();
         configurarColumnasDiscapacidades();
         configurarColumnasTratamientos();
         configurarSeleccionDiscapacidad();
+        configurarRowFactoryDiscapacidades();
+        configurarCheckboxFiltroNivel();
     }
 
     /**
@@ -212,8 +224,48 @@ public class controladorVentanaPacienteListar {
 
     private void configurarColumnasTratamientos() {
         colTratNombre.setCellValueFactory(new PropertyValueFactory<>("nombreTratamiento"));
-        colTratDefinicion.setCellValueFactory(new PropertyValueFactory<>("definicionTratamiento"));
+        //La columna de nivel busca el tratamiento en el catalogo cacheado para mostrar su nivel
+        colTratNivel.setCellValueFactory(cellData -> {
+            Tratamiento trat = mapaTratamientos.get(cellData.getValue().getCodTrat());
+            String nombreNivel = (trat != null && !trat.getNombreNivel().isEmpty())
+                    ? trat.getNombreNivel() : "-";
+            return new SimpleStringProperty(nombreNivel);
+        });
         colTratVisible.setCellValueFactory(new PropertyValueFactory<>("visible"));
+    }
+
+    /**
+     * Aplica colores de fondo segun el nivel de progresion de cada discapacidad.
+     * Nivel 1 Aguda: rojo suave, Nivel 2 Subaguda: amarillo, Nivel 3 Fortalecimiento: verde, Nivel 4 Funcional: azul.
+     */
+    private void configurarRowFactoryDiscapacidades() {
+        tblDiscapacidadesPaciente.setRowFactory(tv -> new TableRow<>() {
+            @Override
+            protected void updateItem(PacienteDiscapacidad item, boolean empty) {
+                super.updateItem(item, empty);
+                getStyleClass().removeAll("nivel-agudo", "nivel-subagudo", "nivel-fortalecimiento", "nivel-funcional");
+                if (empty || item == null) return;
+                switch (item.getIdNivelActual()) {
+                    case 1 -> getStyleClass().add("nivel-agudo");
+                    case 2 -> getStyleClass().add("nivel-subagudo");
+                    case 3 -> getStyleClass().add("nivel-fortalecimiento");
+                    case 4 -> getStyleClass().add("nivel-funcional");
+                    default -> { /* sin estilo de nivel */ }
+                }
+            }
+        });
+    }
+
+    /**
+     * Configura el checkbox para filtrar tratamientos por nivel actual de la discapacidad seleccionada.
+     */
+    private void configurarCheckboxFiltroNivel() {
+        chkFiltrarPorNivel.selectedProperty().addListener((obs, anterior, seleccionado) -> {
+            PacienteDiscapacidad dis = tblDiscapacidadesPaciente.getSelectionModel().getSelectedItem();
+            if (dis != null) {
+                cargarTratamientosPorDiscapacidad(dis.getCodDis());
+            }
+        });
     }
 
     /**
@@ -257,10 +309,22 @@ public class controladorVentanaPacienteListar {
     // ==================== CARGA DE DATOS ====================
 
     /**
-     * Carga los datos de un paciente por su DNI
+     * Carga los datos de un paciente por su DNI.
+     * Tambien inicializa el catalogo de tratamientos para el filtrado por nivel.
      */
     public void cargarDatosPaciente(String dni) {
         this.dniPacienteActual = dni;
+
+        //Cargar catalogo de tratamientos una sola vez para usarlo en el filtrado
+        try {
+            List<Tratamiento> catalogo = catalogoService.listarTratamientos();
+            mapaTratamientos.clear();
+            for (Tratamiento t : catalogo) {
+                mapaTratamientos.put(t.getCodTrat(), t);
+            }
+        } catch (ConexionException e) {
+            System.err.println("No se pudo cargar el catalogo de tratamientos: " + e.getMessage());
+        }
 
         pacienteActual = pacienteDAO.obtenerPorDNI(dni);
 
@@ -269,8 +333,7 @@ public class controladorVentanaPacienteListar {
             cargarFotoPaciente();
             cargarDiscapacidadesPaciente();
 
-            //Registrar acceso a datos clinicos sensibles (Ley 41/2002, ENS)
-            AuditService.consultaSensible(dni);
+            // La API registra automaticamente el acceso a datos clinicos (AuditReadInterceptor)
         } else {
             VentanaUtil.mostrarVentanaInformativa(
                     "No se encontro el paciente con DNI: " + dni,
@@ -296,8 +359,8 @@ public class controladorVentanaPacienteListar {
         String direccionCompleta = construirDireccionCompleta();
         lblDireccionValor.setText(direccionCompleta.isEmpty() ? "-" : direccionCompleta);
 
-        //Estado del paciente (campo legacy)
-        txtAreaEstado.setText(valorOGuion(pacienteActual.getEstadoTratamiento()));
+        // Campo estado (legacy eliminado — se muestra vacio)
+        txtAreaEstado.setText("-");
 
         //Datos clinicos
         String sexoBD = pacienteActual.getSexo();
@@ -356,12 +419,39 @@ public class controladorVentanaPacienteListar {
     }
 
     /**
-     * Carga los tratamientos asignados al paciente para una discapacidad concreta
+     * Carga los tratamientos asignados al paciente para una discapacidad concreta.
+     * Actualiza la etiqueta del nivel actual y aplica el filtrado por nivel si el checkbox esta activo.
      */
     private void cargarTratamientosPorDiscapacidad(String codDis) {
         try {
+            //Obtener la discapacidad seleccionada para mostrar su nivel actual
+            PacienteDiscapacidad disSeleccionada = tblDiscapacidadesPaciente.getSelectionModel().getSelectedItem();
+
+            //Actualizar etiqueta del nivel actual
+            if (disSeleccionada != null && disSeleccionada.getNombreNivel() != null
+                    && !disSeleccionada.getNombreNivel().isEmpty()) {
+                lblNivelActual.setText("Nivel actual: " + disSeleccionada.getNombreNivel());
+            } else {
+                lblNivelActual.setText("Nivel actual: -");
+            }
+
             List<PacienteTratamiento> tratamientos =
                     pacienteClinicoService.listarTratamientosPaciente(dniPacienteActual, codDis);
+
+            //Filtrar por nivel si el checkbox esta activo y hay discapacidad con nivel valido
+            if (chkFiltrarPorNivel.isSelected() && disSeleccionada != null
+                    && disSeleccionada.getIdNivelActual() > 0) {
+                int nivelActual = disSeleccionada.getIdNivelActual();
+                List<PacienteTratamiento> filtrados = new ArrayList<>();
+                for (PacienteTratamiento pt : tratamientos) {
+                    Tratamiento trat = mapaTratamientos.get(pt.getCodTrat());
+                    if (trat != null && trat.getIdNivel() == nivelActual) {
+                        filtrados.add(pt);
+                    }
+                }
+                tratamientos = filtrados;
+            }
+
             tblTratamientosPaciente.setItems(FXCollections.observableArrayList(tratamientos));
         } catch (ConexionException e) {
             VentanaUtil.mostrarVentanaInformativa(
@@ -558,7 +648,7 @@ public class controladorVentanaPacienteListar {
             Optional<Tratamiento> resultado = dialogo.showAndWait();
             if (resultado.isPresent()) {
                 pacienteClinicoService.asignarTratamiento(
-                        dniPacienteActual, resultado.get().getCodTrat(), disSeleccionada.getCodDis());
+                        dniPacienteActual, resultado.get().getCodTrat());
                 VentanaUtil.mostrarVentanaInformativa(
                         "Tratamiento asignado correctamente.", TipoMensaje.EXITO);
                 cargarTratamientosPorDiscapacidad(disSeleccionada.getCodDis());
@@ -589,7 +679,7 @@ public class controladorVentanaPacienteListar {
         if (confirmado) {
             try {
                 pacienteClinicoService.desasignarTratamiento(
-                        dniPacienteActual, tratSeleccionado.getCodTrat(), disSeleccionada.getCodDis());
+                        dniPacienteActual, tratSeleccionado.getCodTrat());
                 VentanaUtil.mostrarVentanaInformativa(
                         "Tratamiento desasignado correctamente.", TipoMensaje.EXITO);
                 cargarTratamientosPorDiscapacidad(disSeleccionada.getCodDis());
@@ -613,13 +703,10 @@ public class controladorVentanaPacienteListar {
         }
 
         try {
-            boolean nuevoEstado = !tratSeleccionado.isVisible();
-            pacienteClinicoService.cambiarVisibilidad(
-                    dniPacienteActual, tratSeleccionado.getCodTrat(),
-                    disSeleccionada.getCodDis(), nuevoEstado);
+            pacienteClinicoService.toggleVisibilidad(
+                    dniPacienteActual, tratSeleccionado.getCodTrat());
 
-            String mensaje = nuevoEstado ? "Tratamiento ahora visible para el paciente."
-                    : "Tratamiento oculto para el paciente.";
+            String mensaje = "Visibilidad del tratamiento actualizada.";
             VentanaUtil.mostrarVentanaInformativa(mensaje, TipoMensaje.EXITO);
 
             cargarTratamientosPorDiscapacidad(disSeleccionada.getCodDis());
@@ -637,49 +724,9 @@ public class controladorVentanaPacienteListar {
     }
 
     private String construirDireccionCompleta() {
-        if (pacienteActual == null) {
-            return "";
-        }
-
-        StringBuilder direccion = new StringBuilder();
-
-        String calle = pacienteActual.getCalle();
-        String numero = pacienteActual.getNumero();
-        if (calle != null && !calle.trim().isEmpty()) {
-            direccion.append(calle.trim());
-            if (numero != null && !numero.trim().isEmpty() && !numero.equals("0")) {
-                direccion.append(" ").append(numero.trim());
-            }
-        }
-
-        String piso = pacienteActual.getPiso();
-        if (piso != null && !piso.trim().isEmpty()) {
-            if (direccion.length() > 0) {
-                direccion.append(", ");
-            }
-            direccion.append(piso.trim());
-        }
-
-        String cp = pacienteActual.getCodigoPostal();
-        String localidad = pacienteActual.getLocalidad();
-        if ((cp != null && !cp.trim().isEmpty()) || (localidad != null && !localidad.trim().isEmpty())) {
-            if (direccion.length() > 0) {
-                direccion.append(" - ");
-            }
-            if (cp != null && !cp.trim().isEmpty()) {
-                direccion.append(cp.trim()).append(" ");
-            }
-            if (localidad != null && !localidad.trim().isEmpty()) {
-                direccion.append(localidad.trim());
-            }
-        }
-
-        String provincia = pacienteActual.getProvincia();
-        if (provincia != null && !provincia.trim().isEmpty()) {
-            direccion.append(" (").append(provincia.trim()).append(")");
-        }
-
-        return direccion.toString().trim();
+        // La direccion se gestionaba via JDBC directo y no esta disponible via API.
+        // La API no expone la direccion en PacienteResponse por ahora.
+        return "";
     }
 
     // ==================== FOTO ====================

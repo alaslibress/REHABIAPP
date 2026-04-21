@@ -5,8 +5,8 @@ spring:
   datasource:
     # Credenciales de desarrollo; sobreescribibles vía variables de entorno
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/rehabiapp}
-    username: ${SPRING_DATASOURCE_USERNAME:rehabiapp_dev}
-    password: ${SPRING_DATASOURCE_PASSWORD:dev_password_change_me}
+    username: ${SPRING_DATASOURCE_USERNAME:admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
   jpa:
     # Muestra el SQL generado por Hibernate — útil en desarrollo para detectar N+1

@@ -11,6 +11,8 @@ import com.rehabiapp.api.domain.repository.SanitarioRepository;
 import com.rehabiapp.api.infrastructure.audit.AuditService;
 import com.rehabiapp.api.infrastructure.security.JwtService;
 import com.rehabiapp.api.infrastructure.security.PasswordService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class AuthApplicationService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthApplicationService.class);
 
     private final SanitarioRepository sanitarioRepository;
     private final PasswordService passwordService;
@@ -60,10 +64,14 @@ public class AuthApplicationService {
     public LoginResponse login(LoginRequest request) {
         // Buscar sanitario activo por DNI
         Sanitario sanitario = sanitarioRepository.findByDniSanAndActivoTrue(request.dni())
-                .orElseThrow(() -> new AccesoNoPermitidoException("Credenciales inválidas"));
+                .orElseThrow(() -> {
+                    log.warn("Intento de login fallido — sanitario no encontrado o inactivo");
+                    return new AccesoNoPermitidoException("Credenciales inválidas");
+                });
 
         // Verificar contraseña contra el hash BCrypt almacenado
         if (!passwordService.verificar(request.contrasena(), sanitario.getContrasenaSan())) {
+            log.warn("Intento de login fallido — contrasena incorrecta");
             throw new AccesoNoPermitidoException("Credenciales inválidas");
         }
 
@@ -75,8 +83,13 @@ public class AuthApplicationService {
         String refreshToken = jwtService.generarRefreshToken(request.dni());
 
         // Registrar acceso en audit_log (Ley 41/2002, ENS Alto)
-        auditService.registrar(AccionAuditoria.LEER, "sanitario", request.dni(), "Login exitoso");
+        // Se usa la sobrecarga con dniUsuario explicito porque en el momento del login
+        // el SecurityContext todavia no tiene al usuario autenticado.
+        String nombreCompleto = sanitario.getNombreSan() + " " + sanitario.getApellido1San();
+        auditService.registrar(AccionAuditoria.LOGIN, "sanitario", request.dni(), "Login exitoso",
+                request.dni(), nombreCompleto);
 
+        log.info("Login exitoso — rol={}", rol.name());
         return new LoginResponse(accessToken, refreshToken, rol.name());
     }
 

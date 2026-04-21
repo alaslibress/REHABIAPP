@@ -12,12 +12,12 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox fx:id="vboxContenedorPrincipal" maxHeight="Infinity" maxWidth="Infinity" spacing="15.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaSanitarios">
+<VBox fx:id="vboxContenedorPrincipal" maxHeight="Infinity" maxWidth="Infinity" spacing="15.0" styleClass="panel-card" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaSanitarios">
     <padding>
         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
     <children>
-        <HBox prefHeight="100.0" prefWidth="200.0">
+        <HBox prefHeight="100.0" prefWidth="200.0" styleClass="panel-card-header">
             <children>
                 <Label fx:id="lblTituloPestania" prefHeight="18.0" prefWidth="200.0" styleClass="label-titulo" text="Sanitarios" />
                 <VBox prefHeight="100.0" prefWidth="802.0" HBox.hgrow="ALWAYS">

@@ -80,6 +80,9 @@ public class controladorAgregarSanitario {
     //DNI original del sanitario cuando estamos en modo edicion
     private String dniOriginal;
 
+    //Email original del sanitario cuando estamos en modo edicion
+    private String emailOriginal;
+
     @FXML
     public void initialize() {
         sanitarioService = new SanitarioService();
@@ -136,6 +139,7 @@ public class controladorAgregarSanitario {
     public void cargarDatosParaEdicion(Sanitario sanitario) {
         modoEdicion = true;
         dniOriginal = sanitario.getDni();
+        emailOriginal = sanitario.getEmail();
 
         lblTituloVentana.setText("Modificar Sanitario");
         btnCrearSanitarioNuevo.setText("Guardar");
@@ -226,18 +230,14 @@ public class controladorAgregarSanitario {
             }
         } catch (ConexionException e) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Error de conexion con la base de datos.",
+                    "No se pudo comunicar con el servidor: " + e.getMessage(),
                     TipoMensaje.ERROR
             );
             return false;
         }
 
         try {
-            sanitarioService.insertar(
-                    sanitario,
-                    sanitario.getTelefono1(),
-                    sanitario.getTelefono2()
-            );
+            sanitarioService.insertar(sanitario, sanitario.getContrasena());
 
             VentanaUtil.mostrarVentanaInformativa(
                     "El sanitario se ha registrado correctamente.",
@@ -254,7 +254,7 @@ public class controladorAgregarSanitario {
 
         } catch (ConexionException e) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Error de conexion con la base de datos.",
+                    "No se pudo comunicar con el servidor: " + e.getMessage(),
                     TipoMensaje.ERROR
             );
             return false;
@@ -284,7 +284,9 @@ public class controladorAgregarSanitario {
                 }
             }
 
-            if (sanitarioDAO.existeEmailExcluyendoDni(sanitario.getEmail(), dniOriginal)) {
+            // Solo verificar unicidad de email si ha cambiado respecto al original
+            if (!sanitario.getEmail().equalsIgnoreCase(emailOriginal)
+                    && sanitarioDAO.existeEmail(sanitario.getEmail())) {
                 VentanaUtil.mostrarVentanaInformativa(
                         "Ya existe otro sanitario con ese email.",
                         TipoMensaje.ERROR
@@ -294,19 +296,14 @@ public class controladorAgregarSanitario {
             }
         } catch (ConexionException e) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Error de conexion con la base de datos.",
+                    "No se pudo comunicar con el servidor: " + e.getMessage(),
                     TipoMensaje.ERROR
             );
             return false;
         }
 
         try {
-            sanitarioService.actualizar(
-                    sanitario,
-                    dniOriginal,
-                    sanitario.getTelefono1(),
-                    sanitario.getTelefono2()
-            );
+            sanitarioService.actualizar(sanitario, dniOriginal);
 
             VentanaUtil.mostrarVentanaInformativa(
                     "Los datos del sanitario se han actualizado correctamente.",
@@ -323,7 +320,7 @@ public class controladorAgregarSanitario {
 
         } catch (ConexionException e) {
             VentanaUtil.mostrarVentanaInformativa(
-                    "Error de conexion con la base de datos.",
+                    "No se pudo comunicar con el servidor: " + e.getMessage(),
                     TipoMensaje.ERROR
             );
             return false;

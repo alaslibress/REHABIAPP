@@ -1,6 +1,5 @@
 package com.javafx.util;
 
-import com.javafx.Clases.AnimacionUtil;
 import com.javafx.Clases.VentanaUtil;
 import com.javafx.Interface.controladorVentanaOpciones;
 import javafx.fxml.FXMLLoader;
@@ -43,7 +42,8 @@ public class VentanaHelper {
         stage.setResizable(false);
 
         VentanaUtil.establecerIconoVentana(stage);
-        stage.setOnShown(e -> AnimacionUtil.animarVentanaModal(stage));
+        // Animacion de apertura sobre el nodo raiz (fade + escala suave)
+        stage.setOnShown(e -> VentanaUtil.animarAperturaModal(root));
 
         stage.showAndWait();
 

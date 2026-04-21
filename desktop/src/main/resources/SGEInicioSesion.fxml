@@ -13,7 +13,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.shape.Circle?>
 
-<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="494.0" prefWidth="600.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorSesion">
+<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="494.0" prefWidth="600.0" styleClass="root login-root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorSesion">
     <children>
 
         <StackPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="124.0" prefWidth="214.0" style="-fx-background-color: #ececec; -fx-background-radius: 20;">
@@ -85,7 +85,7 @@
                 <Insets bottom="30.0" left="30.0" right="30.0" top="10.0" />
             </padding>
             <children>
-                <Circle fx:id="circuloConexion" radius="7.0" />
+                <Circle fx:id="circuloConexion" radius="7.0" styleClass="indicador-conexion" />
                 <Label fx:id="lblEstadoConexion" text="Verificando conexión..." />
             </children>
         </HBox>

@@ -3,6 +3,8 @@ package com.rehabiapp.api.presentation.handler;
 import com.rehabiapp.api.domain.exception.AccesoNoPermitidoException;
 import com.rehabiapp.api.domain.exception.RecursoNoEncontradoException;
 import io.jsonwebtoken.JwtException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +35,8 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
      * Maneja recursos no encontrados en base de datos.
@@ -116,6 +120,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> manejarGenerico(Exception ex) {
+        // Registrar stack trace completo en los logs del servidor para diagnostico
+        log.error("Excepcion no controlada: {}", ex.getMessage(), ex);
         // No exponer stack trace ni mensaje interno en producción
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Error interno del servidor"));

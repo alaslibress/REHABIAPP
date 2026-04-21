@@ -1,7 +1,9 @@
 package com.rehabiapp.api.application.service;
 
+import com.rehabiapp.api.application.dto.ActualizarNotasRequest;
 import com.rehabiapp.api.application.dto.PacienteDiscapacidadRequest;
 import com.rehabiapp.api.application.dto.PacienteDiscapacidadResponse;
+import com.rehabiapp.api.application.dto.PacienteTratamientoRequest;
 import com.rehabiapp.api.application.dto.PacienteTratamientoResponse;
 import com.rehabiapp.api.application.mapper.PacienteDiscapacidadMapper;
 import com.rehabiapp.api.application.mapper.PacienteTratamientoMapper;
@@ -106,7 +108,7 @@ public class AsignacionService {
         }
 
         PacienteDiscapacidad guardada = pacienteDiscapacidadRepository.save(pd);
-        auditService.registrar(AccionAuditoria.CREAR, "paciente_discapacidad",
+        auditService.registrar(AccionAuditoria.CREATE, "paciente_discapacidad",
                 dniPac + "-" + request.codDis(), "Discapacidad asignada al paciente");
 
         return pacienteDiscapacidadMapper.toResponse(guardada);
@@ -120,7 +122,7 @@ public class AsignacionService {
      */
     @Transactional(readOnly = true)
     public List<PacienteDiscapacidadResponse> listarDiscapacidades(String dniPac) {
-        auditService.registrar(AccionAuditoria.LEER, "paciente_discapacidad", dniPac,
+        auditService.registrar(AccionAuditoria.READ, "paciente_discapacidad", dniPac,
                 "Consulta discapacidades del paciente");
         return pacienteDiscapacidadRepository.findByIdDniPac(dniPac)
                 .stream()
@@ -149,7 +151,7 @@ public class AsignacionService {
         pd.setNivelProgresion(nivel);
 
         PacienteDiscapacidad actualizada = pacienteDiscapacidadRepository.save(pd);
-        auditService.registrar(AccionAuditoria.ACTUALIZAR, "paciente_discapacidad",
+        auditService.registrar(AccionAuditoria.UPDATE, "paciente_discapacidad",
                 dniPac + "-" + codDis, "Nivel de progresión actualizado a: " + idNivel);
 
         return pacienteDiscapacidadMapper.toResponse(actualizada);
@@ -163,12 +165,99 @@ public class AsignacionService {
      */
     @Transactional(readOnly = true)
     public List<PacienteTratamientoResponse> listarTratamientos(String dniPac) {
-        auditService.registrar(AccionAuditoria.LEER, "paciente_tratamiento", dniPac,
+        auditService.registrar(AccionAuditoria.READ, "paciente_tratamiento", dniPac,
                 "Consulta tratamientos del paciente");
         return pacienteTratamientoRepository.findByIdDniPac(dniPac)
                 .stream()
                 .map(pacienteTratamientoMapper::toResponse)
                 .toList();
+    }
+
+    /**
+     * Desasigna una discapacidad de un paciente eliminando la fila de paciente_discapacidad.
+     *
+     * @param dniPac DNI del paciente.
+     * @param codDis Codigo de la discapacidad a desasignar.
+     * @throws RecursoNoEncontradoException si la asignacion no existe.
+     */
+    public void desasignarDiscapacidad(String dniPac, String codDis) {
+        PacienteDiscapacidadId id = new PacienteDiscapacidadId(dniPac, codDis);
+        if (!pacienteDiscapacidadRepository.existsById(id)) {
+            throw new RecursoNoEncontradoException(
+                    "Asignacion no encontrada para paciente: " + dniPac + " discapacidad: " + codDis);
+        }
+        pacienteDiscapacidadRepository.deleteById(id);
+        auditService.registrar(AccionAuditoria.DELETE, "paciente_discapacidad",
+                dniPac + "-" + codDis, "Discapacidad desasignada del paciente");
+    }
+
+    /**
+     * Actualiza las notas clinicas de una discapacidad asignada a un paciente.
+     *
+     * @param dniPac  DNI del paciente.
+     * @param codDis  Codigo de la discapacidad.
+     * @param request DTO con las nuevas notas.
+     * @return DTO de respuesta con la asignacion actualizada.
+     * @throws RecursoNoEncontradoException si la asignacion no existe.
+     */
+    public PacienteDiscapacidadResponse actualizarNotas(String dniPac, String codDis,
+                                                        ActualizarNotasRequest request) {
+        PacienteDiscapacidadId id = new PacienteDiscapacidadId(dniPac, codDis);
+        PacienteDiscapacidad pd = pacienteDiscapacidadRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Asignacion no encontrada para paciente: " + dniPac + " discapacidad: " + codDis));
+        pd.setNotas(request.notas());
+        PacienteDiscapacidad actualizada = pacienteDiscapacidadRepository.save(pd);
+        auditService.registrar(AccionAuditoria.UPDATE, "paciente_discapacidad",
+                dniPac + "-" + codDis, "Notas clinicas actualizadas");
+        return pacienteDiscapacidadMapper.toResponse(actualizada);
+    }
+
+    /**
+     * Asigna un tratamiento a un paciente con visible=true por defecto.
+     *
+     * @param dniPac  DNI del paciente.
+     * @param request DTO con el codigo del tratamiento.
+     * @return DTO de respuesta con la asignacion creada.
+     * @throws RecursoNoEncontradoException si el paciente o el tratamiento no existen.
+     */
+    public PacienteTratamientoResponse asignarTratamiento(String dniPac,
+                                                          PacienteTratamientoRequest request) {
+        Paciente paciente = pacienteRepository.findByDniPacAndActivoTrue(dniPac)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado: " + dniPac));
+        Tratamiento tratamiento = tratamientoRepository.findById(request.codTrat())
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Tratamiento no encontrado: " + request.codTrat()));
+
+        PacienteTratamientoId id = new PacienteTratamientoId(dniPac, request.codTrat());
+        PacienteTratamiento pt = new PacienteTratamiento();
+        pt.setId(id);
+        pt.setPaciente(paciente);
+        pt.setTratamiento(tratamiento);
+        pt.setVisible(true);
+
+        PacienteTratamiento guardado = pacienteTratamientoRepository.save(pt);
+        auditService.registrar(AccionAuditoria.CREATE, "paciente_tratamiento",
+                dniPac + "-" + request.codTrat(), "Tratamiento asignado al paciente");
+        return pacienteTratamientoMapper.toResponse(guardado);
+    }
+
+    /**
+     * Desasigna un tratamiento de un paciente eliminando la fila de paciente_tratamiento.
+     *
+     * @param dniPac  DNI del paciente.
+     * @param codTrat Codigo del tratamiento a desasignar.
+     * @throws RecursoNoEncontradoException si la asignacion no existe.
+     */
+    public void desasignarTratamiento(String dniPac, String codTrat) {
+        PacienteTratamientoId id = new PacienteTratamientoId(dniPac, codTrat);
+        if (!pacienteTratamientoRepository.existsById(id)) {
+            throw new RecursoNoEncontradoException(
+                    "Asignacion no encontrada para paciente: " + dniPac + " tratamiento: " + codTrat);
+        }
+        pacienteTratamientoRepository.deleteById(id);
+        auditService.registrar(AccionAuditoria.DELETE, "paciente_tratamiento",
+                dniPac + "-" + codTrat, "Tratamiento desasignado del paciente");
     }
 
     /**
@@ -206,7 +295,7 @@ public class AsignacionService {
         pt.setVisible(!pt.isVisible());
 
         PacienteTratamiento guardado = pacienteTratamientoRepository.save(pt);
-        auditService.registrar(AccionAuditoria.ACTUALIZAR, "paciente_tratamiento",
+        auditService.registrar(AccionAuditoria.UPDATE, "paciente_tratamiento",
                 dniPac + "-" + codTrat,
                 "Visibilidad de tratamiento cambiada a: " + guardado.isVisible());
 

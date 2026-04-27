@@ -14,11 +14,28 @@ const { crearError } = require('../utils/errors');
  * @param {string|null} javaToken
  * @returns {Promise<object>} Patient
  */
+// Limite de tamano de foto: 512 KB en bytes
+const FOTO_MAX_BYTES = 512 * 1024;
+
 async function obtenerPerfil(dniPac, javaToken) {
-  const data = await apiClient.get(`/api/pacientes/${dniPac}`, javaToken);
+  // Llamadas en paralelo: perfil + foto
+  const [data, fotoData] = await Promise.all([
+    apiClient.get(`/api/pacientes/${dniPac}`, javaToken),
+    apiClient.get(`/api/pacientes/${dniPac}/foto`, javaToken).catch(() => null),
+  ]);
 
   if (!data) {
     throw crearError('PATIENT_NOT_FOUND');
+  }
+
+  // Construir data URI si hay foto y no supera el limite de tamano
+  let avatarDataUri = null;
+  if (fotoData && fotoData.base64) {
+    const byteLen = Buffer.byteLength(fotoData.base64, 'base64');
+    if (byteLen <= FOTO_MAX_BYTES) {
+      const mime = fotoData.mimeType || 'image/png';
+      avatarDataUri = `data:${mime};base64,${fotoData.base64}`;
+    }
   }
 
   // Mapeo Java PacienteResponse -> GraphQL Patient
@@ -36,6 +53,9 @@ async function obtenerPerfil(dniPac, javaToken) {
     // La direccion es un objeto relacional en Java — no disponible directamente
     address: null,
     active: data.activo,
+    numSs: data.numSs || null,
+    sexo: data.sexo || null,
+    avatarDataUri,
   };
 }
 

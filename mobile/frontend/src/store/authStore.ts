@@ -6,6 +6,7 @@ import { client } from '../services/graphql/client';
 import { LOGIN_MUTATION } from '../services/graphql/mutations/auth';
 import { parseGraphQLError } from '../utils/errorHandler';
 import { useErrorStore } from './errorStore';
+import { useBootstrapStore } from './bootstrapStore';
 
 // Clave para almacenamiento seguro de tokens
 const TOKEN_KEY = 'auth_token';
@@ -32,10 +33,10 @@ export const useAuthStore = create<AuthState>(function (set) {
         // Limpiar cualquier error previo del error store global
         useErrorStore.getState().hideError();
         set({ token, isAuthenticated: true, isLoading: false, error: null });
+        // Hidratar todos los stores de datos del paciente tras el inicio de sesion
+        useBootstrapStore.getState().hydrate();
       } catch (err) {
         const appError: AppError = parseGraphQLError(err);
-        // Mostrar el popup de error directamente desde el store
-        // para garantizar que siempre aparece independientemente del flujo del componente
         useErrorStore.getState().showError(appError);
         set({ error: appError, isLoading: false });
         throw appError;
@@ -46,6 +47,8 @@ export const useAuthStore = create<AuthState>(function (set) {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       set({ token: null, isAuthenticated: false, error: null });
       client.clearStore();
+      // Limpiar todos los stores de datos al cerrar sesion
+      useBootstrapStore.getState().reset();
     },
 
     refreshSession: async function (): Promise<void> {

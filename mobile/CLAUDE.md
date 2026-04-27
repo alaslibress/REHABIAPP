@@ -131,27 +131,27 @@ npm test                  # Run tests
 
 ### Phase 1: Frontend project setup
 
-- [ ] Initialize Expo project with TypeScript.
-- [ ] Define folder structure (components, services, store, types, utils).
-- [ ] Configure navigation (tab-based with bottom navigation).
-- [ ] Set up theming (light/dark mode, accessible color palette).
+- [x] Initialize Expo project with TypeScript — `expo@^54.0.0`, `typescript@~5.9.2`, `tsconfig.json`, `expo-env.d.ts`, `expo-router/entry` main.
+- [x] Define folder structure — `src/components`, `src/services/graphql`, `src/store`, `src/types`, `src/utils`, `src/hooks` populated.
+- [x] Configure navigation — Expo Router file-based; `app/(auth)/_layout.tsx` + `app/(tabs)/_layout.tsx` with bottom-tab `Tabs` (7 tabs: Inicio, Citas, Juegos, Cura, Progreso, Perfil, Ajustes).
+- [x] Theming light/dark + accessible palette — `tailwind.config.js` (NativeWind preset, `darkMode: 'class'`, full `primary` ramp + `surface`/`background`/`text-*`/`border` light+dark + `error`/`success`); `src/utils/theme.ts` exposes `ThemeContext` + `useTheme()`; `settings.tsx` toggles light/dark; Inter font family with regular/medium/semibold weights.
 
 
 ### Phase 3: Authentication and shell
 
-- [ ] Login screen (DNI/email + password via GraphQL mutation).
-- [ ] Secure token storage (Expo SecureStore).
-- [ ] Auto-logout on token expiration.
-- [ ] Main navigation shell (Dashboard, Treatments, Appointments, Profile, Games, Settings tabs).
-- [ ] Pull-to-refresh and loading states across all screens.
+- [x] Login screen (DNI/email + password via GraphQL mutation) — `app/(auth)/login.tsx` + `LOGIN_MUTATION` in `src/services/graphql/mutations/auth.ts`.
+- [x] Secure token storage (Expo SecureStore) — `expo-secure-store@15.0.8`; `authStore.ts` persists token under `auth_token`.
+- [x] Auto-logout on token expiration — `errorLink` en `client.ts` detecta `UNAUTHENTICATED`/`TOKEN_EXPIRED`/`TOKEN_INVALID` y llama `cerrarSesionPorExpiracion()`.
+- [x] Main navigation shell — `app/(tabs)/_layout.tsx` with 7 tabs (Inicio, Citas, Juegos, Cura, Progreso, Perfil, Ajustes).
+- [x] Pull-to-refresh & loading states across all screens — `bootstrapStore.refreshing` + `RefreshControl` añadidos a `index.tsx` y `profile.tsx`; `profile.tsx` muestra `ActivityIndicator` mientras `patient == null`.
 
 ### Phase 4: Patient features
 
-- [ ] Patient profile screen (personal data from `me` query).
-- [ ] Assigned disabilities with current progression level.
-- [ ] Treatment list filtered by disability and level.
-- [ ] Game session history with progress charts.
-- [ ] Appointment list (upcoming and past).
+- [x] Patient profile screen — `app/(tabs)/profile.tsx` reads `userStore.patient` populated from `GET_MY_PROFILE` (`me` query); `InfoRow` for DNI, NSS, birth date, address, phone, email + `ProfileHeader`.
+- [x] Assigned disabilities with current progression level — `GET_MY_DISABILITIES` returns `currentLevel`; rendered in profile (pathology pills) and in `treatments.tsx` via `DisabilitySection`.
+- [x] Treatment list filtered by disability and level — `treatments.tsx` groups by `disabilityCode` and renders `DisabilitySection` per disability with the corresponding level.
+- [x] Game session history with progress charts — `app/(tabs)/progress.tsx` + `BodyDiagram` + `ProgressChartModal` (LineChart) using `GET_MY_BODY_PART_PROGRESS` and `GET_BODY_PART_METRICS`; assigned-game listing in `games.tsx`.
+- [ ] Appointment list (upcoming **and past**) — only upcoming list rendered; `appointmentsStore.fetch` queries with `upcoming:true` only; no past section. Pending.
 
 ### Phase 5: Advanced features
 

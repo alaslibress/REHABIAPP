@@ -18,6 +18,13 @@ const ERROR_CODES = {
   APPOINTMENT_NOT_FOUND: 'APPOINTMENT_NOT_FOUND',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+  NO_GAMES_ASSIGNED: 'NO_GAMES_ASSIGNED',
+  NO_TREATMENTS_ASSIGNED: 'NO_TREATMENTS_ASSIGNED',
+  DOCUMENT_DOWNLOAD_FAILED: 'DOCUMENT_DOWNLOAD_FAILED',
+  APPOINTMENT_REQUEST_INVALID_CONTACT: 'APPOINTMENT_REQUEST_INVALID_CONTACT',
+  NOTIFICATION_PERMISSION_DENIED: 'NOTIFICATION_PERMISSION_DENIED',
+  BODY_PART_NO_DATA: 'BODY_PART_NO_DATA',
+  APPOINTMENT_REQUEST_CONFLICT: 'APPOINTMENT_REQUEST_CONFLICT',
 };
 
 // Mapa de codigos a mensajes legibles en castellano
@@ -69,6 +76,34 @@ const MENSAJES = {
   INTERNAL_ERROR: {
     subtitulo: 'Error interno',
     texto: 'Se ha producido un error inesperado. Por favor, intentelo de nuevo mas tarde.',
+  },
+  NO_GAMES_ASSIGNED: {
+    subtitulo: 'Sin juegos',
+    texto: 'No tienes juegos asignados.',
+  },
+  NO_TREATMENTS_ASSIGNED: {
+    subtitulo: 'Sin tratamientos',
+    texto: 'No tienes tratamientos asignados todavia.',
+  },
+  DOCUMENT_DOWNLOAD_FAILED: {
+    subtitulo: 'Descarga fallida',
+    texto: 'No se pudo descargar el documento. Intentalo de nuevo.',
+  },
+  APPOINTMENT_REQUEST_INVALID_CONTACT: {
+    subtitulo: 'Contacto invalido',
+    texto: 'Debes indicar un telefono o email valido para solicitar una cita.',
+  },
+  NOTIFICATION_PERMISSION_DENIED: {
+    subtitulo: 'Permiso denegado',
+    texto: 'Activa las notificaciones desde los ajustes del sistema.',
+  },
+  BODY_PART_NO_DATA: {
+    subtitulo: 'Sin datos',
+    texto: 'Aun no hay metricas para esta zona. Juega para ver tu progreso.',
+  },
+  APPOINTMENT_REQUEST_CONFLICT: {
+    subtitulo: 'Horario ocupado',
+    texto: 'Ya hay una cita para esa fecha y hora. Por favor, elige otro horario.',
   },
 };
 

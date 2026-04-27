@@ -6,6 +6,8 @@ const patientResolvers = require('./patient');
 const treatmentResolvers = require('./treatment');
 const appointmentResolvers = require('./appointment');
 const gameResolvers = require('./game');
+const settingsResolvers = require('./settings');
+const progressResolvers = require('./progress');
 
 const resolvers = {
   Query: {
@@ -13,10 +15,12 @@ const resolvers = {
     ...treatmentResolvers.Query,
     ...appointmentResolvers.Query,
     ...gameResolvers.Query,
+    ...progressResolvers.Query,
   },
   Mutation: {
     ...authResolvers.Mutation,
     ...appointmentResolvers.Mutation,
+    ...settingsResolvers.Mutation,
   },
   // Field resolvers de tipos especificos
   Patient: patientResolvers.Patient,

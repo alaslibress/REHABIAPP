@@ -16,6 +16,10 @@ const patientTypeDefs = gql`
     birthDate: String
     address: String
     active: Boolean!
+    numSs: String
+    sexo: String
+    # Foto de perfil como data URI (base64) — null si no hay foto
+    avatarDataUri: String
     # Saludo calculado por el backend segun la hora local del paciente
     greeting: String
   }

@@ -12,6 +12,9 @@ export const GET_MY_PROFILE = gql`
       birthDate
       address
       active
+      numSs
+      sexo
+      avatarDataUri
     }
   }
 `;

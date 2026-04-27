@@ -10,6 +10,11 @@ const gameResolvers = {
       const user = requireAuth(context);
       return gameService.obtenerSesiones(user.sub, context.javaToken, limit, offset);
     },
+
+    async myAssignedGames(_parent, _args, context) {
+      const user = requireAuth(context);
+      return gameService.obtenerJuegosAsignados(user.sub, context.javaToken);
+    },
   },
 };
 

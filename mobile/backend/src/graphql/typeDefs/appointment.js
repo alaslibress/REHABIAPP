@@ -15,6 +15,19 @@ const appointmentTypeDefs = gql`
     notes: String
   }
 
+  # Estado de una solicitud de cita enviada por el paciente
+  enum AppointmentRequestStatus { PENDING CONFIRMED REJECTED }
+
+  # Solicitud de cita enviada por el paciente al centro
+  type AppointmentRequest {
+    id: ID!
+    fechaPreferida: String!
+    horaPreferida: String!
+    motivo: String!
+    estado: AppointmentRequestStatus!
+    createdAt: String!
+  }
+
   extend type Query {
     # Citas del paciente, filtrable por estado y por proximas
     myAppointments(status: AppointmentStatus, upcoming: Boolean): [Appointment!]!
@@ -26,6 +39,15 @@ const appointmentTypeDefs = gql`
 
     # Cancelar una cita existente por su ID
     cancelAppointment(appointmentId: ID!): Appointment!
+
+    # Solicitar una cita nueva (el sanitario la confirmara posteriormente)
+    requestAppointment(
+      fechaPreferida: String!
+      horaPreferida: String!
+      motivo: String!
+      telefono: String
+      email: String
+    ): AppointmentRequest!
   }
 `;
 

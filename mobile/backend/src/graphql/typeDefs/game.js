@@ -21,9 +21,26 @@ const gameTypeDefs = gql`
     metrics: GameMetrics
   }
 
+  # Nivel de dificultad de un juego terapeutico
+  enum GameDifficulty { EASY MEDIUM HARD }
+
+  # Juego terapeutico asignado al paciente
+  type AssignedGame {
+    id: ID!
+    name: String!
+    description: String!
+    thumbnailUrl: String
+    webglUrl: String
+    difficulty: GameDifficulty!
+    assignedAt: String!
+  }
+
   extend type Query {
     # Historial de sesiones de juego del paciente con paginacion
     myGameSessions(limit: Int, offset: Int): [GameSession!]!
+
+    # Juegos terapeuticos asignados al paciente
+    myAssignedGames: [AssignedGame!]!
   }
 `;
 

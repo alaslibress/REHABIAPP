@@ -22,3 +22,28 @@ export const CANCEL_APPOINTMENT = gql`
     }
   }
 `;
+
+export const REQUEST_APPOINTMENT = gql`
+  mutation RequestAppointment(
+    $fechaPreferida: String!
+    $horaPreferida: String!
+    $motivo: String!
+    $telefono: String
+    $email: String
+  ) {
+    requestAppointment(
+      fechaPreferida: $fechaPreferida
+      horaPreferida: $horaPreferida
+      motivo: $motivo
+      telefono: $telefono
+      email: $email
+    ) {
+      id
+      fechaPreferida
+      horaPreferida
+      motivo
+      estado
+      createdAt
+    }
+  }
+`;

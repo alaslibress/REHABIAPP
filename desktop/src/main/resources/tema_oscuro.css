@@ -222,6 +222,18 @@
     -fx-text-fill: #1A1A1A;
 }
 
+/* Boton de busqueda con tono primario azul — mismo color que button-primario, padding de icono */
+.button-primario-icon {
+    -fx-background-color: #5499C7;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px;
+}
+
+.button-primario-icon:hover {
+    -fx-background-color: #6B8EC4;
+}
+
 /* Boton secundario */
 #btnCancelar, #btnCancelarSanitario, #btnCancelarOpciones, #btnCancelarPregunta {
     -fx-background-color: #2D2D2D;
@@ -977,6 +989,21 @@
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 20, 0.25, 0, 6);
+}
+
+/* Correccion fondo blanco en ScrollPane de formularios modales (VentanaAgregarPaciente) */
+.modal-root > .scroll-pane,
+.modal-root > .scroll-pane > .viewport,
+.scroll-pane.modal-root,
+.scroll-pane.modal-root > .viewport {
+    -fx-background-color: -color-fondo-panel;
+    -fx-background: -color-fondo-panel;
+}
+
+/* Fondo oscuro para el contenido desplazable de formularios con ScrollPane raiz */
+.root.modal-root > .scroll-pane > .viewport > VBox,
+.scroll-pane.root > .viewport > .modal-root {
+    -fx-background-color: -color-fondo-panel;
 }
 
 .modal-header {

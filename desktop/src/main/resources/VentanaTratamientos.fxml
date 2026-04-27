@@ -35,7 +35,7 @@
                                         <Insets right="10.0" />
                                     </HBox.margin>
                                 </Label>
-                                <Button fx:id="btnBuscarTratamientos" mnemonicParsing="false" onAction="#buscarTratamientos" prefHeight="30.0" prefWidth="30.0" styleClass="button-icono">
+                                <Button fx:id="btnBuscarTratamientos" mnemonicParsing="false" onAction="#buscarTratamientos" prefHeight="30.0" prefWidth="30.0" styleClass="button-primario-icon">
                                     <graphic>
                                         <ImageView fitHeight="18.0" fitWidth="25.0" pickOnBounds="true" preserveRatio="true">
                                             <image>
@@ -67,7 +67,7 @@
                                         <Tooltip text="Anadir nuevo tratamiento" />
                                     </tooltip>
                                     <HBox.margin>
-                                        <Insets right="10.0" />
+                                        <Insets right="20.0" />
                                     </HBox.margin>
                                 </Button>
                                 <Button fx:id="btnFiltrarTratamientos" mnemonicParsing="false" onAction="#abrirFiltrosTratamientos" prefHeight="40.0" prefWidth="40.0" styleClass="button-icono">

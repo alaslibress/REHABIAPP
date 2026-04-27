@@ -323,6 +323,8 @@ public class controladorVentanaTratamientos {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaAgregarTratamiento.fxml"));
             Parent root = loader.load();
 
+            controladorAgregarTratamiento controlador = loader.getController();
+
             Scene scene = new Scene(root);
             controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
 
@@ -334,11 +336,14 @@ public class controladorVentanaTratamientos {
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
-            try {
-                cargarTratamientos();
-                aplicarFiltros();
-            } catch (Exception e) {
-                System.err.println("Error al recargar datos: " + e.getMessage());
+            // Solo recargar si el usuario guardo algo; evita popup de error al cancelar
+            if (controlador.isGuardadoExitoso()) {
+                try {
+                    cargarTratamientos();
+                    aplicarFiltros();
+                } catch (Exception e) {
+                    System.err.println("Error al recargar datos: " + e.getMessage());
+                }
             }
 
         } catch (Exception e) {
@@ -384,11 +389,14 @@ public class controladorVentanaTratamientos {
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
-            try {
-                cargarTratamientos();
-                aplicarFiltros();
-            } catch (Exception e) {
-                System.err.println("Error al recargar datos: " + e.getMessage());
+            // Solo recargar si el usuario guardo algo; evita popup de error al cancelar
+            if (controlador.isGuardadoExitoso()) {
+                try {
+                    cargarTratamientos();
+                    aplicarFiltros();
+                } catch (Exception e) {
+                    System.err.println("Error al recargar datos: " + e.getMessage());
+                }
             }
 
         } catch (Exception e) {

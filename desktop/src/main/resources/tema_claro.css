@@ -215,6 +215,18 @@
     -fx-text-fill: #1A1A1A;
 }
 
+/* Boton de busqueda con tono primario azul — mismo color que button-primario, padding de icono */
+.button-primario-icon {
+    -fx-background-color: #5DADE2;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px;
+}
+
+.button-primario-icon:hover {
+    -fx-background-color: #4A90E2;
+}
+
 /* Boton secundario */
 #btnCancelar, #btnCancelarSanitario, #btnCancelarOpciones, #btnCancelarPregunta {
     -fx-background-color: #E8EDF2;

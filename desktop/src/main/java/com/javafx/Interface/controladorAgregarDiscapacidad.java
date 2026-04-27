@@ -53,6 +53,13 @@ public class controladorAgregarDiscapacidad {
     private boolean modoEdicion = false;
     private String codigoOriginal;
 
+    // Indica si el formulario cerro tras un guardado exitoso
+    private boolean guardadoExitoso = false;
+
+    public boolean isGuardadoExitoso() {
+        return guardadoExitoso;
+    }
+
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML
      */
@@ -147,6 +154,7 @@ public class controladorAgregarDiscapacidad {
                         TipoMensaje.EXITO
                 );
             }
+            guardadoExitoso = true;
             cerrarVentana(event);
 
         } catch (DuplicadoException e) {

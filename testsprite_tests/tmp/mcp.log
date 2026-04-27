@@ -1,0 +1,8 @@
+{"timestamp":"2026-04-24T13:27:12.433Z","level":"info","message":"Tool invocation started","correlationId":"ae82d772-4258-42b6-8c62-376702a58823","tool":"testsprite_bootstrap"}
+{"timestamp":"2026-04-24T13:27:12.440Z","level":"debug","message":"Initialization params","correlationId":"ae82d772-4258-42b6-8c62-376702a58823","tool":"testsprite_bootstrap","context":{"localPort":8081,"type":"backend","projectPath":"/home/alaslibres/DAM/RehabiAPP/data","testScope":"codebase"}}
+{"timestamp":"2026-04-24T13:27:12.442Z","level":"info","message":"Attempting to start server (attempt 1/3)","correlationId":"ae82d772-4258-42b6-8c62-376702a58823","tool":"testsprite_bootstrap"}
+{"timestamp":"2026-04-24T13:27:12.815Z","level":"info","message":"GET /init?project_path=%2Fhome%2Falaslibres%2FDAM%2FRehabiAPP%2Fdata&default_type=backend 200 6ms","correlationId":"ae82d772-4258-42b6-8c62-376702a58823","tool":"testsprite_bootstrap"}
+{"timestamp":"2026-04-24T13:27:12.882Z","level":"info","message":"GET /api/config?project_path=%2Fhome%2Falaslibres%2FDAM%2FRehabiAPP%2Fdata 200 5ms","correlationId":"ae82d772-4258-42b6-8c62-376702a58823","tool":"testsprite_bootstrap"}
+{"timestamp":"2026-04-24T13:27:12.907Z","level":"info","message":"GET /favicon.ico 404 2ms","correlationId":"ae82d772-4258-42b6-8c62-376702a58823","tool":"testsprite_bootstrap"}
+{"timestamp":"2026-04-24T13:27:12.457Z","level":"info","message":"HTTP server started, config saved","correlationId":"ae82d772-4258-42b6-8c62-376702a58823","tool":"testsprite_bootstrap"}
+{"timestamp":"2026-04-24T13:27:12.454Z","level":"info","message":"HTTP server started successfully on port 36809","correlationId":"ae82d772-4258-42b6-8c62-376702a58823","tool":"testsprite_bootstrap"}

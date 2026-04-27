@@ -263,3 +263,9 @@ Do NOT change the card's date/practitioner layout, icons, or the `status` badge 
 - A separate "history" tab. The product wants both lists on the same screen.
 - Phase 5 work (booking screen, WhatsApp chatbot, push, offline-first).
 - Any `/mobile/backend` GraphQL change. The existing `myAppointments(upcoming: Boolean)` already returns past records when `upcoming:false`. If the BFF turns out NOT to honor that flag (verify in `mobile/backend/src/graphql`), STOP and notify the developer — do NOT improvise a fix on the frontend side.
+
+---
+
+## Nota Sprint Progreso (2026-04-27)
+
+Treatment PDF y progress charts disponibles cuando /api Phase 8 cierre. Sin trabajo en este sprint.

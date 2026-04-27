@@ -1,4 +1,250 @@
-# PLAN.md — Data Pipeline: Phase 4 Advanced Analytics
+# PLAN.md — Data Pipeline: Phase 5 Treatment progress timeline
+
+> **Date:** 2026-04-27
+> **Agent:** Sonnet (Doer) under Agent 1 (API + Data)
+> **Domain:** `/data/`
+> **Prerequisitos:**
+>  1. Phases 1-4 cerradas (ver archivo al final del documento).
+>  2. Leer `data/CLAUDE.md` y `data/.claude/skills/springboot4-mongodb/SKILL.md` ANTES de empezar.
+> **Scope:** materializar la línea de tiempo de progreso clínico por articulación que consume `/api` (`ProgresoService`) para regenerar `paciente.progreso_md`. Incluye pipeline Mongo, dos endpoints (`treatment-timeline`, `has-new-sessions`) y un generador de markdown determinista.
+
+---
+
+## Status summary
+
+| # | Phase 5 item | Status |
+|---|---|---|
+| 5.1 | `TreatmentProgressTimelinePipeline` (group articulación + day, primer vs último, serie diaria) | PENDING |
+| 5.2 | GET `/analytics/patient/{dni}/treatment-timeline` (X-Internal-Key) | PENDING |
+| 5.3 | GET `/analytics/patient/{dni}/has-new-sessions?desde=ISO_TS` | PENDING |
+| 5.4 | `ProgressMarkdownGenerator` (markdown determinista por articulación con tendencia SimpleRegression) | PENDING |
+| 5.5 | Tests Testcontainers Mongo + snapshot del markdown | PENDING |
+
+Todas las rutas relativas a `/home/alaslibres/DAM/RehabiAPP/data/`.
+
+---
+
+## Step 5.1 — TreatmentProgressTimelinePipeline
+
+**Path:** `data/src/main/java/com/rehabiapp/data/application/pipeline/TreatmentProgressTimelinePipeline.java`
+
+**Input:**
+- `String patientDni` (obligatorio).
+- `Instant from` (opcional; `null` = todo el histórico).
+
+**Aggregation stages:**
+
+1. `$match`:
+   ```
+   { patientDni: <dni> }
+   ```
+   Si `from != null`: añadir `sessionStart: { $gte: from }`.
+
+2. `$sort`:
+   ```
+   { sessionStart: 1 }
+   ```
+   Garantiza que `$first` y `$last` reflejen primer y último registro temporal.
+
+3. `$group` por articulación + día:
+   ```
+   _id: {
+     articulacionCodigo: "$movementMetrics.articulacionCodigo",
+     day: { $dateToString: { format: "%Y-%m-%d", date: "$sessionStart" } }
+   },
+   firstSession: { $first: "$$ROOT" },
+   lastSession:  { $last: "$$ROOT" },
+   points: { $push: {
+       fecha: "$sessionStart",
+       valor: "$movementMetrics.rangeOfMotionDegrees"
+   } }
+   ```
+
+**Output Java:** `List<ArticulacionTimeline>` (DTO declarado en `application/service/dto/`):
+
+```java
+public record ArticulacionTimeline(
+    String articulacionCodigo,
+    String articulacionNombre,
+    String metricKey,                  // p.ej. "rangeOfMotionDegrees"
+    MetricSnapshot inicial,            // valor primer día
+    MetricSnapshot actual,             // valor último día
+    double deltaAbs,                   // actual - inicial
+    double deltaPct,                   // (actual - inicial) / inicial * 100
+    List<MetricPoint> serie            // serie diaria ordenada asc por fecha
+) {}
+
+public record MetricSnapshot(Instant fecha, double valor) {}
+public record MetricPoint(Instant fecha, double valor) {}
+```
+
+**Trend:** usar `org.apache.commons.math3.stat.regression.SimpleRegression` (ya disponible vía Phase 4 step 0) sobre la serie diaria con `x = índice del día` para obtener `slope` y `r2`. El slope se expone también como log informativo (no parte del DTO público todavía).
+
+---
+
+## Step 5.2 — Endpoint treatment-timeline
+
+**Path:** extender `data/src/main/java/com/rehabiapp/data/api/AnalyticsController.java` (o ruta equivalente del controller existente).
+
+**Auth:** `X-Internal-Key` (filter ya cubre `/analytics/**`, root CLAUDE §6).
+
+**Query params:**
+- `from` (opcional, ISO instant). Sin valor → todo el histórico.
+
+**Response:**
+
+```java
+public record TreatmentTimelineResponse(
+    String patientDni,
+    Instant generatedAt,
+    List<ArticulacionTimeline> articulaciones
+) {}
+```
+
+Endpoint:
+
+```java
+@GetMapping("/patient/{dni}/treatment-timeline")
+public TreatmentTimelineResponse treatmentTimeline(
+    @PathVariable @Pattern(regexp = DNI_REGEX) String dni,
+    @RequestParam(required = false) String from) {
+    return service.treatmentTimeline(dni, from);
+}
+```
+
+`service.treatmentTimeline(...)` orquesta `TreatmentProgressTimelinePipeline.run(dni, fromInstant)` y rellena `generatedAt = Instant.now()`. Si la lista resultante está vacía → 404 `not_found` (consistente con Phase 4).
+
+---
+
+## Step 5.3 — Endpoint has-new-sessions
+
+**Path:** mismo controller `AnalyticsController`.
+
+**Lógica Mongo:**
+
+```
+db.gameSession
+  .find({ patientDni: <dni>, receivedAt: { $gt: <desde> } })
+  .sort({ receivedAt: -1 })
+  .limit(1)
+```
+
+Si `desde IS NULL` → `hayNuevos = (count({ patientDni }) > 0)` y `ultimoRegistro = max(receivedAt)`.
+
+Si el cliente nunca sincronizó (`ultima_sync_progreso IS NULL` en /api) y por tanto envía `desde` vacío, /api debe interpretarlo como primera sync → `hayNuevos = true` por convención.
+
+**Response:**
+
+```java
+public record HasNewSessionsResponse(
+    boolean hayNuevos,
+    Instant ultimoRegistro      // null si hayNuevos == false
+) {}
+```
+
+Endpoint:
+
+```java
+@GetMapping("/patient/{dni}/has-new-sessions")
+public HasNewSessionsResponse hasNewSessions(
+    @PathVariable @Pattern(regexp = DNI_REGEX) String dni,
+    @RequestParam(required = false) String desde) {
+    return service.hasNewSessions(dni, desde);
+}
+```
+
+**Índices:** Verificar `MongoIndexInitializer` ya declara índice compuesto `{patientDni:1, receivedAt:-1}`; si falta, añadirlo. No usar `@CompoundIndex` si el initializer es single source of truth.
+
+```
+gameSession: { patientDni: 1, receivedAt: -1 }
+```
+
+Si ya existe `{ patientDni: 1 }` simple, el compuesto lo sustituye. Documentar la regla en el initializer.
+
+---
+
+## Step 5.4 — ProgressMarkdownGenerator
+
+**Path:** `data/src/main/java/com/rehabiapp/data/application/service/ProgressMarkdownGenerator.java`
+
+**Input:** `TreatmentTimelineResponse`.
+
+**Output:** `String` markdown determinista. Mismo input → mismo output (requisito para snapshot tests).
+
+**Plantilla:**
+
+```
+# Progreso paciente {dni}
+Generado: {ISO}
+
+## Articulación {codigo} — {nombre}
+- Estado inicial: valor X el día Y
+- Estado actual: valor X el día Y
+- Variación: ±N% (slope=...)
+
+### Serie diaria
+| Fecha | Valor |
+|---|---|
+| 2026-04-10 | 68.20 |
+| 2026-04-11 | 69.50 |
+...
+```
+
+**Reglas de determinismo:**
+- Iterar `articulaciones` en orden ascendente por `articulacionCodigo`.
+- Iterar `serie` en orden ascendente por `fecha`.
+- Formato numérico fijo: 2 decimales, locale `Locale.ROOT`.
+- Slope con 4 decimales, locale `Locale.ROOT`.
+- Fechas formateadas con `DateTimeFormatter.ISO_LOCAL_DATE` (UTC).
+- `generatedAt` se inserta literalmente desde el DTO; los tests deben fijarlo (clock injection).
+
+`SimpleRegression` se recalcula aquí sobre `serie` para imprimir `slope=...`.
+
+---
+
+## Step 5.5 — Tests
+
+**`TreatmentProgressTimelinePipelineIT`** — Testcontainers Mongo:
+- Sembrar 3 articulaciones × 5 días con valores monótonos crecientes.
+- Asserts:
+  - `articulaciones.size() == 3`.
+  - Cada `ArticulacionTimeline.serie.size() == 5`.
+  - `inicial.fecha < actual.fecha`.
+  - `deltaAbs > 0` y `deltaPct > 0` para datos crecientes.
+- Caso `from = null`: incluye todo.
+- Caso `from = day3`: excluye días 1 y 2.
+
+**`HasNewSessionsServiceIT`** — Testcontainers Mongo:
+- `desde = null, count > 0` → `hayNuevos = true`.
+- `desde > maxReceivedAt` → `hayNuevos = false`.
+- `desde < maxReceivedAt` → `hayNuevos = true` y `ultimoRegistro == maxReceivedAt`.
+
+**`ProgressMarkdownGeneratorTest`** — snapshot:
+- Construir `TreatmentTimelineResponse` con `generatedAt` fijo (`Instant.parse("2026-04-27T08:00:00Z")`).
+- Generar markdown.
+- Comparar contra fixture en `src/test/resources/markdown/progreso_paciente_12345678Z.md` (commiteado).
+- Segundo test: mismo input → mismo output (idempotencia).
+
+**TestSprite — `backend_test_plan`:**
+- Contratos HTTP `/treatment-timeline` y `/has-new-sessions`.
+- 401 sin `X-Internal-Key`.
+- 400 con DNI mal formado.
+- 404 con paciente sin sesiones en `/treatment-timeline`.
+
+---
+
+## Aceptación
+
+- `curl -H 'X-Internal-Key:<key>' http://localhost:8081/analytics/patient/{dni}/treatment-timeline` → 200 con `TreatmentTimelineResponse` válido.
+- `curl -H 'X-Internal-Key:<key>' http://localhost:8081/analytics/patient/{dni}/has-new-sessions?desde=<ISO>` → 200 coherente con datos sembrados.
+- Snapshot del markdown reproducible sin diferencias entre ejecuciones consecutivas.
+- TestSprite `backend_test_plan` cierra al 100 % (Self-Healing root §10.3 hasta 5 intentos).
+
+---
+
+## Archivo
+
+### PLAN.md previo (cerrado 2026-04-20) — Phase 4 Advanced Analytics
 
 > **Agent:** Sonnet (Doer) under Agent 1 (API + Data)
 > **Domain:** `/data/`

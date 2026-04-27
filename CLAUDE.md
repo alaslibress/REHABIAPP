@@ -235,6 +235,7 @@ Before performing any task, the agent MUST check and read the installed skills r
 - Patient data retained minimum 5 years after deactivation (Ley 41/2002).
 - Database communication in production over SSL/TLS.
 - Encryption keys and certificates never committed to the Git repository.
+- Nueva columna `paciente.progreso_md TEXT` + `paciente.ultima_sync_progreso TIMESTAMP` (V15) para materializar el resumen de progreso clinico consumido por la futura IA.
 
 ---
 
@@ -302,6 +303,11 @@ Before performing any task, the agent MUST check and read the installed skills r
 - API delegates game data operations to /data pipeline
 - MongoDB stores high-volume semi-structured session documents
 - Data processed with aggregation pipelines for analytics
+
+### Desktop <--> /api (NEW - Sprint Progreso 2026-04-27)
+
+- Polling de progreso: el escritorio consulta `GET /api/pacientes/{dni}/progreso/check?desde=ISO_TS` y, si hay nuevos registros de juego, ejecuta `POST /api/pacientes/{dni}/progreso/sync` para regenerar `paciente.progreso_md` y actualizar `ultima_sync_progreso`.
+- Subida de PDF de tratamiento: el escritorio sube el documento clinico vía `POST /api/catalogo/tratamientos/{cod}/documentos` (multipart). La app mobile descarga ese mismo binario reutilizando el endpoint existente `GET /api/pacientes/{dni}/tratamientos/{cod}/documento`.
 
 ---
 

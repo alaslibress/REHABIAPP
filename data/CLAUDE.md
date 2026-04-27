@@ -120,29 +120,17 @@ PatientProgress {
 - [x] Set up environment configuration — `.env.example` creado en `/data/.env.example`; `.gitignore` añadido.
 - [x] Health check endpoint (GET /health) — `HealthController` returns 200 OK.
 
-### Phase 2: Schema and ingestion
+### Phase 2-4: Schemas, ingestion, pipelines, advanced analytics
 
-- [x] Define Mongoose schema for GameSession — **Spring @Document** `GameSession` + `MovementMetrics` record.
-- [x] Define Mongoose schema for PatientProgress — **Spring @Document** `PatientProgress` con indice unico compuesto.
-- [x] Create internal ingestion endpoint (POST /ingest/game-session) — `IngestController` + `GameSessionIngestService`.
-- [x] Input validation and sanitization on ingestion — Jakarta Validation en `GameSessionIngestRequest` + `MovementMetricsDto` + `GlobalExceptionHandler`.
-- [x] Duplicate detection — pre-check `existsBySessionId` + indice unico `uk_session_id` + 409 Conflict.
-- [x] Indexes on patientDni, gameId, progressionLevel, sessionStart — `@Indexed` + `@CompoundIndexes` + `MongoIndexInitializer`.
+> Cerradas. Resumen: Spring `@Document` `GameSession` + `PatientProgress` + `LevelStatistics`; ingest `POST /ingest/game-session` con dedupe; pipelines `WeeklyGamePipeline`, `MonthlyDisabilityPipeline`, `LevelStatisticsPipeline`, `RomTimeSeriesPipeline`, `CohortComparisonPipeline`; jobs scheduled (`AnalyticsRefreshJob`); endpoints `GET /analytics/patient/{dni}`, `.../rom-timeseries`, `.../cohort-compare/...`, `/analytics/export/patient/{dni}` (CSV/JSON streaming) y `/analytics/charts/...` (4 charts) + contrato OpenAPI en `docs/analytics-charts.openapi.yaml`.
 
-### Phase 3: Transformation and aggregation
+### Phase 5 — Treatment progress timeline (2026-04-27)
 
-- [x] Aggregation pipeline: patient progress per game per week — `WeeklyGamePipeline` (ISO-week buckets).
-- [x] Aggregation pipeline: patient progress per disability per month — `MonthlyDisabilityPipeline` (cross-game, gameId="*").
-- [x] Aggregation pipeline: global statistics per progression level — `LevelStatisticsPipeline` + `LevelStatistics` @Document.
-- [x] Scheduled job to refresh PatientProgress + LevelStatistics — `AnalyticsRefreshJob` (cron configurable, upsert idempotente).
-- [x] Endpoint to retrieve aggregated data — GET /analytics/patient/{dni} via `AnalyticsController` + `PatientAnalyticsResponse`.
-
-### Phase 4: Advanced analytics
-
-- [x] Time-series ROM — GET /analytics/patient/{dni}/rom-timeseries (`RomTimeSeriesPipeline` + `TrendCalculator` + `RomTimeSeriesService`).
-- [x] Cohort comparison — GET /analytics/cohort-compare/patient/{dni} (`CohortComparisonPipeline` + `CohortComparisonService`).
-- [x] Data export CSV/JSON — GET /analytics/export/patient/{dni} (`ExportService` streaming + `ExportController`).
-- [x] Chart-ready format — 4 endpoints en `ChartController` + `ChartService`. OpenAPI contract en `docs/analytics-charts.openapi.yaml`.
+- [ ] `TreatmentProgressTimelinePipeline` (group by articulacion + day, primer vs ultimo, serie diaria).
+- [ ] GET `/analytics/patient/{dni}/treatment-timeline` (X-Internal-Key).
+- [ ] GET `/analytics/patient/{dni}/has-new-sessions?desde=ISO_TS`.
+- [ ] `ProgressMarkdownGenerator` (markdown determinista por articulacion con tendencia SimpleRegression).
+- [ ] Tests Testcontainers Mongo + snapshot del markdown.
 
 ---
 

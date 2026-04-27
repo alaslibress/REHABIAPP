@@ -1,3 +1,147 @@
+# PLAN — Desktop SGE
+
+## Sprint Progreso — 2026-04-27
+
+> Fuente: PART B.3 del plan aprobado por Agent 0 Thinker (Opus).
+> Branch: mobile.
+> Author: Agent 3 Doer (Sonnet) bajo direccion del Thinker (Opus).
+> Idioma: comentarios y codigo en espanol (`/CLAUDE.md` Section 4.5). Este plan esta escrito en espanol.
+> Scope: pulido visual + integracion PDF de tratamiento + seleccion de juego por articulacion + nueva ventana de Progreso del paciente.
+> Dependencia: `/api` Phase 8 (V14 + V15 + endpoints) y `/data` Phase 5 (pipeline + endpoints + markdown) deben estar disponibles antes de cerrar D.5..D.12.
+
+### Step D.1 — Verificar paridad botones (no edicion a ciegas)
+
+- Lanzar la app en tema claro y oscuro.
+- Capturar VentanaSanitarios vs VentanaTratamientos vs VentanaDiscapacidades.
+- Si la divergencia es CSS, identificar selector responsable. Si es runtime (resolucion ImageView), usar mismas rutas de imagen.
+- Ningun cambio si ya son identicos.
+- Aceptacion: capturas de las tres pestanas con botones identicos en tamano, color y margen.
+
+### Step D.2 — Filtros tratamientos
+
+- Verificar runtime: `Restablecer` / `Cancelar` / `Aplicar` (lineas 69-71 de `VentanaFiltroTratamientos.fxml`) son visibles.
+- Si estan clipados, ajustar `prefHeight` del Stage o constraints del HBox padre.
+- Si los `onAction` no responden, recablear handlers en el controlador.
+- Aceptacion: los tres botones aparecen y operan en ambos temas.
+
+### Step D.3 — Centrar texto pop-ups
+
+- Editar `VentanaInformativa.fxml` y `VentanaPregunta.fxml`: Label root con `alignment="CENTER"` + `textAlignment="CENTER"`.
+- Si existe `AlertFactory` / `PopUpUtil`, asegurar que aplica `setStyle("-fx-alignment:CENTER;-fx-text-alignment:CENTER;")` al DialogPane.
+- CSS (en ambos temas):
+
+  ```css
+  .dialog-pane > .content,
+  .dialog-pane > .content > .label,
+  .dialog-pane .header-panel,
+  .dialog-pane .header-panel > .label {
+      -fx-alignment: CENTER;
+      -fx-text-alignment: CENTER;
+  }
+  ```
+
+- Aceptacion: cualquier popup informativo o de pregunta muestra texto centrado en ambos temas.
+
+### Step D.4 — Fix permanente fondo oscuro modal
+
+1. Auditar `VentanaAgregarPaciente.fxml` + `VentanaAgregarSanitario.fxml`: eliminar **cualquier** `style="-fx-background-color..."` inline en root, ScrollPane, GridPane o Region interna.
+2. Asegurar que el styleClass del root incluya `modal-root` (y NO incluya `scroll-pane` aislado).
+3. Anadir en `tema_oscuro.css` (al final, prioridad maxima):
+
+   ```css
+   .root.modal-root,
+   .root.modal-root > *,
+   .root.modal-root .scroll-pane,
+   .root.modal-root .scroll-pane > .viewport,
+   .root.modal-root .scroll-pane > .viewport > *,
+   .root.modal-root .grid-pane,
+   .root.modal-root .vbox,
+   .root.modal-root .hbox {
+       -fx-background-color: -color-fondo-panel !important;
+       -fx-background: -color-fondo-panel !important;
+   }
+   ```
+
+4. Verificar que `aplicarConfiguracionAScene` usa `setAll(stylesheet)` y no `add` (evita persistencia del CSS anterior tras switch de tema).
+5. Smoke: alternar tema 5 veces consecutivas, abrir cada modal despues -> no debe haber blanco.
+- Aceptacion: tema oscuro -> ambas ventanas con fondo oscuro uniforme tras 5 alternancias de tema.
+
+### Step D.5 — PDF import
+
+- `VentanaAgregarTratamiento.fxml` + `VentanaEditarTratamiento.fxml`: nueva fila con Label "PDF tratamiento" + TextField (read-only) + Button "Seleccionar" + Button "Eliminar".
+- Controlador: `FileChooser.ExtensionFilter("PDF", "*.pdf")`. Validar tamano <= 10MB.
+- Al guardar el tratamiento, si hay archivo seleccionado: POST multipart a `/api/catalogo/tratamientos/{cod}/documentos`.
+- Reutilizar `ApiClient` con un nuevo metodo `postMultipart`.
+- Aceptacion: al guardar tratamiento aparece fila en `tratamiento_documento`; mobile descarga PDF (256 KB stream) sin error.
+
+### Step D.6 — Lista juegos sugeridos
+
+- En el mismo formulario: ListView debajo del ComboBox de discapacidad.
+- Al seleccionar discapacidad -> fetch `GET /api/catalogo/juegos?idArticulacion=N` -> poblar ListView.
+- Si `id_articulacion IS NULL` -> ListView vacio + label "Esta discapacidad no tiene articulacion asignada".
+- La seleccion del juego escribe `tratamiento.cod_juego`.
+- Aceptacion: editar tratamiento de discapacidad con `id_articulacion=4` -> ListView muestra juegos de articulacion 4.
+
+### Step D.7 — Boton Progreso en pestana Pacientes
+
+- `VentanaPacientes.fxml`: anadir Button `btnProgresoPaciente` junto a `btnGenerarPDFPaciente` (mismo HBox + mismo styleClass).
+- Controlador: validar `tblPacientes.getSelectionModel().getSelectedItem() != null`.
+  - Si null -> `AlertFactory.error("Selecciona un paciente")`.
+  - Si OK -> abrir `VentanaProgresoPaciente`.
+- Aceptacion: sin seleccion -> popup de error; con seleccion -> abre ventana Progreso.
+
+### Step D.8 — Boton Progreso en Ficha
+
+- `VentanaListarPaciente.fxml`: anadir Button "Progreso" (mismo styleClass que botones existentes de la ficha).
+- Controlador: invoca apertura de `VentanaProgresoPaciente` con DNI ya cargado.
+- Aceptacion: doble-clic sobre paciente -> Ficha -> click Progreso -> ventana abre con DNI correcto.
+
+### Step D.9 — VentanaProgresoPaciente.fxml
+
+```xml
+<ScrollPane fitToWidth="true">
+  <VBox spacing="20" styleClass="modal-root">
+    <Label text="Progreso paciente {dni} - {nombre}"/>
+    <Button text="Sincronizar" fx:id="btnSync"/>
+    <VBox fx:id="contenedorGraficas" spacing="30"/>
+  </VBox>
+</ScrollPane>
+```
+
+- Aceptacion: la ventana abre con scroll vertical, label de cabecera, boton Sincronizar y contenedor de graficas vacio.
+
+### Step D.10 — controladorVentanaProgresoPaciente.java
+
+- En `initialize`:
+  1. Llamar `ProgresoService.checkNuevos(dni, ultimaSyncLocal)`.
+  2. Si `hayNuevos == true` -> llamar `series` y reconstruir charts; sino mostrar charts cacheadas + label "Datos al dia".
+- Boton "Sincronizar" -> `POST .../progreso/sync` -> refresh.
+- Por cada `ArticulacionTimeline` -> `LineChart` (NumberAxis tiempo, NumberAxis valor) en VBox vertical.
+- Concurrencia: `javafx.concurrent.Task` para no bloquear el FX thread.
+- Aceptacion: al sembrar 1 game session en Mongo aparece 1 punto; sembrar otra + Sincronizar -> 2 puntos.
+
+### Step D.11 — ProgresoService
+
+- `desktop/src/main/java/com/javafx/Clases/ProgresoService.java`.
+- Metodos: `checkNuevos`, `obtenerSeries`, `sincronizar`. Wrapper sobre `ApiClient`.
+- Aceptacion: pruebas unitarias verifican propagacion de excepciones y serializacion correcta.
+
+### Step D.12 — Tests
+
+- JUnit + Mockito sobre `ProgresoService` (mock ApiClient). NO se usa TestSprite en /desktop por cobertura JavaFX limitada. Smoke manual: arrancar stack, sembrar 1 game session en Mongo, abrir Progreso → debe aparecer 1 punto; sembrar otra → Sincronizar → 2 puntos.
+
+### Aceptacion global del sprint
+
+- Los 12 items del checklist marcados como DONE.
+- TestSprite verde si aplica; si no, screenshots + JUnit verdes.
+- `audit_log` contiene rows de upload PDF, download PDF y sync de progreso.
+- `paciente.progreso_md` no nulo tras la primera sincronizacion exitosa.
+- QA gating: JUnit `./gradlew test` + Mockito + smoke manual screenshots. NO TestSprite (incompatibilidad JavaFX).
+
+---
+
+## Archivo (sprint anterior cerrado)
+
 # IMPLEMENTATION PLAN — Therapeutic Game Link + UI Parity + Cancel/Dark Bugfixes
 
 > Date: 2026-04-24

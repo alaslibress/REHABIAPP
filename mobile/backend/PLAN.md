@@ -1786,3 +1786,11 @@ npm test
 **Criterio de exito:** Los 7 puntos pasan. Marcar como completado.
 
 ---
+
+## Nota Sprint Progreso (2026-04-27)
+
+Smoke test PDF tras 8.5 GET documento. Sin nuevos endpoints en este sprint.
+
+- [ ] Smoke test manual: `treatmentDocument` GraphQL query devuelve PDF binario una vez `/api/pacientes/{dni}/tratamientos/{cod}/documento` esté implementado por /api Phase 8.
+
+---

@@ -112,35 +112,37 @@ PatientProgress {
 
 ### Phase 1: Project setup
 
-- [ ] Initialize Node.js project with Express and TypeScript (or plain JS with JSDoc).
-- [ ] Configure MongoDB connection via Mongoose (connection string from environment variables).
-- [ ] Define folder structure (models, routes, controllers, services, pipelines, utils, config).
-- [ ] Set up environment configuration (.env with MongoDB URI, port, API keys).
-- [ ] Health check endpoint (GET /health).
+> Stack overridden by skill `springboot4-mongodb`: Spring Boot 4 + Java 24 + Spring Data MongoDB (NOT Node.js/Mongoose). Checklist interpreted against the Spring Boot stack.
+
+- [x] Initialize project with build tool and typed stack — **implemented as Spring Boot 4.0.0 + Java 24 + Maven** (`pom.xml`, `DataApplication.java`).
+- [x] Configure MongoDB connection (connection string from env vars) — **Spring Data MongoDB** via `spring.data.mongodb.uri` in `application-local.yml` / `application-aws.yml`.
+- [x] Define folder structure — `domain/model`, `domain/repository`, `application/service`, `application/pipeline`, `infrastructure/config`, `infrastructure/util` creados con `.gitkeep`.
+- [x] Set up environment configuration — `.env.example` creado en `/data/.env.example`; `.gitignore` añadido.
+- [x] Health check endpoint (GET /health) — `HealthController` returns 200 OK.
 
 ### Phase 2: Schema and ingestion
 
-- [ ] Define Mongoose schema for GameSession (matching the telemetry JSON from /games).
-- [ ] Define Mongoose schema for PatientProgress (pre-aggregated analytics).
-- [ ] Create internal ingestion endpoint (POST /ingest/game-session) called by /api.
-- [ ] Input validation and sanitization on ingestion.
-- [ ] Duplicate detection (prevent re-ingestion of the same session).
-- [ ] Indexes on patientDni, gameId, progressionLevel, sessionStart for query performance.
+- [x] Define Mongoose schema for GameSession — **Spring @Document** `GameSession` + `MovementMetrics` record.
+- [x] Define Mongoose schema for PatientProgress — **Spring @Document** `PatientProgress` con indice unico compuesto.
+- [x] Create internal ingestion endpoint (POST /ingest/game-session) — `IngestController` + `GameSessionIngestService`.
+- [x] Input validation and sanitization on ingestion — Jakarta Validation en `GameSessionIngestRequest` + `MovementMetricsDto` + `GlobalExceptionHandler`.
+- [x] Duplicate detection — pre-check `existsBySessionId` + indice unico `uk_session_id` + 409 Conflict.
+- [x] Indexes on patientDni, gameId, progressionLevel, sessionStart — `@Indexed` + `@CompoundIndexes` + `MongoIndexInitializer`.
 
 ### Phase 3: Transformation and aggregation
 
-- [ ] Aggregation pipeline: patient progress per game per week (average score, completion rate, ROM trend).
-- [ ] Aggregation pipeline: patient progress per disability per month (cross-game metrics).
-- [ ] Aggregation pipeline: global statistics per progression level (for practitioner dashboards).
-- [ ] Scheduled job to refresh PatientProgress collection from raw GameSession data.
-- [ ] Endpoint to retrieve aggregated data (GET /analytics/patient/:dni).
+- [x] Aggregation pipeline: patient progress per game per week — `WeeklyGamePipeline` (ISO-week buckets).
+- [x] Aggregation pipeline: patient progress per disability per month — `MonthlyDisabilityPipeline` (cross-game, gameId="*").
+- [x] Aggregation pipeline: global statistics per progression level — `LevelStatisticsPipeline` + `LevelStatistics` @Document.
+- [x] Scheduled job to refresh PatientProgress + LevelStatistics — `AnalyticsRefreshJob` (cron configurable, upsert idempotente).
+- [x] Endpoint to retrieve aggregated data — GET /analytics/patient/{dni} via `AnalyticsController` + `PatientAnalyticsResponse`.
 
 ### Phase 4: Advanced analytics
 
-- [ ] Time-series analysis of range of motion improvement over rehabilitation period.
-- [ ] Comparison analytics: patient progress vs. average cohort progress for same disability and level.
-- [ ] Data export endpoint (CSV/JSON) for practitioner download.
-- [ ] Integration with desktop ERP visualization (chart-ready data format).
+- [x] Time-series ROM — GET /analytics/patient/{dni}/rom-timeseries (`RomTimeSeriesPipeline` + `TrendCalculator` + `RomTimeSeriesService`).
+- [x] Cohort comparison — GET /analytics/cohort-compare/patient/{dni} (`CohortComparisonPipeline` + `CohortComparisonService`).
+- [x] Data export CSV/JSON — GET /analytics/export/patient/{dni} (`ExportService` streaming + `ExportController`).
+- [x] Chart-ready format — 4 endpoints en `ChartController` + `ChartService`. OpenAPI contract en `docs/analytics-charts.openapi.yaml`.
 
 ---
 

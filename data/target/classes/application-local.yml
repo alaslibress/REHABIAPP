@@ -2,10 +2,10 @@
 # MongoDB local sin TLS, logging verbose para depuracion
 
 spring:
-  data:
-    mongodb:
-      # URI de MongoDB local con fallback al valor por defecto de desarrollo
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/rehabiapp_telemetry}
+  mongodb:
+    # URI de MongoDB local con fallback al valor por defecto de desarrollo
+    # SB4 usa spring.mongodb.uri (spring.data.mongodb.uri ignorado)
+    uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/rehabiapp_telemetry}
 
 logging:
   level:

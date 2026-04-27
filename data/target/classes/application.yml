@@ -33,6 +33,10 @@ management:
 # La configuracion real del MongoClient con auto-encryption se implementa
 # cuando se crean los modelos de datos (fuera del alcance de esta fase K8s)
 rehabiapp:
+  internal:
+    shared-key: ${API_INTERNAL_SHARED_KEY:}
+  analytics:
+    cron: ${ANALYTICS_REFRESH_CRON:0 5 * * * *}
   csfle:
     enabled: ${CSFLE_ENABLED:false}
     # Namespace del key vault en MongoDB para las claves de cifrado

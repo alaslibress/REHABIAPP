@@ -1,0 +1,173 @@
+openapi: "3.1.0"
+info:
+  title: RehabiAPP Data — Analytics Charts API
+  version: "1.0.0"
+  description: |
+    Internal analytics endpoints consumed by /api (which proxies to /desktop and /mobile).
+    All endpoints require X-Internal-Key header matching API_INTERNAL_SHARED_KEY.
+
+servers:
+  - url: http://localhost:8081
+    description: Local dev
+
+security:
+  - InternalKey: []
+
+components:
+  securitySchemes:
+    InternalKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Key
+
+  schemas:
+    ChartSeries:
+      type: object
+      required: [name, x, y]
+      properties:
+        name:
+          type: string
+          example: "Patient"
+        x:
+          type: array
+          items:
+            type: string
+          example: ["2026-W14", "2026-W15"]
+        y:
+          type: array
+          items:
+            type: number
+            nullable: true
+          example: [68.2, 72.5]
+
+    ChartPayload:
+      type: object
+      required: [chartId, title, xAxisLabel, yAxisLabel, xType, yType, series]
+      properties:
+        chartId:
+          type: string
+          example: "rom_progress"
+        title:
+          type: string
+          example: "Range of motion progress"
+        xAxisLabel:
+          type: string
+        yAxisLabel:
+          type: string
+        xType:
+          type: string
+          enum: [category, time, number]
+        yType:
+          type: string
+          enum: [number]
+        series:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChartSeries"
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+
+paths:
+  /analytics/charts/patient/{dni}/rom-progress:
+    get:
+      summary: ROM weekly progress with cohort mean overlay
+      operationId: romProgress
+      parameters:
+        - name: dni
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[0-9]{8}[A-HJ-NP-TV-Z]$"
+      responses:
+        "200":
+          description: ChartPayload with chartId=rom_progress, one Patient series
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChartPayload"
+        "400":
+          description: Invalid DNI
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid X-Internal-Key
+        "404":
+          description: No data for patient
+
+  /analytics/charts/patient/{dni}/score-by-game:
+    get:
+      summary: Bar chart — average score per gameId last 90 days
+      operationId: scoreByGame
+      parameters:
+        - name: dni
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[0-9]{8}[A-HJ-NP-TV-Z]$"
+      responses:
+        "200":
+          description: ChartPayload with chartId=score_by_game
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChartPayload"
+        "400":
+          description: Invalid DNI
+        "401":
+          description: Missing or invalid X-Internal-Key
+
+  /analytics/charts/patient/{dni}/completion-trend:
+    get:
+      summary: Line chart — weekly completion rate
+      operationId: completionTrend
+      parameters:
+        - name: dni
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[0-9]{8}[A-HJ-NP-TV-Z]$"
+      responses:
+        "200":
+          description: ChartPayload with chartId=completion_trend
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChartPayload"
+        "400":
+          description: Invalid DNI
+        "401":
+          description: Missing or invalid X-Internal-Key
+
+  /analytics/charts/global/level-comparison:
+    get:
+      summary: Bar chart — global average score per progression level
+      operationId: levelComparison
+      responses:
+        "200":
+          description: ChartPayload with chartId=level_comparison
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChartPayload"
+        "401":
+          description: Missing or invalid X-Internal-Key

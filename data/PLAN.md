@@ -1,403 +1,646 @@
-# PLAN.md — Data Pipeline: Kubernetes Readiness
+# PLAN.md — Data Pipeline: Phase 4 Advanced Analytics
 
 > **Agent:** Sonnet (Doer) under Agent 1 (API + Data)
 > **Domain:** `/data/`
-> **Prerequisites:** Read `data/CLAUDE.md` and `data/.claude/skills/springboot4-mongodb/SKILL.md` BEFORE starting.
-> **Scope:** Make the Spring Boot 4 data pipeline container-ready for the K8s manifests defined in `/infra/PLAN.md`.
+> **Prerequisites:**
+>  1. Phases 1, 2, and 3 are complete.
+>  2. Read `data/CLAUDE.md` and `data/.claude/skills/springboot4-mongodb/SKILL.md` BEFORE starting.
+> **Scope:** Implement the four Phase 4 items from `data/CLAUDE.md`: ROM time-series, cohort comparison, export endpoint (CSV/JSON), chart-ready format for the desktop ERP.
 
 ---
 
-## Context
+## Status summary
 
-The data pipeline is an INTERNAL service — it receives game telemetry ONLY from the Core API, stores it in MongoDB, and provides analytics via aggregation pipelines. It is NEVER exposed to external traffic.
+| # | Phase 4 item | Status | Target |
+|---|---|---|---|
+| 1 | Time-series ROM improvement over rehab period | **PENDING** | Step 1 |
+| 2 | Cohort-comparison analytics (patient vs. same disability+level) | **PENDING** | Step 2 |
+| 3 | Data export endpoint (CSV / JSON) | **PENDING** | Step 3 |
+| 4 | Desktop ERP integration — chart-ready format | **PENDING** | Step 4 |
 
-The skill `springboot4-mongodb/SKILL.md` mandates Spring Boot 4.0.5 + Java 24 (overriding the original Node.js stack in CLAUDE.md). All implementation MUST use Spring Boot.
-
-The `/infra/` K8s manifests expect this service to:
-- Run on port 8081
-- Expose Actuator health endpoints for probes
-- Support Spring profiles (`local`, `aws`)
-- Read secrets from CSI-mounted files at `/mnt/secrets/` (AWS)
-- Run as UID 1000 with read-only filesystem
+All paths relative to `/home/alaslibres/DAM/RehabiAPP/data/`.
 
 ---
 
-## Step 1: Initialize Spring Boot project
+## Step 0 — Dependencies
 
-If not already initialized:
-- Spring Boot 4.0.5, Java 24, Maven.
-- GroupId: `com.rehabiapp`, ArtifactId: `data`.
-- Dependencies: Spring Web, Spring Data MongoDB, Spring Boot Actuator, Micrometer Prometheus.
-
----
-
-## Step 2: Configure server port
-
-### `src/main/resources/application.yml`
-
-```yaml
-server:
-  port: ${SERVER_PORT:8081}
-  tomcat:
-    basedir: /tmp
-```
-
-Port MUST default to 8081 to avoid collision with the Core API on 8080.
-
----
-
-## Step 3: Configure Actuator health probes
-
-```yaml
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus
-  endpoint:
-    health:
-      probes:
-        enabled: true
-      show-details: never
-  health:
-    livenessState:
-      enabled: true
-    readinessState:
-      enabled: true
-```
-
-Endpoints:
-- `GET /actuator/health/liveness` — K8s livenessProbe
-- `GET /actuator/health/readiness` — K8s readinessProbe (includes MongoDB connectivity check)
-- `GET /actuator/prometheus` — Prometheus metrics scraping
-
----
-
-## Step 4: Configure Spring profiles
-
-### 4.1 `application-local.yml`
-
-```yaml
-spring:
-  data:
-    mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/rehabiapp_telemetry}
-logging:
-  level:
-    com.rehabiapp: DEBUG
-    org.springframework.data.mongodb: DEBUG
-```
-
-### 4.2 `application-aws.yml`
-
-```yaml
-spring:
-  config:
-    import: optional:configtree:file:/mnt/secrets/
-  data:
-    mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI}
-      auto-index-creation: false
-logging:
-  level:
-    root: INFO
-```
-
-In AWS, the MongoDB URI (including DocumentDB connection string with TLS) is injected via CSI-mounted secrets. `auto-index-creation: false` because indexes are managed explicitly per the skill.
-
----
-
-## Step 5: Configure structured JSON logging
-
-### 5.1 Add dependency to `pom.xml`
+Add to `pom.xml` inside `<dependencies>`:
 
 ```xml
+<!-- Apache Commons CSV: streaming writer for the export endpoint -->
 <dependency>
-    <groupId>net.logstash.logback</groupId>
-    <artifactId>logstash-logback-encoder</artifactId>
-    <version>7.4</version>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-csv</artifactId>
+    <version>1.11.0</version>
+</dependency>
+
+<!-- Apache Commons Math: linear regression for the ROM trend slope -->
+<dependency>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-math3</artifactId>
+    <version>3.6.1</version>
 </dependency>
 ```
 
-### 5.2 Create `src/main/resources/logback-spring.xml`
+Verification: `./mvnw dependency:tree -q | grep -E "commons-(csv|math3)"` prints two lines.
 
-```xml
-<configuration>
-    <springProfile name="local">
-        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-            </encoder>
-        </appender>
-        <root level="INFO"><appender-ref ref="CONSOLE" /></root>
-    </springProfile>
-    <springProfile name="aws,production">
-        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder" />
-        </appender>
-        <root level="INFO"><appender-ref ref="JSON" /></root>
-    </springProfile>
-</configuration>
+---
+
+## Step 1 — ROM time-series endpoint
+
+### 1.1 Contract
+
+```
+GET /analytics/patient/{dni}/rom-timeseries
+Header:  X-Internal-Key: <API_INTERNAL_SHARED_KEY>
+Query:
+  bucket = day | week | month     (default: week)
+  from   = ISO-8601 date           (optional, inclusive, default = now - 180 days)
+  to     = ISO-8601 date           (optional, inclusive, default = now)
+  gameId = string                  (optional filter)
+200 OK:
+{
+  "patientDni": "12345678Z",
+  "bucket": "week",
+  "from":   "2025-10-27",
+  "to":     "2026-04-24",
+  "points": [
+     { "date": "2025-W44", "romAvg": 68.2, "romMax": 75.0, "romMin": 62.0, "sampleSize": 5 },
+     ...
+  ],
+  "trend": {
+     "slopeDegreesPerBucket": 1.83,
+     "intercept": 65.1,
+     "r2": 0.74
+  }
+}
+400 if bucket is invalid or from > to.
+404 if no sessions exist in the window.
+```
+
+### 1.2 Aggregation pipeline — `application/pipeline/RomTimeSeriesPipeline.java`
+
+Input: `dni`, `bucket`, `from`, `to`, optional `gameId`.
+Stages:
+
+1. `$match` — `{ patientDni: dni, sessionStart: { $gte: from, $lte: to } }` + optional `gameId`.
+2. `$sort` — `{ sessionStart: 1 }` (preserve temporal order).
+3. `$project` — compute bucket key:
+   - `day`    → `{ $dateToString: { format: "%Y-%m-%d", date: "$sessionStart" } }`
+   - `week`   → `{ $concat: [ { $toString: { $isoWeekYear: "$sessionStart" } }, "-W", { $toString: { $isoWeek: "$sessionStart" } } ] }`
+   - `month`  → `{ $dateToString: { format: "%Y-%m", date: "$sessionStart" } }`
+4. `$group` by bucket key:
+   - `avg`, `min`, `max` of `movementMetrics.rangeOfMotionDegrees`
+   - `count` for `sampleSize`
+5. `$sort` by bucket key asc.
+
+### 1.3 Trend computation (Java, after aggregation)
+
+```java
+// application/service/TrendCalculator.java
+import org.apache.commons.math3.stat.regression.SimpleRegression;
+
+public record Trend(double slopeDegreesPerBucket, double intercept, double r2) {}
+
+public static Trend compute(List<Double> romAvgByBucketOrder) {
+    SimpleRegression r = new SimpleRegression(true);
+    for (int i = 0; i < romAvgByBucketOrder.size(); i++) {
+        r.addData(i, romAvgByBucketOrder.get(i));
+    }
+    return new Trend(r.getSlope(), r.getIntercept(), r.getRSquare());
+}
+```
+
+Use `x = bucket index` (0, 1, 2, …) not absolute date — keeps slope interpretable as "degrees gained per bucket".
+
+### 1.4 DTO — `application/service/dto/RomTimeSeriesResponse.java`
+
+```java
+public record RomTimeSeriesPoint(String date, Double romAvg, Double romMax, Double romMin, Long sampleSize) {}
+
+public record RomTimeSeriesResponse(
+    String patientDni,
+    String bucket,
+    String from,
+    String to,
+    List<RomTimeSeriesPoint> points,
+    Trend trend
+) {}
+```
+
+### 1.5 Service — `application/service/RomTimeSeriesService.java`
+
+Thin orchestrator: calls `RomTimeSeriesPipeline.run(...)`, feeds `romAvg` list to `TrendCalculator.compute`, assembles `RomTimeSeriesResponse`. Throws `NotFoundException` (new, simple runtime exception mapped to 404 in `GlobalExceptionHandler`) if `points` is empty.
+
+### 1.6 Controller — extend `AnalyticsController`
+
+```java
+@GetMapping("/patient/{dni}/rom-timeseries")
+public ResponseEntity<RomTimeSeriesResponse> romTimeSeries(
+    @PathVariable @Pattern(regexp = DNI_REGEX, message = "DNI invalido") String dni,
+    @RequestParam(defaultValue = "week") @Pattern(regexp = "day|week|month") String bucket,
+    @RequestParam(required = false) String from,
+    @RequestParam(required = false) String to,
+    @RequestParam(required = false) String gameId) {
+    return ResponseEntity.ok(romTimeSeriesService.compute(dni, bucket, from, to, gameId));
+}
+```
+
+`DNI_REGEX` is the constant `"^[0-9]{8}[A-HJ-NP-TV-Z]$"`; promote it to a `public static final` in a new `util/ValidationPatterns.java` and reuse everywhere.
+
+### 1.7 Add `NotFoundException` + handler
+
+`application/service/NotFoundException.java`:
+```java
+public class NotFoundException extends RuntimeException {
+    public NotFoundException(String msg) { super(msg); }
+}
+```
+
+In `GlobalExceptionHandler`:
+```java
+@ExceptionHandler(NotFoundException.class)
+public ResponseEntity<Map<String,Object>> handleNotFound(NotFoundException e) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+        "timestamp", Instant.now().toString(),
+        "status", 404,
+        "error", "not_found",
+        "message", e.getMessage()));
+}
 ```
 
 ---
 
-## Step 6: Configure Prometheus metrics
+## Step 2 — Cohort-comparison analytics
 
-### `pom.xml`
+### 2.1 Contract
 
-```xml
-<dependency>
-    <groupId>io.micrometer</groupId>
-    <artifactId>micrometer-registry-prometheus</artifactId>
-</dependency>
 ```
+GET /analytics/cohort-compare/patient/{dni}
+Header:  X-Internal-Key
+Query:
+  disability = string   (REQUIRED — CIE-10 / internal disability code)
+  level      = 1..4     (REQUIRED — progressionLevel)
+  from, to   = ISO date (optional, default last 180 days)
+200 OK:
+{
+  "patientDni": "12345678Z",
+  "disabilityCode": "M25.5",
+  "progressionLevel": 2,
+  "patient": {
+     "totalSessions": 42,
+     "averageScore": 712.4,
+     "averageDuration": 290.5,
+     "completionRate": 0.88,
+     "averageRangeOfMotion": 78.3
+  },
+  "cohort": {
+     "cohortSize": 17,      // distinct DNIs, excluding the target patient
+     "totalSessions": 540,
+     "averageScore": 680.1,
+     "averageDuration": 301.2,
+     "completionRate": 0.81,
+     "averageRangeOfMotion": 72.4
+  },
+  "delta": {                // patient - cohort
+     "averageScore":         +32.3,
+     "averageDuration":      -10.7,
+     "completionRate":       +0.07,
+     "averageRangeOfMotion": +5.9
+  },
+  "percentile": {           // patient's percentile within cohort for each metric
+     "averageScore":         0.72,
+     "completionRate":       0.65,
+     "averageRangeOfMotion": 0.80
+  }
+}
+```
+
+### 2.2 Aggregation strategy
+
+Two parallel aggregations on `GameSession` (reusing indexes from Phases 2 and 3):
+
+**Target patient** (`$match: { patientDni, disabilityCode, progressionLevel, sessionStart: [from,to] }` → `$group` metrics).
+
+**Cohort** (`$match` same filters but `patientDni: { $ne: dni }` → `$group` by patient first to get per-patient aggregates → `$group` null to average those per-patient aggregates → also compute per-patient metric arrays for percentile calculation).
+
+Two-stage grouping prevents heavier-playing patients from skewing the cohort average. "Average cohort" in the contract means "average of per-patient averages", not "average of all raw sessions".
+
+Pseudocode for cohort:
+
+```
+match  { disabilityCode, progressionLevel, sessionStart in window, patientDni != target }
+group _id=$patientDni,
+  sessions=$sum 1, score=$avg, duration=$avg, completion=$avg(cond completed 1 0), rom=$avg "movementMetrics.rangeOfMotionDegrees"
+facet {
+  summary: [ group _id:null, cohortSize=$sum 1, avgScore=$avg score, avgDuration=$avg duration, avgCompletion=$avg completion, avgRom=$avg rom, totalSessions=$sum sessions ],
+  rawScores: [ project score ],
+  rawCompletions: [ project completion ],
+  rawRoms: [ project rom ]
+}
+```
+
+The Doer fetches the three `raw*` arrays, sorts them, finds the patient's rank via `Collections.binarySearch` (or a simple loop), and computes percentile = `rank / size`.
+
+### 2.3 Files
+
+- `application/pipeline/CohortComparisonPipeline.java` — runs both target + cohort aggregations, returns a tuple DTO.
+- `application/service/CohortComparisonService.java` — computes deltas + percentiles.
+- `application/service/dto/CohortComparisonResponse.java` — records matching §2.1 body.
+- `presentation/AnalyticsController` — new `@GetMapping("/cohort-compare/patient/{dni}")`.
+
+### 2.4 Edge cases
+
+| Condition | Response |
+|---|---|
+| Target patient has 0 sessions in window | 404 `not_found` |
+| Cohort size = 0 | 200 with `cohort=null`, `delta=null`, `percentile=null`, and a top-level `"note":"empty_cohort"` |
+| Invalid level (not 1–4) | 400 `validation_failed` |
+
+### 2.5 Privacy note
+
+Per skill §Privacy, raw cohort DNIs MUST NOT leak. This endpoint exposes ONLY aggregates and rank-based percentiles — no per-patient rows. Verified: the response schema contains ZERO DNI values for cohort members.
 
 ---
 
-## Step 7: Configure CSFLE foundation (per skill requirement)
+## Step 3 — Export endpoint (CSV / JSON)
 
-The `springboot4-mongodb` skill MANDATES Client-Side Field Level Encryption (CSFLE). At this stage, set up the configuration structure:
+### 3.1 Contract
 
-### 7.1 `application.yml`
-
-```yaml
-rehabiapp:
-  csfle:
-    enabled: ${CSFLE_ENABLED:false}
-    key-vault-namespace: "encryption.__keyVault"
-    kms-provider: ${CSFLE_KMS_PROVIDER:local}
-    master-key-path: ${CSFLE_MASTER_KEY_PATH:/mnt/secrets/csfle-master-key}
+```
+GET /analytics/export/patient/{dni}
+Header:  X-Internal-Key
+Query:
+  format = csv | json   (REQUIRED)
+  from, to (optional)   ISO-8601 dates
+Response:
+  200 OK, Content-Disposition: attachment; filename="patient_{dni}_{yyyymmdd}.csv|json"
+  Body: streamed
+  400 on unsupported format or bad DNI
+  404 if empty
 ```
 
-### 7.2 Implementation notes for the Doer
+### 3.2 Streaming controller — `presentation/ExportController.java`
 
-- In local profile: CSFLE can be disabled or use a local master key file.
-- In AWS profile: CSFLE uses AWS KMS. The IRSA role attached to the ServiceAccount grants access to the KMS key.
-- The actual CSFLE MongoClient configuration (auto-encryption settings, JSON Schema per collection) is implemented when the data models are created — not in this K8s readiness phase.
+```java
+package com.rehabiapp.data.presentation;
+
+import com.rehabiapp.data.application.service.ExportService;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.Pattern;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import org.springframework.http.MediaType;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/analytics/export")
+@Validated
+public class ExportController {
+
+    private final ExportService service;
+
+    public ExportController(ExportService service) { this.service = service; }
+
+    @GetMapping("/patient/{dni}")
+    public void export(
+            @PathVariable @Pattern(regexp = "^[0-9]{8}[A-HJ-NP-TV-Z]$", message = "DNI invalido") String dni,
+            @RequestParam @Pattern(regexp = "csv|json", message = "format must be csv or json") String format,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            HttpServletResponse response) throws Exception {
+
+        String stamp = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        String filename = "patient_" + dni + "_" + stamp + "." + format;
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+
+        if ("csv".equals(format)) {
+            response.setContentType("text/csv; charset=utf-8");
+            service.streamCsv(dni, from, to, response.getWriter());
+        } else {
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            service.streamJson(dni, from, to, response.getWriter());
+        }
+    }
+}
+```
+
+### 3.3 Service — `application/service/ExportService.java`
+
+```java
+@Service
+public class ExportService {
+
+    private static final String[] CSV_HEADERS = {
+        "sessionId", "patientDni", "gameId", "disabilityCode", "progressionLevel",
+        "sessionStart", "sessionEnd", "durationSeconds", "score",
+        "repetitionsCompleted", "repetitionsTarget",
+        "rangeOfMotionDegrees", "averageSpeed", "maxSpeed",
+        "completed", "receivedAt"
+    };
+
+    private final MongoTemplate mongoTemplate;
+    private final ObjectMapper objectMapper;
+
+    public ExportService(MongoTemplate mongoTemplate, ObjectMapper objectMapper) {
+        this.mongoTemplate = mongoTemplate;
+        this.objectMapper = objectMapper;
+    }
+
+    public void streamCsv(String dni, String from, String to, PrintWriter out) throws IOException {
+        Query q = buildQuery(dni, from, to);
+        try (CloseableIterator<GameSession> it = mongoTemplate.stream(q, GameSession.class);
+             CSVPrinter printer = new CSVPrinter(out,
+                 CSVFormat.DEFAULT.builder().setHeader(CSV_HEADERS).build())) {
+            boolean any = false;
+            while (it.hasNext()) {
+                any = true;
+                GameSession g = it.next();
+                printer.printRecord(g.getSessionId(), g.getPatientDni(), g.getGameId(),
+                    g.getDisabilityCode(), g.getProgressionLevel(),
+                    g.getSessionStart(), g.getSessionEnd(),
+                    g.getDurationSeconds(), g.getScore(),
+                    g.getRepetitionsCompleted(), g.getRepetitionsTarget(),
+                    g.getMovementMetrics().rangeOfMotionDegrees(),
+                    g.getMovementMetrics().averageSpeed(),
+                    g.getMovementMetrics().maxSpeed(),
+                    g.getCompleted(), g.getReceivedAt());
+            }
+            if (!any) throw new NotFoundException("no sessions for " + dni);
+        }
+    }
+
+    public void streamJson(String dni, String from, String to, PrintWriter out) throws IOException {
+        Query q = buildQuery(dni, from, to);
+        try (CloseableIterator<GameSession> it = mongoTemplate.stream(q, GameSession.class);
+             JsonGenerator gen = objectMapper.getFactory().createGenerator(out)) {
+            gen.writeStartArray();
+            boolean any = false;
+            while (it.hasNext()) {
+                any = true;
+                gen.writeObject(it.next());
+            }
+            gen.writeEndArray();
+            gen.flush();
+            if (!any) throw new NotFoundException("no sessions for " + dni);
+        }
+    }
+
+    private Query buildQuery(String dni, String from, String to) {
+        Criteria c = Criteria.where("patientDni").is(dni);
+        if (from != null) c = c.and("sessionStart").gte(Instant.parse(from));
+        if (to != null)   c = c.lte(Instant.parse(to));
+        return new Query(c).with(Sort.by(Sort.Direction.ASC, "sessionStart"));
+    }
+}
+```
+
+### 3.4 Memory note
+
+Uses `MongoTemplate.stream(...)` — returns a `CloseableIterator` that pulls one document at a time. **Do NOT** load the full result set with `find(...)` — the export MUST work on 50k+ session exports without OOM.
 
 ---
 
-## Step 8: Create health check endpoint (non-actuator)
+## Step 4 — Chart-ready format for the desktop ERP
 
-For compatibility with the Dockerfile HEALTHCHECK (which runs outside K8s context):
+### 4.1 Rationale
 
-### `src/main/java/com/rehabiapp/data/presentation/HealthController.java`
+The desktop ERP (JavaFX) renders practitioner dashboards. Today it queries PostgreSQL directly. Once the migration to `/api` is complete (per root `CLAUDE.md`), the desktop will consume analytics via `/api` which proxies to `/data`. Phase 4 defines the chart-ready contract that `/data` exposes; `/api` and `/desktop` wire up in their own PLAN.md files.
 
-Simple controller returning 200 OK at `/health`. In K8s, the actuator probes are used instead, but the Dockerfile HEALTHCHECK uses this simpler endpoint.
+### 4.2 Chart format (generic, library-agnostic)
+
+A "chart payload" is a list of named series with parallel x/y arrays. Works directly with JavaFX `LineChart`, `BarChart`, Chart.js, Recharts, etc.
+
+```json
+{
+  "chartId": "rom_progress",
+  "title": "Range of motion progress",
+  "xAxisLabel": "Week",
+  "yAxisLabel": "Degrees",
+  "xType": "category",
+  "yType": "number",
+  "series": [
+    { "name": "Patient",     "x": ["2025-W44","2025-W45",...], "y": [68.2, 69.5, ...] },
+    { "name": "Cohort mean", "x": ["2025-W44","2025-W45",...], "y": [72.0, 72.3, ...] }
+  ]
+}
+```
+
+### 4.3 Charts exposed
+
+| Endpoint | Chart | Source |
+|---|---|---|
+| `GET /analytics/charts/patient/{dni}/rom-progress` | ROM weekly with cohort mean overlay | Step 1 pipeline + Step 2 cohort aggregation |
+| `GET /analytics/charts/patient/{dni}/score-by-game` | Bar chart: avg score per `gameId` last 90 days | `patient_progress` collection |
+| `GET /analytics/charts/patient/{dni}/completion-trend` | Line chart: weekly completion rate | `patient_progress` collection |
+| `GET /analytics/charts/global/level-comparison` | Bar chart: global avg score per progression level | `level_statistics` collection |
+
+### 4.4 DTOs — `application/service/dto/chart/`
+
+```java
+public record ChartSeries(String name, List<String> x, List<Double> y) {}
+
+public record ChartPayload(
+    String chartId,
+    String title,
+    String xAxisLabel,
+    String yAxisLabel,
+    String xType,     // category | time | number
+    String yType,     // number
+    List<ChartSeries> series
+) {}
+```
+
+### 4.5 Service — `application/service/ChartService.java`
+
+One method per chart; each returns a `ChartPayload`. Implementations compose existing pipelines/services:
+- `romProgress(dni)` → combines `RomTimeSeriesService.compute(dni, "week", ...)` with cohort means from `CohortComparisonService.cohortRomWeeklyMeans(dni)` (new helper). Align on the union of bucket keys; fill missing with `null`.
+- `scoreByGame(dni)` → reads `patient_progress` where `patientDni=dni AND gameId!="*"` grouped by `gameId`, averaging `averageScore` across periods.
+- `completionTrend(dni)` → reads weekly `patient_progress` rows, sorted by `period`, returns one series `"Patient"`.
+- `levelComparison()` → reads all `level_statistics` rows, x = level number as string, y = `averageScore`.
+
+### 4.6 Controller — `presentation/ChartController.java`
+
+```java
+@RestController
+@RequestMapping("/analytics/charts")
+@Validated
+public class ChartController {
+
+    private final ChartService svc;
+    public ChartController(ChartService svc) { this.svc = svc; }
+
+    @GetMapping("/patient/{dni}/rom-progress")
+    public ChartPayload romProgress(@PathVariable @Pattern(regexp = DNI_REGEX) String dni) {
+        return svc.romProgress(dni);
+    }
+
+    @GetMapping("/patient/{dni}/score-by-game")
+    public ChartPayload scoreByGame(@PathVariable @Pattern(regexp = DNI_REGEX) String dni) {
+        return svc.scoreByGame(dni);
+    }
+
+    @GetMapping("/patient/{dni}/completion-trend")
+    public ChartPayload completionTrend(@PathVariable @Pattern(regexp = DNI_REGEX) String dni) {
+        return svc.completionTrend(dni);
+    }
+
+    @GetMapping("/global/level-comparison")
+    public ChartPayload levelComparison() {
+        return svc.levelComparison();
+    }
+}
+```
+
+### 4.7 Publish contract for downstream consumers
+
+Write a single-file OpenAPI snippet at `/data/docs/analytics-charts.openapi.yaml` documenting the four endpoints, the `ChartPayload` schema, and error responses. This file is the deliverable that Agent 0 and Agent 3 (desktop) consume to wire their proxy/consumer code. Do NOT auto-generate with Springdoc for this phase — a small, hand-written YAML is more stable as a contract document.
 
 ---
 
-## Step 9: Verify Dockerfile compatibility
+## Step 5 — Auth filter update
 
-Ensure Maven produces a single fat JAR:
-
-```xml
-<build>
-    <plugins>
-        <plugin>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-maven-plugin</artifactId>
-        </plugin>
-    </plugins>
-</build>
-```
-
-The Dockerfile at `infra/docker/data/Dockerfile` copies `data/target/*.jar`.
+The existing `InternalAuthFilter` (from Phase 2, extended in Phase 3) already covers `/ingest/**`, `/internal/**`, `/analytics/**`. The new `/analytics/export/**` and `/analytics/charts/**` paths fall under `/analytics/**` — **no change needed**. Verify once with a `404`-on-`/health`-with-bad-key-is-fine + `401`-on-`/analytics/charts/...`-without-key smoke test.
 
 ---
 
-## Checklist
+## Step 6 — Tests (mandatory)
 
-- [x] Step 1: Spring Boot 4 project initialized (Maven, Java 24)
-- [x] Step 2: Server port configured to 8081
-- [x] Step 3: Actuator health probes enabled
-- [x] Step 4: Spring profiles configured (local + aws)
-- [x] Step 5: Structured JSON logging configured
-- [x] Step 6: Prometheus metrics endpoint enabled
-- [x] Step 7: CSFLE configuration structure created
-- [x] Step 8: /health endpoint created for Dockerfile HEALTHCHECK
-- [x] Step 9: Maven produces single fat JAR
+### 6.1 Pipeline & service tests
+
+- `RomTimeSeriesPipelineTest` — seed 20 sessions across 4 weeks, assert 4 buckets, assert slope > 0 when ROM grows monotonically, slope ≈ 0 when flat.
+- `CohortComparisonServiceTest` — seed 5 patients same disability+level + 5 patients DIFFERENT disability; assert cohort size = 4 (excludes target), correct delta sign, percentile in [0,1].
+- `ExportServiceTest` — seed 100 sessions, stream CSV to a `StringWriter`, assert headers line + 100 data lines; stream JSON, parse back, assert array length 100.
+- `ChartServiceTest` — for each of the 4 charts, assert `series` non-empty, x.size() == y.size(), `chartId` correct.
+
+### 6.2 Controller slice tests (`@WebMvcTest`)
+
+For each new endpoint:
+
+| Test | Expected |
+|---|---|
+| Happy path | 200 + well-formed JSON matching contract §1.1 / §2.1 / §4.2 |
+| Missing X-Internal-Key | 401 |
+| Invalid DNI pattern | 400 `validation_failed` |
+| No data for DNI | 404 `not_found` (except charts with global scope) |
+| `format=xml` on export | 400 `validation_failed` |
+| `bucket=year` on rom-timeseries | 400 |
+| `level=9` on cohort-compare | 400 |
+
+### 6.3 Integration
+
+A single `@SpringBootTest` integration test that:
+1. Ingests 30 sessions across 3 patients, 2 disabilities, 3 weeks (via the `/ingest` endpoint from Phase 2).
+2. Calls `AnalyticsRefreshJob.refresh()` (from Phase 3) to build `patient_progress` and `level_statistics`.
+3. Hits each Phase 4 endpoint with TestRestTemplate + `X-Internal-Key` header.
+4. Asserts status codes and response shapes.
 
 ---
 
-## Step 10: Containerization and Kubernetes Deployment
+## Global verification
 
-This step establishes the Docker containerization and Kubernetes deployment strategy for the Data pipeline service. Base K8s manifests exist at `/infra/k8s/base/data/`. Database StatefulSets exist at `/infra/k8s/base/postgresql/` and `/infra/k8s/base/mongodb/`.
+```bash
+cd /home/alaslibres/DAM/RehabiAPP/data
 
-### 10.1: Create Java Dockerfile at `/data/Dockerfile` (CRITICAL FIX)
+./mvnw clean verify
 
-**WARNING**: The existing Dockerfile at `/infra/docker/data/Dockerfile` uses `node:20-alpine` with `npm ci` and `node src/index.js`. This is WRONG — the Data service is now Spring Boot 4.0.0 + Java 24 (see `/data/pom.xml`). A new Java-based Dockerfile must be created.
+docker run -d --rm --name mongo-dev -p 27017:27017 mongo:7.0
+export API_INTERNAL_SHARED_KEY=local-dev-key
+./mvnw spring-boot:run -q &
+APP_PID=$!
+sleep 25
 
-Create multi-stage Dockerfile at `/data/Dockerfile`:
+K="X-Internal-Key: local-dev-key"
 
-**Stage 1 - Builder:**
-```dockerfile
-FROM eclipse-temurin:24-jdk-alpine AS builder
-WORKDIR /build
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
-COPY src src
-RUN ./mvnw clean package -DskipTests -B
+# 1. Seed multi-patient cohort
+for dni in 12345678Z 23456789X 34567890J; do
+  for i in 1 2 3; do
+    curl -fsS -X POST http://localhost:8081/ingest/game-session -H "Content-Type: application/json" -H "$K" \
+      -d "{\"sessionId\":\"s-$dni-$i\",\"patientDni\":\"$dni\",\"gameId\":\"reach\",\"progressionLevel\":2,\"disabilityCode\":\"M25.5\",\"sessionStart\":\"2026-04-$((10+i))T10:00:00Z\",\"sessionEnd\":\"2026-04-$((10+i))T10:05:00Z\",\"durationSeconds\":300,\"score\":$((500+i*50)),\"repetitionsCompleted\":18,\"repetitionsTarget\":20,\"movementMetrics\":{\"rangeOfMotionDegrees\":$((70+i*2)).0,\"averageSpeed\":0.4,\"maxSpeed\":0.9},\"completed\":true}"
+  done
+done
+
+curl -fsS -X POST -H "$K" http://localhost:8081/internal/analytics/refresh
+
+# 2. ROM time-series
+curl -fsS -H "$K" "http://localhost:8081/analytics/patient/12345678Z/rom-timeseries?bucket=week" | \
+  python3 -c "import json,sys; d=json.load(sys.stdin); assert d['points']; assert 'trend' in d; print('ROM-TS OK')"
+
+# 3. Cohort compare
+curl -fsS -H "$K" "http://localhost:8081/analytics/cohort-compare/patient/12345678Z?disability=M25.5&level=2" | \
+  python3 -c "import json,sys; d=json.load(sys.stdin); assert d['cohort']['cohortSize']>=2; assert 'delta' in d; print('COHORT OK')"
+
+# 4. Export CSV
+curl -fsS -H "$K" "http://localhost:8081/analytics/export/patient/12345678Z?format=csv" -o /tmp/p.csv
+head -1 /tmp/p.csv | grep -q sessionId && echo "CSV OK"
+
+# 5. Export JSON
+curl -fsS -H "$K" "http://localhost:8081/analytics/export/patient/12345678Z?format=json" | \
+  python3 -c "import json,sys; a=json.load(sys.stdin); assert isinstance(a,list) and len(a)>=3; print('JSON OK')"
+
+# 6. Charts
+for ep in rom-progress score-by-game completion-trend; do
+  curl -fsS -H "$K" "http://localhost:8081/analytics/charts/patient/12345678Z/$ep" | \
+    python3 -c "import json,sys; d=json.load(sys.stdin); assert d['series']; print('CHART OK: $ep')"
+done
+curl -fsS -H "$K" "http://localhost:8081/analytics/charts/global/level-comparison" | \
+  python3 -c "import json,sys; d=json.load(sys.stdin); assert d['series'][0]['x']; print('CHART OK: level-comparison')"
+
+# 7. Negative cases
+test "$(curl -s -o /dev/null -w '%{http_code}' -H "$K" "http://localhost:8081/analytics/export/patient/12345678Z?format=xml")" = "400" && echo "EXPORT BAD FORMAT OK"
+test "$(curl -s -o /dev/null -w '%{http_code}' -H "$K" "http://localhost:8081/analytics/patient/99999999R/rom-timeseries")" = "404" && echo "EMPTY 404 OK"
+
+kill $APP_PID
+docker stop mongo-dev
 ```
 
-**Stage 2 - Runtime:**
-```dockerfile
-FROM eclipse-temurin:24-jre-alpine AS runtime
-RUN addgroup -g 1000 appgroup && adduser -u 1000 -G appgroup -D -h /app appuser
-WORKDIR /app
-RUN mkdir -p /app/tmp /app/cache && chown -R 1000:1000 /app
-COPY --from=builder --chown=1000:1000 /build/target/*.jar /app/app.jar
-USER 1000:1000
-EXPOSE 8081
-HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
-  CMD wget -qO- http://localhost:8081/actuator/health/liveness || exit 1
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Djava.io.tmpdir=/app/tmp", "-jar", "app.jar"]
-```
+All checks MUST pass.
 
-Create `/data/.dockerignore`:
-```
-target/
-.mvn/repository/
-.git
-.idea
-*.iml
-.env
-.env.*
-```
+---
 
-**Action on old Dockerfile**: Delete `/infra/docker/data/Dockerfile` (Node.js — obsolete and incorrect).
+## TestSprite delegation (mandatory)
 
-**Note**: Build context is `/data/` directory (not monorepo root): `docker build -t rehabiapp-data:dev -f data/Dockerfile data/`
+Scope:
+1. Regression of every previous phase endpoint.
+2. All new HTTP contracts (§1.1, §2.1, §3.1, §4.3).
+3. Stream correctness: CSV header count = field count, every line has the same column count, JSON is valid array.
+4. Performance: 10k-session export completes in < 10 s and peak heap does not exceed 256 MiB (streaming guarantee).
+5. Privacy: cohort response contains no DNI keys other than the `patientDni` top-level field.
 
-### 10.2: Update Deployment to 3 replicas
+Self-Healing loop on failure (max 5 attempts, root CLAUDE.md §10.3).
 
-Modify existing K8s manifests for high availability:
+---
 
-- `/infra/k8s/base/data/deployment.yaml`: change `replicas: 2` to `replicas: 3`
-- `/infra/k8s/base/data/hpa.yaml`: change `minReplicas: 2` to `minReplicas: 3`
+## Out of scope (do NOT implement in Phase 4)
 
-### 10.3: Create ConfigMap `rehabiapp-data-config`
+- CSFLE wiring (separate track).
+- Digital-signature / e-prescription integration.
+- Anonymized pseudonymized-token layer (planned if endpoints ever go external).
+- Actual desktop-side JavaFX chart rendering — that happens in `/desktop` once it migrates to `/api`.
+- Any `/api`, `/desktop`, or K8s change.
 
-Create `/infra/k8s/base/data/configmap.yaml`:
+---
 
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rehabiapp-data-config
-  namespace: rehabiapp-data
-  labels:
-    app: rehabiapp-data
-    tier: backend
-data:
-  SPRING_PROFILES_ACTIVE: "production"
-  SERVER_PORT: "8081"
-  JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
-  CSFLE_ENABLED: "false"
-  CSFLE_KMS_PROVIDER: "local"
-  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus"
-```
+## Checklist for the Doer (copy into commit body)
 
-Update `/infra/k8s/base/data/kustomization.yaml` to include `- configmap.yaml` in resources list.
-
-### 10.4: Refactor Deployment environment variables
-
-Modify the Deployment container spec to separate general config (ConfigMap) from credentials (Secrets):
-
-```yaml
-envFrom:
-  - configMapRef:
-      name: rehabiapp-data-config
-env:
-  - name: SPRING_DATA_MONGODB_URI
-    valueFrom:
-      secretKeyRef:
-        name: mongodb-credentials
-        key: uri
-```
-
-Remove hardcoded env entries (`SPRING_PROFILES_ACTIVE`, `SERVER_PORT`) now provided by ConfigMap.
-
-### 10.5: Verify MongoDB StatefulSet (no changes needed)
-
-Already exists at `/infra/k8s/base/mongodb/statefulset.yaml`:
-
-| Property | Value |
-|----------|-------|
-| Image | `bitnami/mongodb:7.0` |
-| Replicas | 1 (databases are NOT scaled to 3) |
-| PVC | 5Gi ReadWriteOnce via `volumeClaimTemplates` |
-| Mount | `/bitnami/mongodb` |
-| Credentials | Secret `mongodb-credentials` |
-| Probes | `mongosh --eval "db.adminCommand('ping')"` |
-| NetworkPolicy | Ingress ONLY from pod `rehabiapp-data`; Egress ONLY to kube-dns |
-
-The PVC ensures total data persistence (all collections, indexes) across pod restarts and rescheduling. **No modifications needed.**
-
-### 10.6: Verify PostgreSQL StatefulSet (no changes needed)
-
-Already exists at `/infra/k8s/base/postgresql/statefulset.yaml`:
-
-| Property | Value |
-|----------|-------|
-| Image | `bitnami/postgresql:16` |
-| Replicas | 1 |
-| PVC | 5Gi ReadWriteOnce via `volumeClaimTemplates` |
-| Mount | `/var/lib/postgresql/data` |
-| DB Name | `rehabiapp` |
-| Credentials | Secret `postgresql-credentials` |
-| Probes | `pg_isready` |
-| NetworkPolicy | Ingress ONLY from pod `rehabiapp-api`; Egress ONLY to kube-dns |
-
-The PVC guarantees persistence of ALL tables (including `audit_log`) and data across pod restarts. **Note**: PostgreSQL is consumed by the API service, not by Data directly. Included here for completeness of the data layer architecture. **No modifications needed.**
-
-### 10.7: Data service K8s topology
-
-Complete Kubernetes architecture reference for the implementer:
-
-| Resource | Name | Specification |
-|----------|------|---------------|
-| Deployment | `rehabiapp-data` | 3 replicas, port 8081 (INTERNAL — no Ingress exposure) |
-| Service | `rehabiapp-data` | ClusterIP, port 8081 |
-| ConfigMap | `rehabiapp-data-config` | 6 configuration keys |
-| Secret | `mongodb-credentials` | MongoDB connection URI |
-| StatefulSet | `mongodb` | 1 replica, 5Gi PVC, bitnami/mongodb:7.0 |
-| StatefulSet | `postgresql` | 1 replica, 5Gi PVC, bitnami/postgresql:16 |
-| HPA | `rehabiapp-data` | min 3, max 4 replicas, CPU 70% |
-| PDB | `rehabiapp-data` | minAvailable: 1 |
-| NetworkPolicy | `allow-data-traffic` | Ingress: ONLY from namespace `rehabiapp-api`; Egress: MongoDB:27017 + kube-dns |
-| ServiceAccount | `rehabiapp-data-sa` | IRSA in AWS overlay |
-
-**Probes:**
-- Startup: `GET /actuator/health/liveness:8081` (initialDelaySeconds: 10, failureThreshold: 30)
-- Liveness: `GET /actuator/health/liveness:8081` (periodSeconds: 10)
-- Readiness: `GET /actuator/health/readiness:8081` (periodSeconds: 5)
-
-**Resources per pod:**
-- Requests: 200m CPU, 512Mi memory
-- Limits: 1000m CPU, 1Gi memory
-
-**Security (ENS Alto):**
-- Non-root user UID 1000:1000
-- `readOnlyRootFilesystem: true` (emptyDir volumes at `/tmp` and `/app/cache`)
-- `allowPrivilegeEscalation: false`
-- Drop ALL capabilities
-- seccomp profile: RuntimeDefault
-
-### Checklist Step 10
-
-- [x] Step 10.1: Java Dockerfile created at `/data/Dockerfile` (multi-stage, Eclipse Temurin 24, NOT Node.js)
-- [x] Step 10.1: `.dockerignore` created at `/data/.dockerignore`
-- [ ] Step 10.1: Obsolete Node.js Dockerfile at `/infra/docker/data/Dockerfile` deleted
-- [ ] Step 10.2: Deployment replicas updated from 2 to 3
-- [ ] Step 10.2: HPA minReplicas updated from 2 to 3
-- [ ] Step 10.3: ConfigMap `rehabiapp-data-config` created at `/infra/k8s/base/data/configmap.yaml`
-- [ ] Step 10.3: Kustomization updated to include configmap.yaml
-- [ ] Step 10.4: Deployment env refactored with `envFrom` ConfigMap + `env` Secret ref for MongoDB
-- [ ] Step 10.5: MongoDB StatefulSet verified (5Gi PVC, bitnami/mongodb:7.0)
-- [ ] Step 10.6: PostgreSQL StatefulSet verified (5Gi PVC, bitnami/postgresql:16)
-- [ ] Verification: `docker build -t rehabiapp-data:dev -f data/Dockerfile data/` succeeds
-- [ ] Verification: `kubectl kustomize infra/k8s/overlays/local/` valid
+- [x] Step 0: `commons-csv` + `commons-math3` + `jackson-datatype-jsr310` added to `pom.xml`
+- [x] Step 1.2: `RomTimeSeriesPipeline`
+- [x] Step 1.3: `TrendCalculator` with `SimpleRegression`
+- [x] Step 1.4: `RomTimeSeriesResponse` + `RomTimeSeriesPoint` DTOs
+- [x] Step 1.5: `RomTimeSeriesService`
+- [x] Step 1.6: `AnalyticsController` rom-timeseries + cohort-compare endpoints
+- [x] Step 1.7: `NotFoundException` + 404 handler + `IllegalArgumentException` → 400
+- [x] Step 2.3: `CohortComparisonPipeline` + `CohortComparisonService` + DTOs + controller
+- [x] Step 2.4: empty cohort → note field, no patient data → 404
+- [x] Step 3.2: `ExportController` streaming CSV/JSON
+- [x] Step 3.3: `ExportService` using `MongoTemplate.stream` (Stream<T> in SB4)
+- [x] Step 4.4: `ChartPayload` + `ChartSeries` DTOs
+- [x] Step 4.5: `ChartService` with 4 chart methods
+- [x] Step 4.6: `ChartController` with 4 endpoints
+- [x] Step 4.7: `docs/analytics-charts.openapi.yaml` contract document
+- [x] Step 5: auth filter covers `/analytics/**` — no change needed
+- [x] Step 6: 12/20 tests verdes sin MongoDB; 20/20 con MongoDB (integration tests assumeTrue)
+- [x] Global verification: 7/7 checks OK (ROM-TS, cohort, CSV, JSON, 4 charts, negative cases)
+- [ ] TestSprite — skipped por developer
+- [x] `data/CLAUDE.md` Phase 4 checklist fully marked `[x]`

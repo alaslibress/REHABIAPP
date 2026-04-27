@@ -8,6 +8,7 @@ com/rehabiapp/api/domain/entity/PacienteDiscapacidad.class
 com/rehabiapp/api/domain/repository/TratamientoRepository.class
 com/rehabiapp/api/application/dto/ActualizarNotasRequest.class
 com/rehabiapp/api/application/dto/RefreshRequest.class
+com/rehabiapp/api/domain/entity/Articulacion.class
 com/rehabiapp/api/domain/repository/DireccionRepository.class
 com/rehabiapp/api/presentation/controller/CitaController.class
 com/rehabiapp/api/application/dto/CitaRequest.class
@@ -17,6 +18,7 @@ com/rehabiapp/api/domain/repository/PacienteTratamientoRepository.class
 com/rehabiapp/api/application/dto/PacienteRequest.class
 com/rehabiapp/api/application/mapper/CitaMapperImpl.class
 com/rehabiapp/api/application/mapper/PacienteTratamientoMapperImpl.class
+com/rehabiapp/api/domain/repository/JuegoRepository.class
 com/rehabiapp/api/domain/repository/PacienteRepository.class
 com/rehabiapp/api/application/dto/PacienteTratamientoResponse.class
 com/rehabiapp/api/application/mapper/DiscapacidadMapper.class
@@ -26,6 +28,7 @@ com/rehabiapp/api/application/dto/TratamientoResponse.class
 com/rehabiapp/api/domain/entity/CitaId.class
 com/rehabiapp/api/application/mapper/PacienteMapper.class
 com/rehabiapp/api/application/dto/DiscapacidadRequest.class
+com/rehabiapp/api/application/dto/JuegoRequest.class
 com/rehabiapp/api/application/mapper/SanitarioMapper.class
 com/rehabiapp/api/infrastructure/encryption/CampoClinicoConverter.class
 com/rehabiapp/api/domain/repository/PacienteDiscapacidadRepository.class
@@ -33,12 +36,14 @@ com/rehabiapp/api/application/dto/LoginResponse.class
 com/rehabiapp/api/application/dto/PacienteDiscapacidadResponse.class
 com/rehabiapp/api/presentation/controller/AsignacionController.class
 com/rehabiapp/api/domain/enums/Rol.class
+com/rehabiapp/api/application/mapper/ArticulacionMapperImpl.class
 com/rehabiapp/api/application/service/CitaService.class
 com/rehabiapp/api/application/mapper/DiscapacidadMapperImpl.class
 com/rehabiapp/api/presentation/controller/CatalogoController.class
 com/rehabiapp/api/application/dto/PacienteTratamientoRequest.class
 com/rehabiapp/api/application/mapper/PacienteTratamientoMapper.class
 com/rehabiapp/api/ApiApplication.class
+com/rehabiapp/api/domain/entity/Juego.class
 com/rehabiapp/api/application/service/CatalogoService.class
 com/rehabiapp/api/application/mapper/PacienteDiscapacidadMapper.class
 com/rehabiapp/api/application/dto/NivelProgresionResponse.class
@@ -53,6 +58,7 @@ com/rehabiapp/api/domain/audit/RehabiRevisionEntity.class
 com/rehabiapp/api/application/dto/CitaResponse.class
 com/rehabiapp/api/domain/repository/SanitarioRepository.class
 com/rehabiapp/api/application/dto/SanitarioResponse.class
+com/rehabiapp/api/application/dto/JuegoResponse.class
 com/rehabiapp/api/domain/repository/CitaRepository.class
 com/rehabiapp/api/domain/entity/NivelProgresion.class
 com/rehabiapp/api/infrastructure/security/PasswordService.class
@@ -60,6 +66,7 @@ com/rehabiapp/api/application/service/SanitarioService.class
 com/rehabiapp/api/domain/enums/AccionAuditoria.class
 com/rehabiapp/api/infrastructure/audit/AuditReadInterceptor.class
 com/rehabiapp/api/domain/entity/Direccion.class
+com/rehabiapp/api/application/mapper/JuegoMapper.class
 com/rehabiapp/api/infrastructure/security/JwtAuthenticationFilter.class
 com/rehabiapp/api/domain/entity/Discapacidad.class
 com/rehabiapp/api/presentation/handler/GlobalExceptionHandler.class
@@ -72,6 +79,7 @@ com/rehabiapp/api/infrastructure/config/FlywayConfig.class
 com/rehabiapp/api/domain/entity/Cita.class
 com/rehabiapp/api/domain/entity/SanitarioRol.class
 com/rehabiapp/api/application/dto/DiscapacidadResponse.class
+com/rehabiapp/api/application/mapper/ArticulacionMapper.class
 com/rehabiapp/api/application/dto/TratamientoRequest.class
 com/rehabiapp/api/application/service/PacienteService.class
 com/rehabiapp/api/domain/entity/DiscapacidadTratamientoId.class
@@ -88,10 +96,13 @@ com/rehabiapp/api/domain/entity/PacienteDiscapacidadId.class
 com/rehabiapp/api/domain/entity/Localidad.class
 com/rehabiapp/api/domain/entity/CodigoPostal.class
 com/rehabiapp/api/application/dto/PacienteDiscapacidadRequest.class
+com/rehabiapp/api/application/mapper/JuegoMapperImpl.class
 com/rehabiapp/api/domain/entity/Sanitario.class
 com/rehabiapp/api/domain/entity/PacienteTratamientoId.class
 com/rehabiapp/api/domain/repository/DiscapacidadRepository.class
+com/rehabiapp/api/application/dto/JuegoAsociarRequest.class
 com/rehabiapp/api/domain/entity/Paciente.class
+com/rehabiapp/api/domain/repository/ArticulacionRepository.class
 com/rehabiapp/api/infrastructure/config/WebMvcConfig.class
 com/rehabiapp/api/domain/audit/RehabiRevisionListener.class
 com/rehabiapp/api/domain/enums/Sexo.class
@@ -99,3 +110,4 @@ com/rehabiapp/api/domain/entity/TelefonoPaciente.class
 com/rehabiapp/api/infrastructure/config/SecurityConfig.class
 com/rehabiapp/api/domain/entity/Tratamiento.class
 com/rehabiapp/api/presentation/controller/SanitarioController.class
+com/rehabiapp/api/application/dto/ArticulacionResponse.class

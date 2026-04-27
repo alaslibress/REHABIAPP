@@ -1,10 +1,14 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/ApiApplication.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/ActualizarNotasRequest.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/ArticulacionResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/CitaRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/CitaResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/DireccionDto.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/DiscapacidadRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/DiscapacidadResponse.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/JuegoAsociarRequest.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/JuegoRequest.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/JuegoResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/LoginRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/LoginResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/NivelProgresionResponse.java
@@ -20,8 +24,10 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/SanitarioResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/TratamientoRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/TratamientoResponse.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/ArticulacionMapper.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/CitaMapper.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/DiscapacidadMapper.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/JuegoMapper.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/NivelProgresionMapper.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/PacienteDiscapacidadMapper.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/mapper/PacienteMapper.java
@@ -36,6 +42,7 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/service/SanitarioService.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/audit/RehabiRevisionEntity.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/audit/RehabiRevisionListener.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/Articulacion.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/AuditLog.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/Cita.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/CitaId.java
@@ -44,6 +51,7 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/Discapacidad.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/DiscapacidadTratamiento.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/DiscapacidadTratamientoId.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/Juego.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/Localidad.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/NivelProgresion.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/Paciente.java
@@ -61,12 +69,14 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/enums/Sexo.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/exception/AccesoNoPermitidoException.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/exception/RecursoNoEncontradoException.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/ArticulacionRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/AuditLogRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/CitaRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/CodigoPostalRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/DireccionRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/DiscapacidadRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/DiscapacidadTratamientoRepository.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/JuegoRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/LocalidadRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/NivelProgresionRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/PacienteDiscapacidadRepository.java

@@ -7,8 +7,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-04-13T12:05:14+0200",
-    comments = "version: 1.6.3, compiler: javac, environment: Java 24.0.2 (Oracle Corporation)"
+    date = "2026-04-24T02:16:13+0200",
+    comments = "version: 1.6.3, compiler: javac, environment: Java 26 (Red Hat, Inc.)"
 )
 @Component
 public class DiscapacidadMapperImpl implements DiscapacidadMapper {
@@ -28,8 +28,10 @@ public class DiscapacidadMapperImpl implements DiscapacidadMapper {
         descripcionDis = discapacidad.getDescripcionDis();
 
         Boolean necesitaProtesis = discapacidad.isNecesitaProtesis();
+        Integer idArticulacion = discapacidad.getArticulacion() != null ? discapacidad.getArticulacion().getIdArticulacion() : null;
+        String nombreArticulacion = discapacidad.getArticulacion() != null ? discapacidad.getArticulacion().getNombre() : null;
 
-        DiscapacidadResponse discapacidadResponse = new DiscapacidadResponse( codDis, nombreDis, descripcionDis, necesitaProtesis );
+        DiscapacidadResponse discapacidadResponse = new DiscapacidadResponse( codDis, nombreDis, descripcionDis, necesitaProtesis, idArticulacion, nombreArticulacion );
 
         return discapacidadResponse;
     }

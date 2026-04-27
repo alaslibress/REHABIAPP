@@ -1,2 +1,7 @@
 /home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/DataApplicationTest.java
+/home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/application/pipeline/PipelineIntegrationTest.java
+/home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/application/service/AnalyticsRefreshJobTest.java
+/home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/domain/repository/GameSessionRepositoryTest.java
+/home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/presentation/AnalyticsControllerTest.java
 /home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/presentation/HealthControllerTest.java
+/home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/presentation/IngestControllerTest.java

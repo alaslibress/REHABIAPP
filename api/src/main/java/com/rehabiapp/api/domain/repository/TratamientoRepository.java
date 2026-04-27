@@ -30,4 +30,7 @@ public interface TratamientoRepository extends JpaRepository<Tratamiento, String
 
     boolean existsByNombreTrat(String nombreTrat);
     boolean existsByNombreTratAndCodTratNot(String nombreTrat, String codTrat);
+
+    /** Verifica si algun tratamiento tiene asociado el juego indicado. */
+    boolean existsByJuegoCodJuego(String codJuego);
 }

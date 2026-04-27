@@ -1,2 +1,7 @@
-com/rehabiapp/data/DataApplicationTest.class
 com/rehabiapp/data/presentation/HealthControllerTest.class
+com/rehabiapp/data/DataApplicationTest.class
+com/rehabiapp/data/application/service/AnalyticsRefreshJobTest.class
+com/rehabiapp/data/presentation/IngestControllerTest.class
+com/rehabiapp/data/domain/repository/GameSessionRepositoryTest.class
+com/rehabiapp/data/presentation/AnalyticsControllerTest.class
+com/rehabiapp/data/application/pipeline/PipelineIntegrationTest.class

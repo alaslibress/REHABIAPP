@@ -255,6 +255,10 @@ JWT Java:  Issued by Java API, signed with Java's own key
 - [ ] Errores de userStore parseados con parseGraphQLError (consistencia con authStore).
 - [ ] Flujo login verificado desde telefono fisico.
 
+### Sprint Progreso (2026-04-27)
+
+- [ ] Smoke test manual del endpoint `GET /api/pacientes/{dni}/tratamientos/{cod}/documento` una vez `/api` Phase 8 lo entregue (verificar que el BFF stream el PDF correctamente al frontend).
+
 ---
 
 ## 7. KUBERNETES TOPOLOGY

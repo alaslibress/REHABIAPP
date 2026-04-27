@@ -112,35 +112,25 @@ PatientProgress {
 
 ### Phase 1: Project setup
 
-- [ ] Initialize Node.js project with Express and TypeScript (or plain JS with JSDoc).
-- [ ] Configure MongoDB connection via Mongoose (connection string from environment variables).
-- [ ] Define folder structure (models, routes, controllers, services, pipelines, utils, config).
-- [ ] Set up environment configuration (.env with MongoDB URI, port, API keys).
-- [ ] Health check endpoint (GET /health).
+> Stack overridden by skill `springboot4-mongodb`: Spring Boot 4 + Java 24 + Spring Data MongoDB (NOT Node.js/Mongoose). Checklist interpreted against the Spring Boot stack.
 
-### Phase 2: Schema and ingestion
+- [x] Initialize project with build tool and typed stack — **implemented as Spring Boot 4.0.0 + Java 24 + Maven** (`pom.xml`, `DataApplication.java`).
+- [x] Configure MongoDB connection (connection string from env vars) — **Spring Data MongoDB** via `spring.data.mongodb.uri` in `application-local.yml` / `application-aws.yml`.
+- [x] Define folder structure — `domain/model`, `domain/repository`, `application/service`, `application/pipeline`, `infrastructure/config`, `infrastructure/util` creados con `.gitkeep`.
+- [x] Set up environment configuration — `.env.example` creado en `/data/.env.example`; `.gitignore` añadido.
+- [x] Health check endpoint (GET /health) — `HealthController` returns 200 OK.
 
-- [ ] Define Mongoose schema for GameSession (matching the telemetry JSON from /games).
-- [ ] Define Mongoose schema for PatientProgress (pre-aggregated analytics).
-- [ ] Create internal ingestion endpoint (POST /ingest/game-session) called by /api.
-- [ ] Input validation and sanitization on ingestion.
-- [ ] Duplicate detection (prevent re-ingestion of the same session).
-- [ ] Indexes on patientDni, gameId, progressionLevel, sessionStart for query performance.
+### Phase 2-4: Schemas, ingestion, pipelines, advanced analytics
 
-### Phase 3: Transformation and aggregation
+> Cerradas. Resumen: Spring `@Document` `GameSession` + `PatientProgress` + `LevelStatistics`; ingest `POST /ingest/game-session` con dedupe; pipelines `WeeklyGamePipeline`, `MonthlyDisabilityPipeline`, `LevelStatisticsPipeline`, `RomTimeSeriesPipeline`, `CohortComparisonPipeline`; jobs scheduled (`AnalyticsRefreshJob`); endpoints `GET /analytics/patient/{dni}`, `.../rom-timeseries`, `.../cohort-compare/...`, `/analytics/export/patient/{dni}` (CSV/JSON streaming) y `/analytics/charts/...` (4 charts) + contrato OpenAPI en `docs/analytics-charts.openapi.yaml`.
 
-- [ ] Aggregation pipeline: patient progress per game per week (average score, completion rate, ROM trend).
-- [ ] Aggregation pipeline: patient progress per disability per month (cross-game metrics).
-- [ ] Aggregation pipeline: global statistics per progression level (for practitioner dashboards).
-- [ ] Scheduled job to refresh PatientProgress collection from raw GameSession data.
-- [ ] Endpoint to retrieve aggregated data (GET /analytics/patient/:dni).
+### Phase 5 — Treatment progress timeline (2026-04-27)
 
-### Phase 4: Advanced analytics
-
-- [ ] Time-series analysis of range of motion improvement over rehabilitation period.
-- [ ] Comparison analytics: patient progress vs. average cohort progress for same disability and level.
-- [ ] Data export endpoint (CSV/JSON) for practitioner download.
-- [ ] Integration with desktop ERP visualization (chart-ready data format).
+- [ ] `TreatmentProgressTimelinePipeline` (group by articulacion + day, primer vs ultimo, serie diaria).
+- [ ] GET `/analytics/patient/{dni}/treatment-timeline` (X-Internal-Key).
+- [ ] GET `/analytics/patient/{dni}/has-new-sessions?desde=ISO_TS`.
+- [ ] `ProgressMarkdownGenerator` (markdown determinista por articulacion con tendencia SimpleRegression).
+- [ ] Tests Testcontainers Mongo + snapshot del markdown.
 
 ---
 

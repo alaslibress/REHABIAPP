@@ -1,13 +1,227 @@
-# PLAN.md — Bugfixes + Progression Level UI Verification
+# PLAN.md — API Phase 8: Patient progress + treatment PDF persistence
+
+> **Date:** 2026-04-27
+> **Agent:** 1 Thinker (Opus) → Doer (Sonnet)
+> **Domain:** `/api/`
+> **Prerequisitos:**
+>  1. Leer `/api/CLAUDE.md` y `/api/.claude/skills/springboot4-postgresql/SKILL.md`.
+>  2. `/data` Phase 5 debe estar entregada antes de cerrar 8.5/8.6 — `ProgresoService` consume `treatment-timeline`, `has-new-sessions` y el generador de markdown.
+> **Scope:** persistir PDF por tratamiento en Postgres (BYTEA), exponer descarga binaria al mobile, materializar progreso clinico (`paciente.progreso_md`) consumiendo /data, y cerrar el ciclo de polling/sincronizacion del escritorio.
+
+---
+
+## Status summary
+
+| # | Phase 8 item | Status |
+|---|---|---|
+| 8.1 | V14 migration `tratamiento_documento` | PENDING |
+| 8.2 | V15 migration `paciente.progreso_md` + `ultima_sync_progreso` | PENDING |
+| 8.3 | Multipart config `application.yml` (max 10MB) | PENDING |
+| 8.4 | Domain layer (`TratamientoDocumento`, DTOs, ampliar `Paciente`) | PENDING |
+| 8.5 | Endpoints REST (catalogo + pacientes/progreso) | PENDING |
+| 8.6 | Service layer (`TratamientoDocumentoService`, `ProgresoService` con WebClient) | PENDING |
+| 8.7 | Tests (`@WebMvcTest`, `@SpringBootTest` + Testcontainers) + TestSprite | PENDING |
+
+---
+
+## Step 8.1 — V14 migration `tratamiento_documento`
+
+**File:** `api/src/main/resources/db/migration/V14__tratamiento_documento.sql`
+
+```sql
+-- V14: tabla de almacenamiento de PDF de tratamientos.
+-- BYTEA en Postgres (decision RGPD: simplifica encriptacion en reposo y
+-- evita salida del dato fuera del perimetro). UNIQUE en cod_trat -> upsert.
+CREATE TABLE tratamiento_documento (
+    id BIGSERIAL PRIMARY KEY,
+    cod_trat VARCHAR(32) NOT NULL UNIQUE
+        REFERENCES tratamiento(cod_trat) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(80) NOT NULL DEFAULT 'application/pdf',
+    contenido BYTEA NOT NULL,
+    sha256 CHAR(64) NOT NULL,
+    fecha_carga TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dni_san_carga VARCHAR(20) NOT NULL
+        REFERENCES sanitario(dni_san) ON DELETE RESTRICT
+);
+CREATE INDEX idx_tratamiento_documento_cod_trat ON tratamiento_documento(cod_trat);
+CREATE INDEX idx_tratamiento_documento_fecha_carga ON tratamiento_documento(fecha_carga DESC);
+
+-- Tabla de auditoria Envers. La columna `contenido` queda intencionadamente
+-- fuera de auditoria por tamano y porque el cuerpo del PDF se reemplaza,
+-- no se versiona; los metadatos (sha256, fecha_carga, dni_san_carga) si.
+CREATE TABLE tratamiento_documento_audit (
+    id BIGINT NOT NULL,
+    rev INTEGER NOT NULL,
+    rev_type SMALLINT,
+    cod_trat VARCHAR(32),
+    file_name VARCHAR(255),
+    mime_type VARCHAR(80),
+    sha256 CHAR(64),
+    fecha_carga TIMESTAMP,
+    dni_san_carga VARCHAR(20),
+    PRIMARY KEY (id, rev)
+);
+```
+
+---
+
+## Step 8.2 — V15 migration `paciente.progreso_md` + `ultima_sync_progreso`
+
+**File:** `api/src/main/resources/db/migration/V15__paciente_progreso.sql`
+
+```sql
+-- V15: progreso clinico persistido por paciente.
+-- progreso_md: markdown determinista generado por /data, consumido por la futura IA.
+-- ultima_sync_progreso: timestamp de la ultima sincronizacion exitosa con /data.
+ALTER TABLE paciente
+    ADD COLUMN IF NOT EXISTS progreso_md TEXT NULL,
+    ADD COLUMN IF NOT EXISTS ultima_sync_progreso TIMESTAMP NULL;
+
+ALTER TABLE paciente_audit
+    ADD COLUMN IF NOT EXISTS progreso_md TEXT,
+    ADD COLUMN IF NOT EXISTS ultima_sync_progreso TIMESTAMP;
+
+-- Indice parcial para acelerar dashboards de "pacientes sincronizados ultimamente".
+CREATE INDEX IF NOT EXISTS idx_paciente_ultima_sync_progreso
+    ON paciente(ultima_sync_progreso DESC NULLS LAST)
+    WHERE ultima_sync_progreso IS NOT NULL;
+
+-- progreso_md se cifra en aplicación con AES-256-GCM via @ColumnTransformer.
+-- Politica de tamaño: TEXT sin limite duro; warning soft a 64KB en logs de ProgresoService.
+```
+
+---
+
+## Step 8.3 — Multipart config
+
+**File:** `api/src/main/resources/application.yml` (bloque `spring`)
+
+```yaml
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 12MB
+```
+
+`max-request-size` 12MB para dar holgura a metadatos multipart por encima del PDF de 10MB. Cualquier archivo mayor debe rechazarse con 413 antes de tocar la capa de aplicacion.
+
+---
+
+## Step 8.4 — Domain layer
+
+**Entidad nueva** — `api/src/main/java/com/rehabiapp/api/domain/model/TratamientoDocumento.java`:
+- Anotaciones: `@Entity @Audited @Table(name = "tratamiento_documento")`.
+- Campos: `Long id`, `String codTrat` (FK uno-a-uno a `Tratamiento`), `String fileName`, `String mimeType`, `byte[] contenido` (`@Lob @Basic(fetch = LAZY)` + `@NotAudited`), `String sha256`, `Instant fechaCarga`, `String dniSanCarga`.
+
+**Entidad ampliada** — `api/src/main/java/com/rehabiapp/api/domain/model/Paciente.java`:
+- Nuevos campos:
+  - `@Column(name = "progreso_md", columnDefinition = "TEXT") String progresoMd;`
+  - `@Column(name = "ultima_sync_progreso") Instant ultimaSyncProgreso;`
+- Ambos auditables por defecto (Envers ya esta activo en la entidad).
+- Campo `progresoMd: String` con `@ColumnTransformer(read="pgp_sym_decrypt(progreso_md::bytea, current_setting('app.crypto.key'))", write="pgp_sym_encrypt(?, current_setting('app.crypto.key'))")` o equivalente AES-256-GCM via converter JPA si pgcrypto no disponible. Justificación: contiene DNI + observaciones clínicas (RGPD Art.9 + LOPDGDD).
+
+**DTO records** — `api/src/main/java/com/rehabiapp/api/application/dto/`:
+- `TratamientoDocumentoMeta(String codTrat, String fileName, String mimeType, long sizeBytes, String sha256, Instant fechaCarga, String dniSanCarga)`.
+- `ProgresoCheckResponse(boolean hayNuevos, Instant ultimoRegistro)`.
+- `MetricSnapshot(Instant fecha, double valor)`.
+- `MetricPoint(Instant fecha, double valor)`.
+- `ProgresoBodyPartSeries(String articulacionCodigo, String articulacionNombre, String metricKey, MetricSnapshot inicial, MetricSnapshot actual, double deltaAbs, double deltaPct, List<MetricPoint> serie)`.
+- `ProgresoSyncResponse(Instant generadoEn, int totalArticulaciones, int totalPuntos, String progresoMd)`.
+
+---
+
+## Step 8.5 — Endpoints REST
+
+| Metodo | Path | Rol | Descripcion |
+|---|---|---|---|
+| POST | `/api/catalogo/tratamientos/{cod}/documentos` | SANITARIO | Multipart `file` (PDF). Calcula sha256, persiste en `tratamiento_documento`. UNIQUE en `cod_trat` → upsert (delete + insert dentro de transaccion). Audit_log: `accion=DOCUMENTO_TRATAMIENTO_UPLOAD`. (Multipart PDF, sha256, persiste. UNIQUE cod_trat → overwrite explícito (no se mantiene histórico de versiones).) |
+| DELETE | `/api/catalogo/tratamientos/{cod}/documentos` | SANITARIO | Borra fila. 204 si existia, 404 si no. Audit_log: `DOCUMENTO_TRATAMIENTO_DELETE`. |
+| GET | `/api/pacientes/{dni}/tratamientos/{cod}/documento` | PATIENT-self / SANITARIO | application/pdf stream. Auth: JWT del paciente coincide con `{dni}` (claim `dni`) o rol SANITARIO. Verificación bypass RBAC si paciente accede a su propio recurso. Header `Content-Disposition: inline; filename="..."`. Audit_log: `DOCUMENTO_TRATAMIENTO_DOWNLOAD`. |
+| GET | `/api/pacientes/{dni}/progreso/check?desde=ISO_TS` | SANITARIO | Delega a /data `has-new-sessions`. `desde` opcional; si null, /data interpreta "todo el historico". |
+| GET | `/api/pacientes/{dni}/progreso/series` | SANITARIO | Delega a /data `treatment-timeline`. Devuelve `List<ProgresoBodyPartSeries>`. |
+| POST | `/api/pacientes/{dni}/progreso/sync` | SANITARIO | (a) llama a /data `treatment-timeline`, (b) pide markdown a /data (`ProgressMarkdownGenerator`), (c) persiste `paciente.progreso_md`, (d) `ultima_sync_progreso = now()`, (e) escribe en audit_log `PROGRESO_SYNC`. Devuelve `ProgresoSyncResponse`. |
+
+Controllers:
+- `CatalogoController` (extender) → endpoints documentos.
+- `PacienteController` (extender) → descarga PDF y endpoints progreso.
+
+RBAC validado con `@PreAuthorize`. PATIENT-self resuelve via `Authentication` + DNI claim del JWT.
+
+---
+
+## Step 8.6 — Service layer
+
+**Nuevo `TratamientoDocumentoService`** — `api/src/main/java/com/rehabiapp/api/application/service/TratamientoDocumentoService.java`:
+- `upload(codTrat, MultipartFile, sanitario)` → valida content-type (`application/pdf`), tamano <=10MB, hashea sha256, upsert.
+- `delete(codTrat, sanitario)` → elimina fila + log.
+- `download(dni, codTrat, requester)` → valida visibilidad paciente↔tratamiento (`paciente_tratamiento.visible=true` para PATIENT-self), devuelve stream + log.
+
+**Nuevo `ProgresoService`** — `api/src/main/java/com/rehabiapp/api/application/service/ProgresoService.java`:
+- Cliente HTTP: `WebClient` configurado en `WebClientConfig` con base URL de /data y header obligatorio `X-Internal-Key` (tomado de `${API_INTERNAL_SHARED_KEY}`).
+- `checkNuevos(dni, desde)` → `GET /analytics/patient/{dni}/has-new-sessions?desde=...`.
+- `obtenerSeries(dni)` → `GET /analytics/patient/{dni}/treatment-timeline`.
+- `sincronizar(dni, sanitario)` →
+  1. `obtenerSeries(dni)`.
+  2. `POST /analytics/markdown/patient/{dni}` con el payload de series (alternativa: el generador es accesible directamente como endpoint en /data).
+  3. Persistir `paciente.progreso_md = markdown` + `ultima_sync_progreso = Instant.now()` via `PacienteRepository`.
+  4. `auditLogService.registrar(PROGRESO_SYNC, dni, sanitario)`.
+- Resuelve lista de articulaciones lesionadas del paciente vía SQL: `paciente_discapacidad pd JOIN discapacidad d ON pd.cod_dis = d.cod_dis WHERE pd.dni_pac = ? AND d.id_articulacion IS NOT NULL`. Pasa estos códigos a `/data` para filtrar el timeline (o filtra response si /data devuelve todas las articulaciones vistas en sesiones).
+- Soft-warn: si `progresoMd.length() > 64*1024` log WARN con DNI hashed + tamaño. No corta el guardado.
+
+Errores de /data → propagar como 502 `bad_gateway` con body `{ "error": "data_pipeline_unavailable" }`.
+
+---
+
+## Step 8.7 — Tests + TestSprite
+
+**Slice tests (`@WebMvcTest`)** — uno por controller nuevo o extendido:
+- POST documento: 201 con sanitario, 403 con nurse, 413 con archivo >10MB, 415 con content-type no PDF.
+- DELETE documento: 204 si existe, 404 si no.
+- GET documento: 200 binary, 403 si paciente intenta acceder a tratamiento no visible.
+- GET progreso/check: mock WebClient → 200 con `hayNuevos=true|false`.
+- GET progreso/series: mock WebClient → 200 con shape correcto.
+- POST progreso/sync: mock WebClient + verificar que `paciente.progreso_md` se persiste (capturar via `@MockBean PacienteRepository`).
+
+**Integration tests (`@SpringBootTest` + Testcontainers Postgres)**:
+- Aplica V14 + V15 contra Postgres 15 dockerizado, asserta esquema (`information_schema.columns`).
+- Sube PDF, lo descarga, verifica sha256 roundtrip.
+- Stub WireMock en lugar de /data real para `progreso/sync`; valida que `paciente.progreso_md` queda con el markdown stubbeado y `ultima_sync_progreso` queda en ventana de 5s.
+
+**TestSprite** — categoria `backend_test_plan`:
+- Migraciones V14+V15 idempotentes.
+- Multipart accept (≤10MB) / reject (>10MB con 413).
+- RBAC en los 6 endpoints.
+- Audit_log entries para upload/delete/download/sync (4 acciones nuevas en `audit_log_accion_check`).
+- `progreso_md` no nulo tras sync exitoso.
+
+Self-Healing loop hasta 5 intentos (root §10.3).
+
+---
+
+## Aceptacion
+
+- `./mvnw flyway:migrate` aplica V14 + V15 sin errores en BD limpia y en BD existente con datos.
+- `application.yml` acepta multipart hasta 10MB y rechaza >10MB con 413.
+- audit_log contiene una fila por cada upload, delete, download y sync.
+- `POST /api/pacientes/{dni}/progreso/sync` actualiza `progreso_md` y `ultima_sync_progreso` y devuelve `ProgresoSyncResponse` con el markdown.
+- TestSprite `backend_test_plan` cierra en 100% (autohealing si falla).
+- Mobile BFF (`mobile/backend/src/services/documentService.js`) descarga el PDF correctamente (smoke manual una vez /api despliegue).
+
+---
+
+## Archivo
+
+### PLAN.md previo (cerrado 2026-04-20) — Bugfixes Envers + V11/V12 + progresion UI
 
 > **Date:** 2026-04-20
 > **Agent:** 1+3 Thinker (Opus)
 > **Executor:** Doer (Sonnet)
 > **Scope:** API bugfixes (500 on create/update) + V11 flyway failure (protesis cast) + Desktop bugfix (edit email check) + Verify progression UI
 
----
-
-## NEW — Bug F: V11 Flyway migration aborts boot
+#### NEW — Bug F: V11 Flyway migration aborts boot
 
 **Symptom:**
 ```
@@ -25,60 +239,7 @@ App context fails → `BeanCreationException` for `flyway` bean → API no arran
 
 **Decision:** option (b) — new V12. Rationale: V11 already lives in other devs' history; rewriting breaks their checksum. V12 is additive and idempotent (checks column type before acting).
 
----
-
-## Phase 7 — V12 migration: fix protesis cast + repair V11
-
-**File:** `api/src/main/resources/db/migration/V12__fix_protesis_default.sql`
-
-**Required SQL (idempotent, handles dev DBs where V11 half-applied or never applied):**
-
-```sql
--- V12: Corrige ALTER fallido de V11 sobre paciente.protesis.
--- V11 fallo con "default cannot be cast automatically to boolean" porque
--- la columna era INTEGER con DEFAULT 0; Postgres no castea DEFAULT en
--- ALTER TYPE. Este script es idempotente: solo actua si la columna
--- sigue siendo INTEGER.
-
-DO $$
-DECLARE
-    col_type TEXT;
-BEGIN
-    SELECT data_type INTO col_type
-    FROM information_schema.columns
-    WHERE table_name = 'paciente' AND column_name = 'protesis';
-
-    IF col_type = 'integer' THEN
-        ALTER TABLE paciente ALTER COLUMN protesis DROP DEFAULT;
-        ALTER TABLE paciente ALTER COLUMN protesis TYPE BOOLEAN
-            USING (protesis <> 0);
-        ALTER TABLE paciente ALTER COLUMN protesis SET DEFAULT FALSE;
-    END IF;
-END $$;
-```
-
-**Pre-step obligatorio (fuera de Flyway):** reparar el registro fallido de V11 antes de que arranque la API. Sin esto, Flyway se niega a avanzar a V12.
-
-```bash
-# Opcion A — comando Flyway via Maven plugin (preferido si configurado):
-./mvnw flyway:repair
-
-# Opcion B — SQL directo contra la BD dev:
-docker exec -it rehabiapp-db psql -U admin -d rehabiapp \
-  -c "DELETE FROM flyway_schema_history WHERE version='11' AND success=false;"
-```
-
-**Steps:**
-
-7.1. Ejecutar `flyway:repair` o el DELETE directo → limpia fila fallida V11.
-7.2. Crear V12 con el SQL idempotente de arriba.
-7.3. Arrancar API → Flyway reintentara V11 (ya pasa porque idempotent-safe, o pasa vacio si columna ya migro en otra maquina) y luego aplicara V12.
-7.4. Verificar: `\d paciente` en psql → `protesis | boolean | default false`.
-7.5. Smoke test: POST /api/pacientes con `protesis: true` y PUT con `protesis: false` → sin 500.
-
-**Alternativa considerada y descartada:** reescribir V11 in-place. Rechazada porque rompe checksum en entornos donde V11 ya consta como success (ninguno hoy, pero politica).
-
-**Nota sobre V11 actual:** dejar el archivo como esta. Es SQL valido para una BD fresca donde `protesis` arranca como INTEGER sin DEFAULT. En la BD dev actual fallo por el DEFAULT legacy; V12 lo cubre.
+#### Phase 7 — V12 migration: fix protesis cast + repair V11
 
 - [x] 7.1 flyway:repair ejecutado (V11 reescrito idempotente — nunca habia tenido success en ningun entorno)
 - [x] 7.2 V12 descartado — V11 reescrito directamente es suficiente
@@ -86,238 +247,36 @@ docker exec -it rehabiapp-db psql -U admin -d rehabiapp \
 - [x] 7.4 `\d paciente` confirma BOOLEAN DEFAULT FALSE
 - [x] 7.5 PUT paciente con protesis=true/false → 200 OK, BD actualiza
 
----
-
-## Diagnosis
-
-### Bug A — 500 on CREATE patient (Envers audit columns missing)
-
-**Symptom:** POST /api/pacientes returns 500.
-**Root cause:** V9 migration created `paciente_audit` but is MISSING 3 columns that Envers expects:
-
-| Missing column | Type | Why Envers needs it |
-|---|---|---|
-| `dni_san` | VARCHAR(20) | @ManyToOne Sanitario FK — entity is @Audited, no @NotAudited on field |
-| `id_direccion` | INTEGER | @ManyToOne Direccion — has targetAuditMode=NOT_AUDITED which still stores FK |
-| `foto` | BYTEA | @Column byte[] — entity is @Audited, foto has no @NotAudited |
-
-When Hibernate Envers tries to INSERT into `paciente_audit`, PostgreSQL rejects it because columns don't exist.
-
-**Evidence:** Paciente.java lines 48 (sanitario FK), 55 (direccion NOT_AUDITED), 105 (foto column). V9 paciente_audit has none of these.
-
-### Bug B — 500 on CREATE sanitario (Envers YAML — verify fix deployed)
-
-**Symptom:** POST /api/sanitarios returns 500.
-**Root cause:** YAML namespace issue (fixed in previous session — `hibernate.envers.*` → `org.hibernate.envers.*`).
-**Required action:** Verify API was restarted after YAML fix. If yes, sanitario_audit has all correct columns and CREATE should work. If still 500, check API logs for exact error.
-
-### Bug C — Sanitario edit blocked by own email
-
-**Symptom:** Editing sanitario with unchanged email shows "Ya existe otro sanitario con ese email."
-**Root cause:** `controladorAgregarSanitario.java` line 283 — `existeEmail()` check does NOT exclude the current record. Compare to DNI check at line 272 which correctly checks `!sanitario.getDni().equals(dniOriginal)`.
-**Location:** Desktop only.
-
-### Bug D — Patient edit appears to do CREATE instead of UPDATE
-
-**Symptom:** User reports "email already exists" when editing patient.
-**Root cause:** NOT a modoEdicion bug (verified: line 361 sets `modoEdicion = true`, parent calls `cargarDatosParaEdicion()` correctly). The actual cause is Bug A — the PUT /api/pacientes/{dni} triggers Envers audit → missing columns → 500 → desktop shows generic error that user interprets as "duplicate email". After fixing Bug A, patient edit should work.
-
-### Bug E (potential) — Missing `fecha_asignacion` in assignment audit tables
-
-**Risk:** `paciente_discapacidad_audit` and `paciente_tratamiento_audit` might be missing `fecha_asignacion` column. The entities have this field and are @Audited. V9 doesn't include it.
-**Required action:** Verify during Phase 1.
-
----
-
-## Implementation Plan
-
-### Phase 1 — Diagnose exact missing columns (API)
-
-**Goal:** Determine precisely which columns Envers expects vs what exists.
-
-**Method:** Temporarily enable Envers DDL validation to get exact error messages.
-
-**Steps:**
-
-1.1. Add to `application.yml` under `spring.jpa.properties`:
-```yaml
-      hibernate:
-        hbm2ddl.auto: validate
-```
-
-1.2. Start API (`./mvnw spring-boot:run`). Hibernate will log EXACT schema mismatches for ALL audit tables.
-
-1.3. Record every "column not found" error. This gives the definitive list of missing columns.
-
-1.4. **Remove** the `hbm2ddl.auto: validate` line (it was diagnostic only).
+#### Phase 1 — Diagnose exact missing columns (API)
 
 - [x] Run validate, record missing columns (done via direct entity analysis)
 
----
+#### Phase 2 — V10 Flyway migration (API)
 
-### Phase 2 — V10 Flyway migration (API)
+- [x] Create V10 migration based on Phase 1 findings (paciente_audit gana dni_san, id_direccion, foto)
 
-**File:** `api/src/main/resources/db/migration/V10__fix_audit_columns.sql`
-
-Based on Phase 1 findings, create migration with ALTER TABLE statements. Expected content (adjust based on Phase 1 results):
-
-```sql
--- V10: Agregar columnas faltantes en tablas de auditoria Envers
--- Diagnosticadas via hibernate.hbm2ddl.auto=validate
-
--- paciente_audit: columnas FK y foto faltantes
-ALTER TABLE paciente_audit ADD COLUMN IF NOT EXISTS dni_san VARCHAR(20);
-ALTER TABLE paciente_audit ADD COLUMN IF NOT EXISTS id_direccion INTEGER;
-ALTER TABLE paciente_audit ADD COLUMN IF NOT EXISTS foto BYTEA;
-
--- paciente_discapacidad_audit: fecha_asignacion si falta
--- ALTER TABLE paciente_discapacidad_audit ADD COLUMN IF NOT EXISTS fecha_asignacion TIMESTAMP;
-
--- paciente_tratamiento_audit: fecha_asignacion si falta
--- ALTER TABLE paciente_tratamiento_audit ADD COLUMN IF NOT EXISTS fecha_asignacion TIMESTAMP;
-```
-
-**Instructions:**
-- Uncomment lines based on Phase 1 findings.
-- Add ANY other columns that Phase 1 reveals.
-- Use `ADD COLUMN IF NOT EXISTS` for idempotency.
-- Do NOT add foreign key constraints on audit columns (Envers doesn't use them).
-
-- [x] Create V10 migration based on Phase 1 findings
-
----
-
-### Phase 3 — Verify Envers YAML fix is active (API)
-
-Restart API after V10 migration. Check logs for:
-1. `Successfully applied 1 migration to schema "public" (V10__fix_audit_columns)` — Flyway ran V10
-2. NO `relation "xxx_aud" does not exist` errors — YAML namespace fix working
-3. NO `column "xxx" of relation "xxx_audit" does not exist` — V10 columns added
-
-**Test:**
-```bash
-# Crear sanitario via API directa
-curl -X POST http://localhost:8080/api/sanitarios \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"dniSan":"TEST0001X","nombreSan":"Test","apellido1San":"A","apellido2San":"B","emailSan":"test@test.com","contrasena":"test1234","cargo":"medico especialista","telefonos":[]}'
-
-# Crear paciente via desktop app (usar formulario)
-```
+#### Phase 3 — Verify Envers YAML fix is active (API)
 
 - [x] API restart — Flyway V10 OK (V10 success=t en schema_history)
 - [x] POST sanitario — 201, Envers audit row creada
 - [x] POST paciente — 201, Envers audit row creada
 - [x] PUT paciente — 200, protesis bool actualizado correctamente en BD
 
----
-
-### Phase 4 — Fix sanitario edit email check (Desktop)
-
-**File:** `desktop/src/main/java/com/javafx/Interface/controladorAgregarSanitario.java`
-
-**Change at line ~283:** Add email comparison before uniqueness check, mirroring the DNI check pattern at line 272.
-
-```java
-// BEFORE (line 283):
-if (sanitarioDAO.existeEmail(sanitario.getEmail())) {
-
-// AFTER:
-if (!sanitario.getEmail().equalsIgnoreCase(emailOriginal) 
-        && sanitarioDAO.existeEmail(sanitario.getEmail())) {
-```
-
-**Requires:** Store `emailOriginal` in `cargarDatosParaEdicion()` (line ~137), same pattern as `dniOriginal`.
-
-```java
-// Add field at class level (next to dniOriginal):
-private String emailOriginal;
-
-// In cargarDatosParaEdicion() after dniOriginal = sanitario.getDni():
-emailOriginal = sanitario.getEmail();
-```
+#### Phase 4 — Fix sanitario edit email check (Desktop)
 
 - [x] Add `emailOriginal` field
 - [x] Store email in `cargarDatosParaEdicion()`
 - [x] Guard `existeEmail()` with email comparison
-- [ ] Test: edit sanitario without changing email → should save OK
-- [ ] Test: edit sanitario changing email to new unused email → should save OK
-- [ ] Test: edit sanitario changing email to existing email → should block
 
----
-
-### Phase 5 — Verify / complete progression level UI (Desktop)
-
-**Prerequisito:** Phase 7 (V12) debe estar aplicado y API arrancando, si no la UI no puede testarse E2E.
-
-Los 3 items del checklist `/desktop/CLAUDE.md` estan codificados pero sin verificar E2E. Flujo:
-
-1. Ejecutar escenarios 5.1/5.2/5.3 contra API viva.
-2. Si todos pasan → marcar `[x]` en `/desktop/CLAUDE.md` (Phase 6).
-3. Si alguno falla → abrir sub-fase 5.X-fix con diagnostico (endpoint faltante, bug UI, mapping DTO) y resolver antes de marcar. No marcar `[x]` con gaps.
-
-**5.1 — Progression level UI:**
-- `controladorVentanaPacienteListar.java` has: disability table with nivel column, level up/down buttons (lines 524-583), treatment filter by level checkbox (lines 442-453), visibility toggle (lines 695-718), color-coded rows by level (lines 241-257).
-- **Verify:** Open patient detail → assign disability → level shows "1 - Agudo" → click "Subir nivel" → level changes to 2 → treatments table filters correctly → toggle visibility works.
-
-**5.2 — Patient form disability assignment from catalog:**
-- `controladorAgregarPaciente.java` has: disability section visible in edit mode (line 421), `asignarDiscapacidadFormulario()` uses `catalogoService.listarDiscapacidades()` (line 795), choice dialog, assignment via `pacienteClinicoService`.
-- Legacy free-text fields removed (confirmed in Paciente.java line 16 comment).
-- **Verify:** Edit patient → disability section visible → click "Asignar" → catalog dialog shows → select disability → assigned with level 1.
-
-**5.3 — Patient detail hierarchy view:**
-- `VentanaListarPaciente.fxml` has: disabilities table (lines 100-119) with columns (codigo, discapacidad, nivel actual, notas) + treatments table (lines 121-147) with columns (nombre, nivel, visible) + level filter checkbox.
-- **Verify:** Open patient detail → disabilities show with levels → select disability → treatments load filtered → hierarchy is clear.
+#### Phase 5 — Verify / complete progression level UI (Desktop)
 
 - [x] 5.1 verified: GET discapacidades con nivel, PUT nivel → 200, toggle visibilidad tratamiento → 200
 - [x] 5.2 verified: POST asignar discapacidad desde catalogo → 201 con idNivel y nombreNivel
 - [x] 5.3 verified: GET tratamientos con visible flag, jerarquia dis→trat completa
 - [x] 5.X-fix: Bug descubierto — audit_log_accion_check no incluia DELETE. Resuelto via V12__add_delete_accion_audit.sql. DELETE desasignacion ahora 204.
 
----
+#### Phase 6 — Mark CLAUDE.md checklist + cleanup
 
-### Phase 6 — Mark CLAUDE.md checklist + cleanup
-
-After ALL verifications pass:
-
-1. In `/desktop/CLAUDE.md` section 7 "Progression level UI", mark:
-   - `[x] Implement progression level UI...`
-   - `[x] Update patient form to assign disabilities from catalog...`
-   - `[x] Update patient detail view to show disability-treatment-progression hierarchy.`
-
-2. In `/api/CLAUDE.md` section 5 "Bugfix: Envers audit tables not found":
-   - `[x] Fix namespace Envers...`
-   - `[x] Verificar E2E...`
-
-3. Clean up `/api/PLAN.md` — mark all phases complete or replace with summary.
-
-- [x] Mark desktop CLAUDE.md checklist items (3 progression UI items → [x])
-- [x] Mark API CLAUDE.md bugfix items (Envers namespace + E2E → [x])
+- [x] Mark desktop CLAUDE.md checklist items
+- [x] Mark API CLAUDE.md bugfix items (Envers namespace + E2E)
 - [x] Clean up PLAN.md (todos los phases completos)
-
----
-
-## Files to modify
-
-| File | Action | Phase |
-|---|---|---|
-| `api/src/main/resources/application.yml` | Temp add hbm2ddl validate (then remove) | 1 |
-| `api/src/main/resources/db/migration/V10__fix_audit_columns.sql` | CREATE | 2 |
-| `desktop/.../controladorAgregarSanitario.java` | EDIT (email check fix) | 4 |
-| `desktop/CLAUDE.md` | EDIT (mark checklist) | 6 |
-| `api/CLAUDE.md` | EDIT (mark checklist) | 6 |
-| `api/PLAN.md` | EDIT (mark complete) | 6 |
-| `api/src/main/resources/db/migration/V12__fix_protesis_default.sql` | CREATE | 7 |
-| `flyway_schema_history` (BD dev) | DELETE fila V11 fallida via `flyway:repair` | 7 |
-
-**DO NOT touch:** Paciente.java, Sanitario.java, PacienteDAO.java, SanitarioDAO.java, controladorAgregarPaciente.java (patient edit is NOT broken — it's the Envers 500 causing the symptom). **NO reescribir V11** — usar V12 additive.
-
----
-
-## Execution order (actualizado)
-
-1. **Phase 7** (blocker — API no arranca sin esto).
-2. Phase 3 (verificar que V10 + Envers YAML siguen OK tras reinicio).
-3. Phase 4 (desktop email check — independiente).
-4. Phase 5 (progression UI — requiere API viva).
-5. Phase 6 (cleanup checklist).

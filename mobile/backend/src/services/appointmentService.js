@@ -136,4 +136,34 @@ async function cancelarCita(appointmentId, javaToken) {
   };
 }
 
-module.exports = { obtenerCitas, reservarCita, cancelarCita };
+/**
+ * Envia una solicitud de cita nueva del paciente al sanitario.
+ * La solicitud queda en estado PENDING hasta que el sanitario la confirme.
+ *
+ * @param {string} dniPac
+ * @param {{ fechaPreferida, horaPreferida, motivo, telefono, email }} input
+ * @param {string|null} javaToken
+ * @returns {Promise<object>} AppointmentRequest
+ */
+async function solicitarCita(dniPac, input, javaToken) {
+  const body = {
+    fechaPreferida: input.fechaPreferida,
+    horaPreferida: input.horaPreferida,
+    motivo: input.motivo,
+    telefono: input.telefono ?? null,
+    email: input.email ?? null,
+  };
+
+  const res = await apiClient.post(`/api/pacientes/${dniPac}/solicitudes-cita`, body, javaToken);
+
+  return {
+    id: res.id || `req-${Date.now()}`,
+    fechaPreferida: res.fechaPreferida || input.fechaPreferida,
+    horaPreferida: res.horaPreferida || input.horaPreferida,
+    motivo: res.motivo || input.motivo,
+    estado: res.estado || 'PENDING',
+    createdAt: res.createdAt || new Date().toISOString(),
+  };
+}
+
+module.exports = { obtenerCitas, reservarCita, cancelarCita, solicitarCita };

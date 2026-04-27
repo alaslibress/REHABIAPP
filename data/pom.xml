@@ -23,6 +23,7 @@
         <!-- Version de Java 24 obligatoria segun el skill springboot4-mongodb -->
         <java.version>24</java.version>
         <logstash-logback-encoder.version>7.4</logstash-logback-encoder.version>
+        <testcontainers.version>1.20.4</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -58,12 +59,39 @@
             <version>${logstash-logback-encoder.version}</version>
         </dependency>
 
+        <!-- Bean Validation (Jakarta Validation) for @Valid DTOs on the ingestion endpoint -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Jackson JSR310: Instant/LocalDate serialization para ExportService -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
+        <!-- Apache Commons CSV: streaming writer for the export endpoint -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>1.11.0</version>
+        </dependency>
+
+        <!-- Apache Commons Math: linear regression for the ROM trend slope -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>3.6.1</version>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
 
     </dependencies>
 

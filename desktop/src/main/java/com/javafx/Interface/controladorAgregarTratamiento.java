@@ -56,6 +56,13 @@ public class controladorAgregarTratamiento {
     private boolean modoEdicion = false;
     private String codigoOriginal;
 
+    // Indica si el formulario cerro tras un guardado exitoso
+    private boolean guardadoExitoso = false;
+
+    public boolean isGuardadoExitoso() {
+        return guardadoExitoso;
+    }
+
     /**
      * Metodo initialize se ejecuta automaticamente al cargar el FXML.
      */
@@ -268,6 +275,7 @@ public class controladorAgregarTratamiento {
                         TipoMensaje.EXITO
                 );
             }
+            guardadoExitoso = true;
             cerrarVentana(event);
 
         } catch (DuplicadoException e) {

@@ -130,10 +130,23 @@ En `application.yml`, cambiar el bloque bajo `spring.jpa.properties`:
 
 ### Phase 4: Ecosystem integration
 
-- [ ] Game telemetry ingestion endpoint (POST, routes data to /data pipeline).
-- [ ] Mobile-specific endpoints (patient dashboard data, treatment visibility, appointment booking).
 - [ ] API documentation with Swagger/OpenAPI.
 - [ ] Rate limiting and request validation.
+
+### Phase 8 — Patient progress + treatment PDF persistence (2026-04-27)
+
+- [ ] V14 migration `tratamiento_documento`.
+- [ ] V15 migration `paciente.progreso_md` + `ultima_sync_progreso`.
+- [ ] Multipart config (`spring.servlet.multipart.max-file-size: 10MB`).
+- [ ] `TratamientoDocumento` entity + DTOs + add `progresoMd`/`ultimaSyncProgreso` to `Paciente`.
+- [ ] POST `/api/catalogo/tratamientos/{cod}/documentos` (multipart upload PDF).
+- [ ] DELETE `/api/catalogo/tratamientos/{cod}/documentos`.
+- [ ] GET `/api/pacientes/{dni}/tratamientos/{cod}/documento` (binary stream).
+- [ ] GET `/api/pacientes/{dni}/progreso/check?desde=ISO_TS`.
+- [ ] GET `/api/pacientes/{dni}/progreso/series`.
+- [ ] POST `/api/pacientes/{dni}/progreso/sync` (regenera markdown + actualiza ultima_sync_progreso).
+- [ ] `@WebMvcTest` + `@SpringBootTest` con Testcontainers + TestSprite backend_test_plan.
+- [ ] Encriptar `paciente.progreso_md` con AES-256-GCM (`@ColumnTransformer` o `AttributeConverter`).
 
 ---
 

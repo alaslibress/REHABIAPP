@@ -38,6 +38,15 @@ public class Discapacidad {
     @Column(name = "necesita_protesis")
     private boolean necesitaProtesis = false;
 
+    /**
+     * Articulacion afectada por esta discapacidad. Nullable — discapacidades
+     * existentes sin articulacion asignada conservan null.
+     * Anadida en V13__juego_articulacion.sql.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_articulacion")
+    private Articulacion articulacion;
+
     // --- Getters y setters ---
 
     public String getCodDis() {
@@ -70,5 +79,13 @@ public class Discapacidad {
 
     public void setNecesitaProtesis(boolean necesitaProtesis) {
         this.necesitaProtesis = necesitaProtesis;
+    }
+
+    public Articulacion getArticulacion() {
+        return articulacion;
+    }
+
+    public void setArticulacion(Articulacion articulacion) {
+        this.articulacion = articulacion;
     }
 }

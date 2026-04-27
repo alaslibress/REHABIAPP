@@ -34,7 +34,7 @@
                                         <Insets right="10.0" />
                                     </HBox.margin>
                                 </Label>
-                                <Button fx:id="btnBuscarDiscapacidades" mnemonicParsing="false" onAction="#buscarDiscapacidades" prefHeight="30.0" prefWidth="30.0" styleClass="button-icono">
+                                <Button fx:id="btnBuscarDiscapacidades" mnemonicParsing="false" onAction="#buscarDiscapacidades" prefHeight="30.0" prefWidth="30.0" styleClass="button-primario-icon">
                                     <graphic>
                                         <ImageView fitHeight="18.0" fitWidth="25.0" pickOnBounds="true" preserveRatio="true">
                                             <image>

@@ -244,6 +244,8 @@ public class controladorVentanaDiscapacidades {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaAgregarDiscapacidad.fxml"));
             Parent root = loader.load();
 
+            controladorAgregarDiscapacidad controlador = loader.getController();
+
             Scene scene = new Scene(root);
             controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
 
@@ -255,10 +257,13 @@ public class controladorVentanaDiscapacidades {
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
-            try {
-                cargarDiscapacidades();
-            } catch (Exception e) {
-                System.err.println("Error al recargar datos: " + e.getMessage());
+            // Solo recargar si el usuario guardo algo; evita popup de error al cancelar
+            if (controlador.isGuardadoExitoso()) {
+                try {
+                    cargarDiscapacidades();
+                } catch (Exception e) {
+                    System.err.println("Error al recargar datos: " + e.getMessage());
+                }
             }
 
         } catch (Exception e) {
@@ -304,10 +309,13 @@ public class controladorVentanaDiscapacidades {
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
-            try {
-                cargarDiscapacidades();
-            } catch (Exception e) {
-                System.err.println("Error al recargar datos: " + e.getMessage());
+            // Solo recargar si el usuario guardo algo; evita popup de error al cancelar
+            if (controlador.isGuardadoExitoso()) {
+                try {
+                    cargarDiscapacidades();
+                } catch (Exception e) {
+                    System.err.println("Error al recargar datos: " + e.getMessage());
+                }
             }
 
         } catch (Exception e) {

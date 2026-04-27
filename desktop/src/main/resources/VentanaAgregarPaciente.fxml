@@ -20,7 +20,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<ScrollPane fitToWidth="true" prefHeight="600.0" prefWidth="750.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorAgregarPaciente">
+<ScrollPane fitToWidth="true" prefHeight="600.0" prefWidth="750.0" styleClass="root modal-root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorAgregarPaciente">
     <content>
         <VBox alignment="TOP_CENTER" spacing="10.0" styleClass="root modal-root">
             <padding>

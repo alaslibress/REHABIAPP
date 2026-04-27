@@ -1,7 +1,11 @@
 package com.rehabiapp.api.presentation.controller;
 
+import com.rehabiapp.api.application.dto.ArticulacionResponse;
 import com.rehabiapp.api.application.dto.DiscapacidadRequest;
 import com.rehabiapp.api.application.dto.DiscapacidadResponse;
+import com.rehabiapp.api.application.dto.JuegoAsociarRequest;
+import com.rehabiapp.api.application.dto.JuegoRequest;
+import com.rehabiapp.api.application.dto.JuegoResponse;
 import com.rehabiapp.api.application.dto.NivelProgresionResponse;
 import com.rehabiapp.api.application.dto.TratamientoRequest;
 import com.rehabiapp.api.application.dto.TratamientoResponse;
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -222,5 +227,93 @@ public class CatalogoController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<NivelProgresionResponse>> listarNiveles() {
         return ResponseEntity.ok(catalogoService.listarNiveles());
+    }
+
+    // ==================== ARTICULACIONES ====================
+
+    /**
+     * Lista todas las articulaciones del catalogo.
+     * GET /api/catalogo/articulaciones
+     */
+    @GetMapping("/articulaciones")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<ArticulacionResponse>> listarArticulaciones() {
+        return ResponseEntity.ok(catalogoService.listarArticulaciones());
+    }
+
+    // ==================== JUEGOS ====================
+
+    /**
+     * Lista juegos activos. Filtrable por articulacion.
+     * GET /api/catalogo/juegos
+     * GET /api/catalogo/juegos?idArticulacion=5
+     */
+    @GetMapping("/juegos")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<JuegoResponse>> listarJuegos(
+            @RequestParam(required = false) Integer idArticulacion) {
+        return ResponseEntity.ok(catalogoService.listarJuegos(idArticulacion));
+    }
+
+    /**
+     * Devuelve un juego por su codigo.
+     * GET /api/catalogo/juegos/{cod}
+     */
+    @GetMapping("/juegos/{cod}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<JuegoResponse> obtenerJuego(@PathVariable String cod) {
+        return ResponseEntity.ok(catalogoService.obtenerJuego(cod));
+    }
+
+    /**
+     * Crea un nuevo juego en el catalogo.
+     * POST /api/catalogo/juegos
+     * Solo SPECIALIST.
+     */
+    @PostMapping("/juegos")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<JuegoResponse> crearJuego(@Valid @RequestBody JuegoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(catalogoService.crearJuego(request));
+    }
+
+    /**
+     * Actualiza un juego existente.
+     * PUT /api/catalogo/juegos/{cod}
+     * Solo SPECIALIST.
+     */
+    @PutMapping("/juegos/{cod}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<JuegoResponse> actualizarJuego(
+            @PathVariable String cod,
+            @Valid @RequestBody JuegoRequest request) {
+        return ResponseEntity.ok(catalogoService.actualizarJuego(cod, request));
+    }
+
+    /**
+     * Elimina un juego. Rechaza con 409 si algun tratamiento lo tiene vinculado.
+     * DELETE /api/catalogo/juegos/{cod}
+     * Solo SPECIALIST.
+     */
+    @DeleteMapping("/juegos/{cod}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<Void> eliminarJuego(@PathVariable String cod) {
+        catalogoService.eliminarJuego(cod);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ==================== ASOCIACION TRATAMIENTO-JUEGO ====================
+
+    /**
+     * Asocia o desasocia un juego terapeutico a un tratamiento.
+     * PUT /api/catalogo/tratamientos/{cod}/juego
+     * Body: {"codJuego": "JUEGO_01"} para asociar, {"codJuego": null} para desasociar.
+     * Solo SPECIALIST.
+     */
+    @PutMapping("/tratamientos/{cod}/juego")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<TratamientoResponse> asociarJuego(
+            @PathVariable String cod,
+            @RequestBody JuegoAsociarRequest request) {
+        return ResponseEntity.ok(catalogoService.asociarJuegoATratamiento(cod, request));
     }
 }

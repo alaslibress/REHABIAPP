@@ -7,12 +7,12 @@ spring:
     # Importar configuracion desde ficheros montados por CSI secrets en K8s
     # "optional:" evita fallo de arranque si el directorio no existe (ej. tests)
     import: optional:configtree:file:/mnt/secrets/
-  data:
-    mongodb:
-      # URI inyectada via variable de entorno procedente del secret CSI
-      uri: ${SPRING_DATA_MONGODB_URI}
-      # Indices gestionados explicitamente (no auto-creacion) segun el skill
-      auto-index-creation: false
+  mongodb:
+    # URI inyectada via variable de entorno procedente del secret CSI
+    # SB4 usa spring.mongodb.uri (spring.data.mongodb.uri ignorado)
+    uri: ${SPRING_DATA_MONGODB_URI}
+    # Indices gestionados explicitamente (no auto-creacion) segun el skill
+    auto-index-creation: false
 
 logging:
   level:

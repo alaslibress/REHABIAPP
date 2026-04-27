@@ -98,6 +98,16 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Maneja argumentos invalidos de negocio (ej. articulacion incompatible al asociar juego).
+     * Devuelve 400 con el mensaje descriptivo.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> manejarArgumentoInvalido(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Argumento invalido", "detalle", ex.getMessage()));
+    }
+
+    /**
      * Maneja tokens JWT inválidos, expirados o malformados.
      * Devuelve 401 con el motivo del rechazo del token.
      *

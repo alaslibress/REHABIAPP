@@ -1,32 +1,43 @@
 import { create } from 'zustand';
 import type { UserState } from '../types/user';
 import { client } from '../services/graphql/client';
-import { GET_MY_PROFILE } from '../services/graphql/queries/user';
+import { GET_MY_PROFILE, GET_MY_DISABILITIES } from '../services/graphql/queries/user';
 import { parseGraphQLError } from '../utils/errorHandler';
+import type { Disability } from '../types/treatments';
 
-export const useUserStore = create<UserState>(function (set) {
+type UserStateExtended = UserState & {
+  disabilities: Disability[];
+};
+
+export const useUserStore = create<UserStateExtended>(function (set) {
   return {
     patient: null,
+    disabilities: [],
     isLoading: false,
 
     fetchProfile: async function (): Promise<void> {
       set({ isLoading: true });
       try {
-        const { data } = await client.query({
-          query: GET_MY_PROFILE,
-          fetchPolicy: 'network-only',
-        });
-        set({ patient: data.me, isLoading: false });
+        const [profileRes, disRes] = await Promise.all([
+          client.query({ query: GET_MY_PROFILE, fetchPolicy: 'network-only' }),
+          client.query({ query: GET_MY_DISABILITIES, fetchPolicy: 'network-only' }),
+        ]);
+
+        const rawDisabilities: Disability[] = (disRes.data.myDisabilities ?? []).map(
+          function (d: { id: string; name: string; description: string | null; currentLevel: number }) {
+            return { ...d, codDis: d.id };
+          }
+        );
+
+        set({ patient: profileRes.data.me, disabilities: rawDisabilities, isLoading: false });
       } catch (err) {
         set({ isLoading: false });
-        // Parsear el error de Apollo a un AppError consistente
-        // para que los componentes que llamen a fetchProfile reciban un error estructurado
         throw parseGraphQLError(err);
       }
     },
 
     clearProfile: function (): void {
-      set({ patient: null });
+      set({ patient: null, disabilities: [] });
     },
   };
 });

@@ -91,81 +91,26 @@ Two user types, both healthcare practitioners:
 
 ## 7. IMPLEMENTATION CHECKLIST
 
-### API prerequisites (Agent 1 scope — must be completed before desktop CRUD tabs)
+### Integraciones avanzadas (fases futuras)
 
-- [x] API: POST /api/catalogo/discapacidades — create disability (codDis, nombreDis, descripcionDis, necesitaProtesis).
-- [x] API: PUT /api/catalogo/discapacidades/{cod} — update disability fields.
-- [x] API: DELETE /api/catalogo/discapacidades/{cod} — delete disability (reject if patients are assigned).
-- [x] API: POST /api/catalogo/tratamientos — create treatment (codTrat, nombreTrat, definicionTrat, idNivel, codDis).
-- [x] API: PUT /api/catalogo/tratamientos/{cod} — update treatment fields.
-- [x] API: DELETE /api/catalogo/tratamientos/{cod} — delete treatment (reject if patients are assigned).
-- [x] API: POST /api/catalogo/tratamientos/{codTrat}/discapacidades/{codDis} — link treatment to disability.
-- [x] API: DELETE /api/catalogo/tratamientos/{codTrat}/discapacidades/{codDis} — unlink treatment from disability.
-- [x] API: GET /api/catalogo/tratamientos/{codTrat}/discapacidades — list disabilities linked to a treatment.
-- [x] API: Add validation — unique codDis/codTrat, unique nombreDis/nombreTrat, required fields, valid FKs.
-
-### Disability CRUD tab (desktop)
-
-- [x] Extend CatalogoDAO with crearDiscapacidad(), actualizarDiscapacidad(), eliminarDiscapacidad() calling new API endpoints.
-- [x] Extend CatalogoService to wrap new CatalogoDAO CRUD methods with error handling.
-- [x] Create DTO DiscapacidadRequest record (codDis, nombreDis, descripcionDis, necesitaProtesis) for POST/PUT body.
-- [x] Create VentanaDiscapacidades.fxml following VentanaPacientes/VentanaSanitarios layout pattern (VBox root, header with title + search/add/filter bar, TableView with columns: Codigo, Nombre, Descripcion, Protesis, footer with Eliminar + Editar buttons).
-- [x] Create controladorVentanaDiscapacidades.java (load from CatalogoService, search filter, CRUD button wiring, RBAC specialist-only for write operations).
-- [x] Create VentanaAgregarDiscapacidad.fxml modal form (fields: codDis, nombreDis, descripcionDis, necesitaProtesis checkbox; create/edit mode support).
-- [x] Create controladorAgregarDiscapacidad.java (validate required fields, handle DuplicadoException, refresh parent table on success).
-- [x] Verify VentanaDiscapacidades loads correctly in tab cache system (cargarPestania("Discapacidades") already wired in controladorVentanaPrincipal line 420).
-
-### Treatment CRUD tab (desktop)
-
-- [x] Extend CatalogoDAO with crearTratamiento(), actualizarTratamiento(), eliminarTratamiento(), vincularDiscapacidad(), desvincularDiscapacidad(), listarDiscapacidadesDeTratamiento().
-- [x] Extend CatalogoService to wrap new treatment CRUD methods.
-- [x] Create DTO TratamientoRequest record (codTrat, nombreTrat, definicionTrat, idNivel, codDis).
-- [x] Create VentanaTratamientos.fxml following same pattern (header + filter bar with ComboBox by disability and by progression level + TableView with columns: Codigo, Nombre, Definicion, Discapacidad, Nivel + footer with Eliminar + Editar buttons).
-- [x] Create controladorVentanaTratamientos.java (load treatments, populate filter ComboBoxes from catalog, wire filters and CRUD buttons, RBAC specialist-only).
-- [x] Create VentanaAgregarTratamiento.fxml modal form (fields: codTrat, nombreTrat, definicionTrat, ComboBox discapacidad required, ComboBox nivel progresion required; create/edit mode support).
-- [x] Create controladorAgregarTratamiento.java (validate required fields including disability + level, handle DuplicadoException, refresh parent table on success).
-- [x] Verify VentanaTratamientos loads correctly in tab cache system (cargarPestania("Tratamientos") already wired in controladorVentanaPrincipal line 428).
-
-### Custom calendar (replace CalendarFX)
-
-- [x] Create CalendarioPersonalizado.java — custom GridPane-based monthly calendar (7 columns L-D x 6 rows, cell as VBox with day number + appointment count label, navigation bar with month/year + prev/next buttons, today highlight, weekend distinct style, adjacent month days muted).
-- [x] Implement cell appointment count rendering: show "{n} cita(s)" badge below day number when appointments exist.
-- [x] Implement cell tooltip on hover: show patient initials list (e.g., "J.G., M.R., A.L.") for days with appointments.
-- [x] Implement single-click day selection: highlight cell, load day's appointments in table below, sync with DatePicker.
-- [x] Implement multi-day selection: Ctrl+Click toggle, Shift+Click range, distinct visual indicator, enable batch deletion.
-- [x] Implement appointment interaction: double-click day to expand in table, double-click table row for appointment context, "Ver ficha paciente" button to navigate to patient tab.
-- [x] Fix appointment creation flow: verify ComboBox patient search + DatePicker + Spinners correctly POST to /api/citas, debug if broken.
-- [x] Remove CalendarFX dependency from build.gradle and all CalendarFX imports from controladorVentanaCitas.java.
-- [x] Update controladorVentanaCitas.java: replace MonthView initialization with CalendarioPersonalizado, replace CalendarSource with direct appointment Map, keep existing table/form/button logic and async loading.
-- [x] Remove emoji from btnVerAgenda text in VentanaCitas.fxml (change to "Ver Mi Agenda" without emoji prefix).
-- [x] Add CSS classes for custom calendar in both tema_claro.css and tema_oscuro.css (.calendario-grid, .calendario-celda, .calendario-celda-hoy, .calendario-celda-fin-semana, .calendario-celda-seleccionada, .calendario-celda-otro-mes, .calendario-badge-citas, .calendario-header, .calendario-nav-button).
-
-### CSS visual enhancement (both themes)
-
-- [x] Enhanced sidebar navigation: left accent border (3px) on active/hover tab, subtle gradient background, smooth color transition between selected/unselected states.
-- [x] Card-based content panels: wrap content areas in card containers with border-radius 8-12px, soft shadow, slight background elevation, darker header strip.
-- [x] Improved table styling: left border indicator on hover row, increased row height 36-40px, smooth hover transition 150ms, accent left border on selected row, improved header bottom border.
-- [x] Enhanced form inputs: inner shadow on focus, left color accent bar 3px on focus, lighter italic placeholder text, validation state borders (green valid, red error).
-- [x] Button refinements: subtle gradient on primary buttons, deeper shadow + scale 0.98 on press, improved disabled state opacity 0.5.
-- [x] Enhanced separators: gradient fade (transparent-color-transparent) instead of solid lines, improved spacing.
-- [x] Typography improvements: letter-spacing 0.3px on titles, section titles 15px semi-bold, text-shadow on dark theme titles.
-- [x] Tooltip and popover polish: deeper softer shadow, improved styling.
-- [x] Scrollbar refinement: thinner track 6px, rounded thumb with hover expansion 6px-8px, subtle color transition.
-- [x] Status indicators and badges: CSS classes .badge-activo, .badge-inactivo, .badge-nivel-* with color-coded progression levels (agudo=red, subagudo=orange, fortalecimiento=blue, funcional=green), pill shape border-radius 12px.
-- [x] Login screen polish: subtle background gradient, improved connection indicator styling.
-- [x] Modal window improvements: accent top border on modal header, smooth open animation.
-
-### Progression level UI (existing pending tasks)
-
-- [x] Implement progression level UI: display patient disabilities with current level, show treatments filtered by matching level, toggle treatment visibility.
-- [x] Update patient form to assign disabilities from catalog instead of free text.
-- [x] Update patient detail view to show disability-treatment-progression hierarchy.
-
-### Advanced integrations (future phases)
-
-- [ ] OpenAI API integration for automated clinical text processing and chart interpretation.
-- [ ] NFC scanner integration for Spanish health card reading (auto-fill patient forms).
+- [ ] Integracion con OpenAI API para procesado automatico de texto clinico e interpretacion de graficas.
+- [ ] Integracion de lector NFC para tarjetas sanitarias espanolas (autocompletar formularios de paciente).
 - [ ] Activar y probar HTTPS hacia la API en produccion (AWS).
+
+### Sprint Progreso (UI polish + PDF + juegos + Progreso paciente) — 2026-04-27
+
+- [ ] D.1 Verificar runtime paridad botones (Sanitarios vs Discapacidades/Tratamientos) y, si difieren, ajustar CSS sin tocar FXML.
+- [ ] D.2 Verificar runtime VentanaFiltroTratamientos: aceptar/cancelar visibles. Si clipados, ajustar prefHeight.
+- [ ] D.3 Centrar texto en TODAS las ventanas emergentes (VentanaInformativa, VentanaPregunta, AlertFactory).
+- [ ] D.4 Fix permanente fondo oscuro en VentanaAgregarPaciente + VentanaAgregarSanitario (eliminar inline styles + lock de cascada CSS de maxima especificidad).
+- [ ] D.5 PDF import (FileChooser + multipart upload) en VentanaAgregarTratamiento + VentanaEditarTratamiento.
+- [ ] D.6 ListView de juegos sugeridos (filtrados por id_articulacion de la discapacidad) en VentanaAgregarTratamiento + VentanaEditarTratamiento.
+- [ ] D.7 Boton "Progreso" en VentanaPacientes.fxml junto a btnGenerarPDFPaciente + validacion de seleccion.
+- [ ] D.8 Boton "Progreso" en VentanaListarPaciente.fxml (Ficha del paciente).
+- [ ] D.9 Nueva ventana VentanaProgresoPaciente.fxml (ScrollPane vertical con LineChart por articulacion).
+- [ ] D.10 Nuevo controladorVentanaProgresoPaciente.java (LineChart por articulacion, Task async, polling check + sync).
+- [ ] D.11 ProgresoService (HTTP: check / series / sync) en com.javafx.Clases.
+- [ ] D.12 JUnit + Mockito + smoke manual (NO TestSprite — JavaFX incompatible).
 
 ---
 

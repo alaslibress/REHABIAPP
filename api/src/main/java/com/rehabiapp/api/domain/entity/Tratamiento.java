@@ -42,6 +42,15 @@ public class Tratamiento {
     @JoinColumn(name = "id_nivel")
     private NivelProgresion nivel;
 
+    /**
+     * Juego terapeutico Unity asociado a este tratamiento (opcional).
+     * Nullable — tratamientos sin juego asociado conservan null.
+     * Anadido en V13__juego_articulacion.sql.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cod_juego")
+    private Juego juego;
+
     // --- Getters y setters ---
 
     public String getCodTrat() {
@@ -74,5 +83,13 @@ public class Tratamiento {
 
     public void setNivel(NivelProgresion nivel) {
         this.nivel = nivel;
+    }
+
+    public Juego getJuego() {
+        return juego;
+    }
+
+    public void setJuego(Juego juego) {
+        this.juego = juego;
     }
 }

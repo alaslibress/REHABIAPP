@@ -20,4 +20,16 @@ type ProgressSummary = {
   lastSessionDate: string | null;
 };
 
+export type GameDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
+
+export type AssignedGame = {
+  id: string;
+  name: string;
+  description: string;
+  thumbnailUrl: string | null;
+  webglUrl: string | null;
+  difficulty: GameDifficulty;
+  assignedAt: string;
+};
+
 export type { GameMetrics, GameSession, ProgressSummary };

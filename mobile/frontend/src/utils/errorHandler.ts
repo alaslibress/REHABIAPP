@@ -50,6 +50,34 @@ const ERROR_MESSAGES: Record<ErrorCode, { subtitle: string; message: string }> =
     subtitle: 'Error interno',
     message: 'Se ha producido un error inesperado. Por favor, intentelo de nuevo mas tarde.',
   },
+  NO_GAMES_ASSIGNED: {
+    subtitle: 'Sin juegos',
+    message: 'No tienes juegos asignados.',
+  },
+  NO_TREATMENTS_ASSIGNED: {
+    subtitle: 'Sin tratamientos',
+    message: 'No tienes tratamientos asignados todavia.',
+  },
+  DOCUMENT_DOWNLOAD_FAILED: {
+    subtitle: 'Descarga fallida',
+    message: 'No se pudo descargar el documento. Intentalo de nuevo.',
+  },
+  APPOINTMENT_REQUEST_INVALID_CONTACT: {
+    subtitle: 'Contacto invalido',
+    message: 'Debes indicar un telefono o email valido para solicitar una cita.',
+  },
+  NOTIFICATION_PERMISSION_DENIED: {
+    subtitle: 'Permiso denegado',
+    message: 'Activa las notificaciones desde los ajustes del sistema para recibir recordatorios.',
+  },
+  BODY_PART_NO_DATA: {
+    subtitle: 'Sin datos',
+    message: 'Aun no hay metricas para esta zona. Juega para ver tu progreso.',
+  },
+  APPOINTMENT_REQUEST_CONFLICT: {
+    subtitle: 'Horario ocupado',
+    message: 'Ya hay una cita para esa fecha y hora. Por favor, elige otro horario.',
+  },
 };
 
 // Convierte un error GraphQL en un AppError estructurado.

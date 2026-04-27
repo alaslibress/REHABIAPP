@@ -8,14 +8,15 @@ import org.mapstruct.Mapping;
 /**
  * Mapper MapStruct para convertir la entidad Discapacidad en DiscapacidadResponse.
  *
- * <p>necesitaProtesis: boolean primitivo en la entidad, Boolean wrapper en el DTO.</p>
+ * <p>necesitaProtesis: boolean primitivo en la entidad, Boolean wrapper en el DTO.
+ * idArticulacion y nombreArticulacion son nullable — discapacidades sin articulacion
+ * asignada devuelven null (compatibilidad hacia atras).</p>
  */
 @Mapper(componentModel = "spring")
 public interface DiscapacidadMapper {
 
-    /**
-     * Convierte la entidad Discapacidad en el DTO de respuesta.
-     */
-    @Mapping(target = "necesitaProtesis", expression = "java(discapacidad.isNecesitaProtesis())")
+    @Mapping(target = "necesitaProtesis",    expression = "java(discapacidad.isNecesitaProtesis())")
+    @Mapping(target = "idArticulacion",      expression = "java(discapacidad.getArticulacion() != null ? discapacidad.getArticulacion().getIdArticulacion() : null)")
+    @Mapping(target = "nombreArticulacion",  expression = "java(discapacidad.getArticulacion() != null ? discapacidad.getArticulacion().getNombre() : null)")
     DiscapacidadResponse toResponse(Discapacidad discapacidad);
 }

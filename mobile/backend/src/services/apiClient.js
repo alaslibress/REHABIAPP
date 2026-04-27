@@ -50,10 +50,40 @@ const MOCK_DISCAPACIDADES_ADMIN = [
 ];
 
 const MOCK_TRATAMIENTOS_ADMIN = [
-  { dniPac: '12345678Z', codTrat: 'TRT001', nombreTrat: 'Ejercicios de movilidad de cadera', visible: true, fechaAsignacion: '2024-03-15T09:00:00' },
-  { dniPac: '12345678Z', codTrat: 'TRT002', nombreTrat: 'Electroterapia de baja frecuencia', visible: true, fechaAsignacion: '2024-03-15T09:00:00' },
-  { dniPac: '12345678Z', codTrat: 'TRT003', nombreTrat: 'Ejercicios de fortalecimiento lumbar', visible: true, fechaAsignacion: '2024-06-05T11:00:00' },
-  { dniPac: '12345678Z', codTrat: 'TRT004', nombreTrat: 'Hidroterapia terapeutica', visible: false, fechaAsignacion: '2024-06-05T11:00:00' },
+  {
+    dniPac: '12345678Z', codTrat: 'TRT001', nombreTrat: 'Movilizacion activa de cadera',
+    descripcion: null, tipo: 'EXERCISE', visible: true,
+    idNivel: 2, nivelNombre: 'Subagudo', codDis: 'M16',
+    resumen: 'Ejercicios suaves de rango articular para recuperar movilidad en la cadera derecha.',
+    materiales: ['Banda elastica ligera', 'Esterilla de yoga'],
+    medicacion: ['Paracetamol 500mg si dolor agudo'],
+    tieneDocumento: true, urlDocumento: null,
+  },
+  {
+    dniPac: '12345678Z', codTrat: 'TRT002', nombreTrat: 'Electroterapia de baja frecuencia',
+    descripcion: null, tipo: 'TEXT_INSTRUCTION', visible: true,
+    idNivel: 2, nivelNombre: 'Subagudo', codDis: 'M16',
+    resumen: 'Aplicacion de corriente TENS para aliviar el dolor cronico en la zona de la cadera.',
+    materiales: ['Electrodos adhesivos', 'Aparato TENS (proporcionado en clinica)'],
+    medicacion: [],
+    tieneDocumento: false, urlDocumento: null,
+  },
+  {
+    dniPac: '12345678Z', codTrat: 'TRT003', nombreTrat: 'Fortalecimiento lumbar',
+    descripcion: null, tipo: 'EXERCISE', visible: true,
+    idNivel: 1, nivelNombre: 'Inicial', codDis: 'M54',
+    resumen: 'Serie de ejercicios isometricos para fortalecer la musculatura paravertebral.',
+    materiales: ['Pelota de fitball', 'Esterilla'],
+    medicacion: ['Ibuprofeno 400mg con comida si necesario'],
+    tieneDocumento: true, urlDocumento: null,
+  },
+  {
+    dniPac: '12345678Z', codTrat: 'TRT004', nombreTrat: 'Hidroterapia terapeutica',
+    descripcion: null, tipo: 'EXERCISE', visible: false,
+    idNivel: 1, nivelNombre: 'Inicial', codDis: 'M54',
+    resumen: null, materiales: [], medicacion: [],
+    tieneDocumento: false, urlDocumento: null,
+  },
 ];
 
 const MOCK_CITAS_ADMIN = [
@@ -124,6 +154,107 @@ function resolverMock(method, path) {
   // DELETE /api/citas
   if (method === 'DELETE' && path === '/api/citas') {
     return null; // 204 simulado
+  }
+
+  // POST /api/pacientes/{dni}/device-tokens (registro de token push)
+  const matchDeviceToken = path.match(/^\/api\/pacientes\/([^/]+)\/device-tokens$/);
+  if (matchDeviceToken && method === 'POST') {
+    return { ok: true }; // Mock — tabla token_dispositivo pendiente en el API Java
+  }
+
+  // DELETE /api/device-tokens (eliminacion de token push)
+  if (method === 'DELETE' && path === '/api/device-tokens') {
+    return null; // 204 simulado
+  }
+
+  // GET /api/pacientes/{dni}/tratamientos/{codTrat}/documento (documento PDF del tratamiento)
+  const matchDocumento = path.match(/^\/api\/pacientes\/([^/]+)\/tratamientos\/([^/]+)\/documento$/);
+  if (matchDocumento && method === 'GET') {
+    // PDF minimo "Hola Mundo" — suficiente para probar el flujo de descarga
+    const MOCK_PDF_BASE64 = Buffer.from(
+      '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
+      '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
+      '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj\n' +
+      'xref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n' +
+      '0000000058 00000 n\n0000000115 00000 n\n' +
+      'trailer<</Size 4/Root 1 0 R>>\nstartxref\n190\n%%EOF'
+    ).toString('base64');
+    return {
+      fileName: `tratamiento-${matchDocumento[2]}.pdf`,
+      mimeType: 'application/pdf',
+      base64: MOCK_PDF_BASE64,
+      url: null,
+    };
+  }
+
+  // GET /api/pacientes/{dni}/juegos (juegos terapeuticos asignados)
+  const matchJuegos = path.match(/^\/api\/pacientes\/([^/]+)\/juegos$/);
+  if (matchJuegos && method === 'GET') {
+    return [
+      { idJuego: 'j1', nombreJuego: 'Alcanza la estrella', descripcion: 'Ejercicio de alcance del brazo derecho.', urlThumbnail: null, urlWebgl: 'https://games.rehabiapp.com/star-reach', dificultad: 'EASY', fechaAsignacion: '2026-04-10' },
+      { idJuego: 'j2', nombreJuego: 'Ritmo de pasos', descripcion: 'Coordinacion de piernas siguiendo el compas.', urlThumbnail: null, urlWebgl: 'https://games.rehabiapp.com/step-rhythm', dificultad: 'MEDIUM', fechaAsignacion: '2026-04-12' },
+    ];
+  }
+
+  // POST /api/pacientes/{dni}/solicitudes-cita (solicitud de cita del paciente)
+  const matchSolicitud = path.match(/^\/api\/pacientes\/([^/]+)\/solicitudes-cita$/);
+  if (matchSolicitud && method === 'POST') {
+    return {
+      id: `req-${Date.now()}`,
+      fechaPreferida: null,
+      horaPreferida: null,
+      motivo: null,
+      estado: 'PENDING',
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  // GET /api/pacientes/{dni}/foto (foto de perfil como base64)
+  const matchFoto = path.match(/^\/api\/pacientes\/([^/]+)\/foto$/);
+  if (matchFoto && method === 'GET') {
+    // PNG 8x8 solido azul primario (#2563EB) — suficiente para probar el flujo de avatar
+    return {
+      base64: 'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAJElEQVQI12P4z8BQz0AEYBjVMKphVMOohlENoxpGNYxqIBkAALsAAQFaxqIAAAAASUVORK5CYII=',
+      mimeType: 'image/png',
+    };
+  }
+
+  // GET /api/pacientes/{dni}/progreso/partes-cuerpo
+  const matchProgreso = path.match(/^\/api\/pacientes\/([^/]+)\/progreso\/partes-cuerpo$/);
+  if (matchProgreso && method === 'GET') {
+    return [
+      { id: 'HEAD', name: 'Cabeza', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+      { id: 'NECK', name: 'Cuello', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+      { id: 'TORSO', name: 'Torso', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+      { id: 'LEFT_SHOULDER', name: 'Hombro izquierdo', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+      { id: 'RIGHT_SHOULDER', name: 'Hombro derecho', hasTreatment: true, progressPct: 62, improvementPct: 18, periodLabel: '4 semanas' },
+      { id: 'LEFT_ARM', name: 'Brazo izquierdo', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+      { id: 'RIGHT_ARM', name: 'Brazo derecho', hasTreatment: true, progressPct: 75, improvementPct: 25, periodLabel: '4 semanas' },
+      { id: 'LEFT_HAND', name: 'Mano izquierda', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+      { id: 'RIGHT_HAND', name: 'Mano derecha', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+      { id: 'LEFT_HIP', name: 'Cadera izquierda', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+      { id: 'RIGHT_HIP', name: 'Cadera derecha', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+      { id: 'LEFT_LEG', name: 'Pierna izquierda', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+      { id: 'RIGHT_LEG', name: 'Pierna derecha', hasTreatment: true, progressPct: 45, improvementPct: 10, periodLabel: '4 semanas' },
+      { id: 'LEFT_FOOT', name: 'Pie izquierdo', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+      { id: 'RIGHT_FOOT', name: 'Pie derecho', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
+    ];
+  }
+
+  // GET /api/pacientes/{dni}/progreso/partes-cuerpo/{bodyPartId}/metricas
+  const matchMetricas = path.match(/^\/api\/pacientes\/([^/]+)\/progreso\/partes-cuerpo\/([^/]+)\/metricas/);
+  if (matchMetricas && method === 'GET') {
+    // 8 puntos de datos semanales ascendentes — simula mejora progresiva
+    const hoy = new Date();
+    return Array.from({ length: 8 }, function (_, i) {
+      const fecha = new Date(hoy);
+      fecha.setDate(hoy.getDate() - (7 - i) * 7);
+      return {
+        date: fecha.toISOString().split('T')[0],
+        score: 40 + Math.round((38 / 7) * i),
+        metricType: 'ACCURACY',
+      };
+    });
   }
 
   return null;

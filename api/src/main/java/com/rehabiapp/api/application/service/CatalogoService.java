@@ -1,21 +1,31 @@
 package com.rehabiapp.api.application.service;
 
+import com.rehabiapp.api.application.dto.ArticulacionResponse;
 import com.rehabiapp.api.application.dto.DiscapacidadRequest;
 import com.rehabiapp.api.application.dto.DiscapacidadResponse;
+import com.rehabiapp.api.application.dto.JuegoAsociarRequest;
+import com.rehabiapp.api.application.dto.JuegoRequest;
+import com.rehabiapp.api.application.dto.JuegoResponse;
 import com.rehabiapp.api.application.dto.NivelProgresionResponse;
 import com.rehabiapp.api.application.dto.TratamientoRequest;
 import com.rehabiapp.api.application.dto.TratamientoResponse;
+import com.rehabiapp.api.application.mapper.ArticulacionMapper;
 import com.rehabiapp.api.application.mapper.DiscapacidadMapper;
+import com.rehabiapp.api.application.mapper.JuegoMapper;
 import com.rehabiapp.api.application.mapper.NivelProgresionMapper;
 import com.rehabiapp.api.application.mapper.TratamientoMapper;
+import com.rehabiapp.api.domain.entity.Articulacion;
 import com.rehabiapp.api.domain.entity.Discapacidad;
 import com.rehabiapp.api.domain.entity.DiscapacidadTratamiento;
 import com.rehabiapp.api.domain.entity.DiscapacidadTratamientoId;
+import com.rehabiapp.api.domain.entity.Juego;
 import com.rehabiapp.api.domain.entity.NivelProgresion;
 import com.rehabiapp.api.domain.entity.Tratamiento;
 import com.rehabiapp.api.domain.exception.RecursoNoEncontradoException;
+import com.rehabiapp.api.domain.repository.ArticulacionRepository;
 import com.rehabiapp.api.domain.repository.DiscapacidadRepository;
 import com.rehabiapp.api.domain.repository.DiscapacidadTratamientoRepository;
+import com.rehabiapp.api.domain.repository.JuegoRepository;
 import com.rehabiapp.api.domain.repository.NivelProgresionRepository;
 import com.rehabiapp.api.domain.repository.PacienteDiscapacidadRepository;
 import com.rehabiapp.api.domain.repository.PacienteTratamientoRepository;
@@ -39,9 +49,13 @@ public class CatalogoService {
     private final DiscapacidadRepository discapacidadRepository;
     private final TratamientoRepository tratamientoRepository;
     private final NivelProgresionRepository nivelProgresionRepository;
+    private final ArticulacionRepository articulacionRepository;
+    private final JuegoRepository juegoRepository;
     private final DiscapacidadMapper discapacidadMapper;
     private final TratamientoMapper tratamientoMapper;
     private final NivelProgresionMapper nivelProgresionMapper;
+    private final ArticulacionMapper articulacionMapper;
+    private final JuegoMapper juegoMapper;
     private final DiscapacidadTratamientoRepository discapacidadTratamientoRepository;
     private final PacienteDiscapacidadRepository pacienteDiscapacidadRepository;
     private final PacienteTratamientoRepository pacienteTratamientoRepository;
@@ -50,9 +64,13 @@ public class CatalogoService {
             DiscapacidadRepository discapacidadRepository,
             TratamientoRepository tratamientoRepository,
             NivelProgresionRepository nivelProgresionRepository,
+            ArticulacionRepository articulacionRepository,
+            JuegoRepository juegoRepository,
             DiscapacidadMapper discapacidadMapper,
             TratamientoMapper tratamientoMapper,
             NivelProgresionMapper nivelProgresionMapper,
+            ArticulacionMapper articulacionMapper,
+            JuegoMapper juegoMapper,
             DiscapacidadTratamientoRepository discapacidadTratamientoRepository,
             PacienteDiscapacidadRepository pacienteDiscapacidadRepository,
             PacienteTratamientoRepository pacienteTratamientoRepository
@@ -60,9 +78,13 @@ public class CatalogoService {
         this.discapacidadRepository = discapacidadRepository;
         this.tratamientoRepository = tratamientoRepository;
         this.nivelProgresionRepository = nivelProgresionRepository;
+        this.articulacionRepository = articulacionRepository;
+        this.juegoRepository = juegoRepository;
         this.discapacidadMapper = discapacidadMapper;
         this.tratamientoMapper = tratamientoMapper;
         this.nivelProgresionMapper = nivelProgresionMapper;
+        this.articulacionMapper = articulacionMapper;
+        this.juegoMapper = juegoMapper;
         this.discapacidadTratamientoRepository = discapacidadTratamientoRepository;
         this.pacienteDiscapacidadRepository = pacienteDiscapacidadRepository;
         this.pacienteTratamientoRepository = pacienteTratamientoRepository;
@@ -327,5 +349,169 @@ public class CatalogoService {
         return discapacidadTratamientoRepository.findByIdCodTrat(codTrat).stream()
                 .map(dt -> discapacidadMapper.toResponse(dt.getDiscapacidad()))
                 .toList();
+    }
+
+    // ==================== ARTICULACIONES ====================
+
+    /**
+     * Lista todas las articulaciones del catalogo (seed estatico).
+     */
+    @Transactional(readOnly = true)
+    public List<ArticulacionResponse> listarArticulaciones() {
+        return articulacionRepository.findAll()
+                .stream()
+                .map(articulacionMapper::toResponse)
+                .toList();
+    }
+
+    // ==================== JUEGOS ====================
+
+    /**
+     * Lista todos los juegos activos del catalogo.
+     * Si se proporciona idArticulacion, filtra por esa articulacion.
+     *
+     * @param idArticulacion filtro opcional; null devuelve todos los activos.
+     */
+    @Transactional(readOnly = true)
+    public List<JuegoResponse> listarJuegos(Integer idArticulacion) {
+        List<Juego> juegos = (idArticulacion != null)
+                ? juegoRepository.findByArticulacionIdArticulacionAndActivoTrue(idArticulacion)
+                : juegoRepository.findByActivoTrue();
+        return juegos.stream().map(juegoMapper::toResponse).toList();
+    }
+
+    /**
+     * Devuelve un juego por su codigo.
+     *
+     * @throws RecursoNoEncontradoException si no existe.
+     */
+    @Transactional(readOnly = true)
+    public JuegoResponse obtenerJuego(String codJuego) {
+        return juegoRepository.findById(codJuego)
+                .map(juegoMapper::toResponse)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Juego no encontrado: " + codJuego));
+    }
+
+    /**
+     * Crea un nuevo juego en el catalogo.
+     * Solo SPECIALIST (validado en el controlador).
+     */
+    public JuegoResponse crearJuego(JuegoRequest request) {
+        if (juegoRepository.existsById(request.codJuego())) {
+            throw new DataIntegrityViolationException(
+                    "Ya existe un juego con codigo: " + request.codJuego());
+        }
+        if (juegoRepository.existsByNombre(request.nombre())) {
+            throw new DataIntegrityViolationException(
+                    "Ya existe un juego con nombre: " + request.nombre());
+        }
+
+        Articulacion articulacion = articulacionRepository.findById(request.idArticulacion())
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Articulacion no encontrada: " + request.idArticulacion()));
+
+        Juego entidad = new Juego();
+        entidad.setCodJuego(request.codJuego());
+        entidad.setNombre(request.nombre());
+        entidad.setDescripcion(request.descripcion());
+        entidad.setUrlJuego(request.urlJuego());
+        entidad.setArticulacion(articulacion);
+        entidad.setActivo(Boolean.TRUE.equals(request.activo()) || request.activo() == null);
+
+        return juegoMapper.toResponse(juegoRepository.save(entidad));
+    }
+
+    /**
+     * Actualiza los campos de un juego existente.
+     */
+    public JuegoResponse actualizarJuego(String codJuego, JuegoRequest request) {
+        Juego entidad = juegoRepository.findById(codJuego)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Juego no encontrado: " + codJuego));
+
+        if (juegoRepository.existsByNombreAndCodJuegoNot(request.nombre(), codJuego)) {
+            throw new DataIntegrityViolationException(
+                    "Ya existe otro juego con nombre: " + request.nombre());
+        }
+
+        Articulacion articulacion = articulacionRepository.findById(request.idArticulacion())
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Articulacion no encontrada: " + request.idArticulacion()));
+
+        entidad.setNombre(request.nombre());
+        entidad.setDescripcion(request.descripcion());
+        entidad.setUrlJuego(request.urlJuego());
+        entidad.setArticulacion(articulacion);
+        if (request.activo() != null) {
+            entidad.setActivo(request.activo());
+        }
+
+        return juegoMapper.toResponse(juegoRepository.save(entidad));
+    }
+
+    /**
+     * Elimina un juego del catalogo.
+     * Rechaza con 409 si algun tratamiento lo tiene asociado.
+     */
+    public void eliminarJuego(String codJuego) {
+        if (!juegoRepository.existsById(codJuego)) {
+            throw new RecursoNoEncontradoException("Juego no encontrado: " + codJuego);
+        }
+        if (tratamientoRepository.existsByJuegoCodJuego(codJuego)) {
+            throw new DataIntegrityViolationException(
+                    "No se puede eliminar: hay tratamientos vinculados a este juego");
+        }
+        juegoRepository.deleteById(codJuego);
+    }
+
+    // ==================== ASOCIACION TRATAMIENTO-JUEGO ====================
+
+    /**
+     * Asocia o desasocia un juego a un tratamiento.
+     *
+     * <p>Si codJuego es null se desasocia el juego actual (el tratamiento queda sin juego).
+     * Si codJuego no es null, valida que la articulacion del juego coincida con al menos
+     * una de las articulaciones de las discapacidades vinculadas al tratamiento.
+     * Si ninguna discapacidad vinculada tiene articulacion definida, el juego se acepta
+     * sin restriccion de articulacion (fallback permisivo).</p>
+     *
+     * @throws RecursoNoEncontradoException  si el tratamiento o el juego no existen.
+     * @throws IllegalArgumentException      si la articulacion del juego no coincide.
+     */
+    public TratamientoResponse asociarJuegoATratamiento(String codTrat, JuegoAsociarRequest request) {
+        Tratamiento tratamiento = tratamientoRepository.findById(codTrat)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Tratamiento no encontrado: " + codTrat));
+
+        if (request.codJuego() == null) {
+            // Desasociacion explicita
+            tratamiento.setJuego(null);
+        } else {
+            Juego juego = juegoRepository.findById(request.codJuego())
+                    .orElseThrow(() -> new RecursoNoEncontradoException(
+                            "Juego no encontrado: " + request.codJuego()));
+
+            // Validar coherencia de articulacion con las discapacidades del tratamiento
+            List<DiscapacidadTratamiento> vinculos =
+                    discapacidadTratamientoRepository.findByIdCodTrat(codTrat);
+
+            boolean hayArticulacionDefinida = vinculos.stream()
+                    .anyMatch(v -> v.getDiscapacidad().getArticulacion() != null);
+
+            if (hayArticulacionDefinida) {
+                Integer idArtJuego = juego.getArticulacion().getIdArticulacion();
+                boolean coincide = vinculos.stream()
+                        .filter(v -> v.getDiscapacidad().getArticulacion() != null)
+                        .anyMatch(v -> v.getDiscapacidad().getArticulacion()
+                                .getIdArticulacion().equals(idArtJuego));
+                if (!coincide) {
+                    throw new IllegalArgumentException(
+                            "El juego seleccionado no corresponde a ninguna articulacion "
+                            + "de las discapacidades vinculadas al tratamiento.");
+                }
+            }
+
+            tratamiento.setJuego(juego);
+        }
+
+        return tratamientoMapper.toResponse(tratamientoRepository.save(tratamiento));
     }
 }

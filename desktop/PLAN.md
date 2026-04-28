@@ -1,636 +1,495 @@
-# IMPLEMENTATION PLAN — Bugfixes + CSS Visual Enhancement
+# PLAN.md — Desktop iteration 2026-04-28
 
-> Date: 2026-04-15
-> Branch: desktop-final
-> Author: Agent 3 Thinker (Opus) — PRESCRIPTIVE. Doer (Sonnet) MUST follow step by step without re-architecting.
-> Language: All code comments inside Java/FXML/CSS MUST be in Spanish (root `CLAUDE.md` §4.5). This plan itself is English.
-> Scope:
->   Phase A — Two bugfixes (DNI filter on "Ver ficha paciente" + misleading "conexion BD" error on register)
->   Phase B — 12 CSS visual enhancement checklist items from `desktop/CLAUDE.md` §7
+> **Branch:** stats-implementation
+> **Author:** Agent 0/3 Thinker (Opus) — PRESCRIPTIVE. Doer (Sonnet) MUST follow step by step.
+> **Language:** All code/comments in Spanish (root `CLAUDE.md` §4.5).
+> **Scope:** Phases A-E del checklist `/desktop/CLAUDE.md` §7.
 
 ---
 
-## 0. CONTEXT THE DOER MUST READ FIRST (MANDATORY)
+## 0. CONTEXTO OBLIGATORIO
 
-Before touching code, open and read:
+Antes de tocar codigo, leer:
 
-1. `/CLAUDE.md` — §4.5 (style), §4.6 (security), §10 (TestSprite loop).
-2. `desktop/CLAUDE.md` — §2, §3, §4, §7 checklist pending items.
-3. `desktop/.claude/skills/javafx-java24/` — apply all rules.
-4. `desktop/src/main/java/com/javafx/Interface/controladorVentanaPrincipal.java` lines 230-470 (cargarPestania, cargarPestaniaCitasConFiltro, busquedaRapida) and lines 597-650 (abrirFichaPacienteDesdeCita, limpiarCachePestania).
-5. `desktop/src/main/java/com/javafx/Interface/controladorVentanaPacientes.java` lines 190-230 (busqueda logic), lines 440-520 (CRUD entry points).
-6. `desktop/src/main/java/com/javafx/Interface/controladorVentanaCitas.java` — how §4.6 `verFichaPaciente` calls `abrirFichaPacienteDesdeCita(dniPac)`.
-7. `desktop/src/main/java/com/javafx/Clases/ApiClient.java` lines 170-450 — how ConexionException is thrown and the exact status codes it covers.
-8. `desktop/src/main/java/com/javafx/Interface/controladorAgregarPaciente.java`, `controladorAgregarSanitario.java`, `controladorAgregarTratamiento.java`, `controladorAgregarDiscapacidad.java` — every `catch (ConexionException)` block.
-9. `desktop/src/main/resources/tema_claro.css` and `tema_oscuro.css` — full files (existing tokens, button styles, table styles).
-10. `desktop/src/main/resources/VentanaPrincipal.fxml` — sidebar structure (`btnPestania*` ids).
-
-DO NOT start coding until all 10 sources are read.
+1. `/CLAUDE.md` raiz — §4.5 estilo, §4.6 seguridad, §10 TestSprite.
+2. `/desktop/CLAUDE.md` — §7 checklist Phase A-E.
+3. `/desktop/.claude/skills/javafx-java24/` — todas las reglas.
+4. `/api/PLAN.md` Phase 5-7 — endpoints nuevos que el desktop consumira.
+5. `/data/PLAN.md` Phase 5-6 — pipeline de progreso y MD.
+6. `/desktop/src/main/resources/css/tema_claro.css` y `tema_oscuro.css` — completos.
+7. Controladores y FXML afectados (listados en cada fase).
 
 ---
 
-## PHASE A — BUGFIXES
+## PHASE A — UI FIXES
 
-### A.1 BUG 1 — "Ver ficha paciente" does NOT filter by DNI
+### A.1 — Homologar botones de busqueda y "Anadir"
 
-#### A.1.1 Root cause
+**Diagnostico:** En `VentanaSanitarios.fxml` los botones tienen estilo `boton-primario` con icono `imagenes/anadir.png` 16x16 y la SearchBar de ControlsFX. En `VentanaDiscapacidades.fxml` y `VentanaTratamientos.fxml` se usaron clases CSS distintas y un TextField simple en lugar de SearchBar.
 
-`controladorVentanaPrincipal.abrirFichaPacienteDesdeCita(String dniPac)` (line 603) receives `dniPac` but NEVER uses it. It only navigates to Pacientes tab. The filter path that already works for Citas (`cargarPestaniaCitasConFiltro` → `setTextoBusquedaPendiente`) is NOT mirrored for Pacientes.
+**Fix:**
 
-#### A.1.2 Fix — mirror the Citas pattern for Pacientes
+1. Abrir `VentanaSanitarios.fxml` y copiar el HBox cabecera (TextField busqueda + Button "Anadir") al portapapeles como referencia.
+2. En `VentanaDiscapacidades.fxml`: reemplazar el HBox cabecera actual con la misma estructura, ajustando ids (`txfBuscarDiscapacidades`, `btnAnadirDiscapacidad`) y los handlers FXML.
+3. Mismo paso para `VentanaTratamientos.fxml` (`txfBuscarTratamientos`, `btnAnadirTratamiento`).
+4. Verificar que las clases CSS aplicadas son IDENTICAS — `cabecera-listado`, `boton-primario`, `campo-busqueda`. Si alguna no existe en discapacidad/tratamiento, anadirla SIN duplicar definiciones CSS.
+5. Confirmar visualmente que los tres listados (sanitarios, discapacidades, tratamientos) son indistinguibles en cabecera.
 
-All four changes atomic. Doer does NOT redesign the cache system.
+### A.2 — Botones Aceptar/Cancelar en filtro de tratamientos
 
-##### A.1.2.1 Modify `controladorVentanaPacientes.java`
+**Diagnostico:** `VentanaFiltroTratamientos.fxml` carece de la barra inferior con botones presente en `VentanaFiltroPacientes.fxml`.
 
-Add field + public setter + consume-on-load, identical pattern to `controladorVentanaCitas.setTextoBusquedaPendiente`:
+**Fix:**
 
-```java
-private String textoBusquedaPendiente;
+1. Anadir `<HBox styleClass="modal-footer">` al final de `VentanaFiltroTratamientos.fxml`:
+```xml
+<HBox styleClass="modal-footer" spacing="10" alignment="CENTER_RIGHT">
+    <Button fx:id="btnCancelar" text="Cancelar" styleClass="boton-secundario" onAction="#cancelar"/>
+    <Button fx:id="btnAceptar"  text="Aceptar"  styleClass="boton-primario"  onAction="#aceptar"/>
+</HBox>
+```
+2. En `controladorFiltroTratamientos.java` anadir `@FXML private void cancelar()` (cerrar sin aplicar) y `@FXML private void aceptar()` (aplicar filtros y cerrar). Si los metodos ya existen con otro nombre, NO renombrar — apuntar el `onAction` al existente.
 
-public void setTextoBusquedaPendiente(String texto) {
-    this.textoBusquedaPendiente = texto;
+### A.3 — Centrado de textos en ventanas emergentes
+
+**Fix:**
+
+1. En `tema_claro.css` y `tema_oscuro.css`, anadir al bloque "MEJORAS VISUALES v2":
+```css
+.modal-texto-centrado, .alert .content, .dialog-pane .content {
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+```
+2. En `VentanaUtil.mostrarVentanaInformativa(...)` y `mostrarConfirmacion(...)` anadir `dialogPane.getStyleClass().add("modal-texto-centrado");` antes de `showAndWait()`.
+3. Auditoria de cada FXML modal (`VentanaAgregarPaciente`, `VentanaAgregarSanitario`, `VentanaAgregarTratamiento`, `VentanaAgregarDiscapacidad`, `VentanaFiltroPacientes`, `VentanaFiltroTratamientos`) — anadir `styleClass="modal-texto-centrado"` al Label de titulo y a cualquier Label informativo.
+
+### A.4 — Fondo blanco en tema oscuro (CRITICO — auditoria CSS profunda)
+
+**Diagnostico previo:** Intentos anteriores fallaron probablemente por:
+- AnchorPane / VBox raiz del FXML SIN `styleClass`, heredando default blanco de JavaFX.
+- Reglas CSS especificas de `.text-field` o `.scroll-pane` que sobreescriben el fondo del padre.
+- Selector demasiado generico (`*`) sin `!important` o con menor especificidad que el style en linea de SceneBuilder.
+
+**Fix prescriptivo (3 pasos):**
+
+1. **Auditoria con SceneBuilder (manual):**
+   - Abrir `VentanaAgregarPaciente.fxml` y `VentanaAgregarSanitario.fxml`.
+   - Inspeccionar la jerarquia: el ROOT (probablemente `AnchorPane` o `VBox`) DEBE tener `styleClass="modal-root"`.
+   - Eliminar cualquier `style="-fx-background-color: ..."` o `style="..."` inline en el root y descendientes.
+
+2. **CSS — anadir reglas con especificidad explicita y herencia controlada:**
+
+En `tema_oscuro.css`, en el bloque "MEJORAS VISUALES v2", anadir AL FINAL (mayor prioridad por orden):
+```css
+/* Forzar fondo correcto en TODOS los modales del tema oscuro */
+.root .modal-root,
+.root .modal-root > * ,
+.modal-root,
+.modal-root > AnchorPane,
+.modal-root > VBox,
+.modal-root > ScrollPane,
+.modal-root > ScrollPane > .viewport {
+    -fx-background-color: -color-fondo-panel;
+}
+.modal-root .scroll-pane,
+.modal-root .scroll-pane > .viewport,
+.modal-root .scroll-pane .content {
+    -fx-background-color: transparent;
 }
 ```
 
-Inside the existing `initialize()` (or the first method guaranteed to run AFTER `cargarPacientes()`), at the END add:
+En `tema_claro.css` mantener el mismo selector pero con el color claro correspondiente.
 
-```java
-if (textoBusquedaPendiente != null && !textoBusquedaPendiente.isBlank()) {
-    txfBuscarPacientes.setText(textoBusquedaPendiente);
-    buscarPacientes(null);
-    textoBusquedaPendiente = null;
-}
+3. **Verificacion E2E:**
+   - Compilar y arrancar con tema oscuro activo.
+   - Abrir VentanaAgregarPaciente y VentanaAgregarSanitario.
+   - Verificar que NINGUN area se ve blanca (incluido el ScrollPane interno).
+   - Repetir con tema claro y comprobar que sigue funcionando.
+
+**No-go:** No usar `!important`. JavaFX CSS no soporta `!important` y romperia el cascade.
+
+---
+
+## PHASE B — TREATMENT PDF IMPORT
+
+### B.1 — FileChooser en VentanaAgregarTratamiento
+
+1. En FXML anadir HBox tras los campos de definicion:
+```xml
+<HBox spacing="10" alignment="CENTER_LEFT">
+    <Label text="PDF del tratamiento:" styleClass="label-formulario"/>
+    <Button fx:id="btnImportarPdf" text="Importar PDF" styleClass="boton-secundario" onAction="#importarPdf"/>
+    <Label fx:id="lblNombrePdf" text="(Sin archivo)" styleClass="label-secundario"/>
+    <Button fx:id="btnEliminarPdf" text="Eliminar" styleClass="boton-peligro" onAction="#eliminarPdf" visible="false"/>
+</HBox>
 ```
 
-If `initialize()` triggers `cargarPacientes()` asynchronously (Task), wrap the block above in `Platform.runLater(...)` placed AFTER the Task's `setOnSucceeded` callback. Keep the method `buscarPacientes(ActionEvent)` UNCHANGED — Doer only invokes it.
-
-If `buscarPacientes` is not `public`/`@FXML` accessible, call the existing `@FXML` search action instead; do NOT rename methods.
-
-##### A.1.2.2 Modify `controladorVentanaPrincipal.java`
-
-Add a new helper mirroring `cargarPestaniaCitasConFiltro` (reference: lines 350-372). Place it directly AFTER `cargarPestaniaCitasConFiltro`:
-
+2. En `controladorAgregarTratamiento.java` anadir:
 ```java
-private void cargarPestaniaPacientesConFiltro(String textoBusqueda) {
-    limpiarCachePestania("Pacientes");
-    pestaniaActual = "";
-    cargarPestania("Pacientes");
-    marcarPestaniaSeleccionada(btnPestaniaPacientes);
+private byte[] pdfBytes;
+private String pdfNombre;
 
-    Object ctrl = cacheControladores.get("Pacientes");
-    if (ctrl instanceof controladorVentanaPacientes cvp && textoBusqueda != null && !textoBusqueda.isBlank()) {
-        cvp.setTextoBusquedaPendiente(textoBusqueda);
+@FXML
+private void importarPdf() {
+    FileChooser fc = new FileChooser();
+    fc.setTitle("Seleccionar PDF del tratamiento");
+    fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF", "*.pdf"));
+    File f = fc.showOpenDialog(btnImportarPdf.getScene().getWindow());
+    if (f == null) return;
+    try {
+        byte[] bytes = Files.readAllBytes(f.toPath());
+        if (bytes.length > 10 * 1024 * 1024) {
+            VentanaUtil.mostrarVentanaInformativa("El PDF supera 10 MB.", TipoMensaje.ADVERTENCIA);
+            return;
+        }
+        // Verificar magic bytes "%PDF-"
+        if (bytes.length < 5 || bytes[0] != '%' || bytes[1] != 'P' || bytes[2] != 'D' || bytes[3] != 'F') {
+            VentanaUtil.mostrarVentanaInformativa("El archivo no es un PDF valido.", TipoMensaje.ERROR);
+            return;
+        }
+        this.pdfBytes = bytes;
+        this.pdfNombre = f.getName();
+        lblNombrePdf.setText(pdfNombre + " (" + (bytes.length / 1024) + " KB)");
+        btnEliminarPdf.setVisible(true);
+    } catch (IOException e) {
+        VentanaUtil.mostrarVentanaInformativa("No se pudo leer el archivo: " + e.getMessage(), TipoMensaje.ERROR);
     }
 }
+
+@FXML
+private void eliminarPdf() {
+    pdfBytes = null;
+    pdfNombre = null;
+    lblNombrePdf.setText("(Sin archivo)");
+    btnEliminarPdf.setVisible(false);
+}
 ```
 
-##### A.1.2.3 Replace body of `abrirFichaPacienteDesdeCita(String dniPac)` (line 603)
+3. En el handler "Guardar", si `pdfBytes != null`, llamar tras el POST/PUT del tratamiento a `catalogoService.subirPdfTratamiento(codTrat, pdfBytes, pdfNombre)`.
 
-Replace the current 4-line body with:
+### B.2 — Modo edicion: cargar PDF existente
+
+En `cargarDatosParaEdicion(Tratamiento t)`:
+- Llamar a `catalogoService.consultarMetadatosPdf(codTrat)` (devuelve `{nombre, tamano}` o null si no hay PDF).
+- Si hay PDF: setear `lblNombrePdf` con el nombre y mostrar `btnEliminarPdf`.
+- NO descargar bytes hasta que el usuario pulse "Reemplazar" (cambia el boton a "Importar PDF" + un boton "Descargar para revisar").
+
+### B.3 — Extender CatalogoDAO
+
+Anadir en `CatalogoDAO.java`:
+```java
+public void subirPdfTratamiento(String codTrat, byte[] bytes, String filename) throws RehabiAppException;
+public PdfMetadato consultarMetadatosPdf(String codTrat) throws RehabiAppException;
+public byte[] descargarPdfTratamiento(String codTrat) throws RehabiAppException;
+public void eliminarPdfTratamiento(String codTrat) throws RehabiAppException;
+```
+
+`PdfMetadato` es un `record(String nombre, long tamano)`.
+
+Implementacion: usar el `ApiClient.postMultipart(...)` (anadir helper si no existe — multipart es nuevo en el desktop).
+
+---
+
+## PHASE C — TREATMENT-GAME ASSOCIATION
+
+### C.1 — Modelo Videojuego
+
+Crear `desktop/src/main/java/com/javafx/Clases/Videojuego.java`:
+```java
+public record Videojuego(
+    Long idVideojuego,
+    String codigo,
+    String nombre,
+    String descripcion,
+    String codDis,
+    String parteCuerpo,
+    String urlUnity,
+    boolean activo
+) {}
+```
+
+### C.2 — VideojuegoDAO
+
+Crear `desktop/src/main/java/com/javafx/DAO/VideojuegoDAO.java` con `listarTodos()` y `listarPorDiscapacidad(String codDis)` llamando a los endpoints `/api/videojuegos` (ver `api/PLAN.md` Phase 6).
+
+### C.3 — Extender CatalogoDAO
+
+Anadir:
+```java
+public List<Videojuego> listarJuegosDeTratamiento(String codTrat) throws RehabiAppException;
+public void vincularJuego(String codTrat, long idVideojuego) throws RehabiAppException;
+public void desvincularJuego(String codTrat, long idVideojuego) throws RehabiAppException;
+```
+
+### C.4 — UI en VentanaAgregarTratamiento
+
+Anadir tras el ComboBox de discapacidad:
+```xml
+<Label text="Videojuegos terapeuticos asociados:" styleClass="label-formulario"/>
+<TableView fx:id="tablaJuegos" prefHeight="180" styleClass="tabla-secundaria">
+    <columns>
+        <TableColumn fx:id="colJuegoSel" prefWidth="40"  text="Sel"/>
+        <TableColumn fx:id="colJuegoCod" prefWidth="100" text="Codigo"/>
+        <TableColumn fx:id="colJuegoNom" prefWidth="220" text="Nombre"/>
+        <TableColumn fx:id="colJuegoCue" prefWidth="120" text="Parte cuerpo"/>
+    </columns>
+</TableView>
+```
+
+`colJuegoSel` es `TableColumn<Videojuego, Boolean>` con `CheckBoxTableCell`.
+
+### C.5 — Wiring en controlador
+
+En `controladorAgregarTratamiento.java`:
+- Listener del ComboBox discapacidad: al cambiar, recarga `tablaJuegos` con `videojuegoDAO.listarPorDiscapacidad(codDis)`.
+- En modo edicion, marcar como seleccionados los juegos que devuelve `catalogoService.listarJuegosDeTratamiento(codTrat)`.
+- Al guardar: calcular diff entre seleccion original y actual → llamar a `vincularJuego` / `desvincularJuego` por cada cambio.
+
+### C.6 — RBAC
+
+Si el usuario es nurse, deshabilitar `tablaJuegos` (`setDisable(true)`) — solo visualizacion.
+
+---
+
+## PHASE D — PATIENT PROGRESS VISUALIZATION
+
+### D.1 — VentanaProgresoPaciente.fxml
+
+Estructura:
+```xml
+<VBox styleClass="modal-root, panel-card" prefWidth="900" prefHeight="700">
+    <HBox styleClass="modal-header">
+        <Label fx:id="lblTituloProgreso" text="Progreso del paciente" styleClass="label-titulo"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label fx:id="lblUltimaActualizacion" text="" styleClass="label-secundario"/>
+        <Button fx:id="btnRecargar" text="Actualizar" onAction="#recargar" styleClass="boton-secundario"/>
+        <Button fx:id="btnCerrar"   text="Cerrar"    onAction="#cerrar"    styleClass="boton-secundario"/>
+    </HBox>
+    <ScrollPane fx:id="scrollGraficos" fitToWidth="true" styleClass="scroll-progreso">
+        <VBox fx:id="contenedorGraficos" spacing="20" styleClass="contenedor-graficos"/>
+    </ScrollPane>
+    <Label fx:id="lblEstado" text="" styleClass="label-estado"/>
+</VBox>
+```
+
+### D.2 — controladorVentanaProgresoPaciente
 
 ```java
-public void abrirFichaPacienteDesdeCita(String dniPac) {
-    if (dniPac == null || dniPac.isBlank()) {
-        cargarPestania("Pacientes");
-        marcarPestaniaSeleccionada(btnPestaniaPacientes);
+public class controladorVentanaProgresoPaciente {
+    private String dniPac;
+    private final ProgresoService progresoService = new ProgresoService();
+    private SyncProgresoService syncService;
+
+    public void inicializarConDni(String dniPac) {
+        this.dniPac = dniPac;
+        cargarProgreso();
+        // Phase E: arrancar polling
+        syncService = new SyncProgresoService(dniPac, this::onNuevosDatos);
+        syncService.iniciar();
+    }
+
+    private void cargarProgreso() {
+        Task<List<ProgresoTratamiento>> task = new Task<>() {
+            @Override protected List<ProgresoTratamiento> call() throws Exception {
+                return progresoService.obtenerProgreso(dniPac);
+            }
+        };
+        task.setOnSucceeded(e -> renderizarGraficos(task.getValue()));
+        task.setOnFailed(e -> mostrarError(task.getException()));
+        new Thread(task).start();
+    }
+
+    private void renderizarGraficos(List<ProgresoTratamiento> datos) {
+        contenedorGraficos.getChildren().clear();
+        if (datos.isEmpty()) {
+            lblEstado.setText("No hay datos de progreso para este paciente.");
+            return;
+        }
+        for (ProgresoTratamiento p : datos) {
+            contenedorGraficos.getChildren().add(GraficoUtil.crearLineChart(p));
+        }
+        lblUltimaActualizacion.setText("Ultima actualizacion: " + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+    }
+    // ... onNuevosDatos, recargar, cerrar, mostrarError
+}
+```
+
+### D.3, D.4 — Botones "Progreso"
+
+- En `VentanaListarPaciente.fxml`: anadir `Button text="Progreso"` en la cabecera de acciones, con handler `abrirProgreso(ActionEvent)` que invoca `VentanaHelper.abrirModal("VentanaProgresoPaciente.fxml", ctrl -> ctrl.inicializarConDni(this.paciente.getDniPac()))`.
+- En `VentanaPacientes.fxml`: anadir `Button text="Progreso"` junto a "Generar listado PDF". Handler:
+```java
+@FXML
+private void abrirProgresoPacienteSeleccionado() {
+    Paciente sel = tablaPacientes.getSelectionModel().getSelectedItem();
+    if (sel == null) {
+        VentanaUtil.mostrarVentanaInformativa("Selecciona un paciente para ver su progreso.", TipoMensaje.ADVERTENCIA);
         return;
     }
-    cargarPestaniaPacientesConFiltro(dniPac);
+    VentanaHelper.abrirModal("VentanaProgresoPaciente.fxml",
+        (controladorVentanaProgresoPaciente ctrl) -> ctrl.inicializarConDni(sel.getDniPac()));
 }
 ```
 
-##### A.1.2.4 Verify the call site in `controladorVentanaCitas.java`
+### D.5 — ProgresoDAO
 
-`verFichaPaciente(ActionEvent)` must already pass `cita.getDniPaciente()`. If not, fix it. Do NOT change anything else in that method.
+```java
+public class ProgresoDAO {
+    public List<ProgresoTratamiento> obtenerProgreso(String dni) throws RehabiAppException {
+        // GET /api/pacientes/{dni}/progreso
+    }
+    public CheckProgresoResponse comprobarNuevosDatos(String dni, Instant desde) throws RehabiAppException {
+        // GET /api/pacientes/{dni}/progreso/check?since=...
+    }
+    public String obtenerMarkdown(String dni) throws RehabiAppException {
+        // GET /api/pacientes/{dni}/progreso/markdown (Content-Type: text/markdown)
+    }
+}
+```
 
-#### A.1.3 Acceptance test (manual)
+### D.6 — ProgresoService
 
-1. Login as ADMIN0000/admin.
-2. Go to Citas tab.
-3. Select any row in the appointments table.
-4. Click "Ver ficha paciente".
-5. Expected: Pacientes tab opens AND `txfBuscarPacientes` is prefilled with the DNI AND the table shows ONLY that patient.
+Wraps el DAO con cache de 30s en memoria por DNI. Limpia cache cuando `comprobarNuevosDatos` devuelve true.
 
-#### A.1.4 Unit test (mandatory per §10 of root CLAUDE.md)
+### D.7 — GraficoUtil
 
-Create `desktop/src/test/java/com/javafx/Interface/NavegacionFichaPacienteTest.java`. Two cases, both with JFXPanel bootstrap:
+```java
+public static LineChart<Number, String> crearLineChart(ProgresoTratamiento p) {
+    NumberAxis ejeX = new NumberAxis();
+    ejeX.setLabel(p.metricaNombre()); // ej. "Rango de movimiento (grados)"
+    CategoryAxis ejeY = new CategoryAxis();
+    ejeY.setLabel("Fecha");
+    LineChart<Number, String> chart = new LineChart<>(ejeX, ejeY);
+    chart.setTitle(p.tratamientoNombre() + " — " + p.parteCuerpo());
 
-- `testSetTextoBusquedaPendienteAplicaFiltroAlIniciar` — instanciate controller, call setter, invoke initialize, assert that `txfBuscarPacientes.getText()` equals the DNI.
-- `testAbrirFichaConDniVacioNoRompeFlujo` — call `abrirFichaPacienteDesdeCita(null)` → no exception, tab loads without filter.
+    XYChart.Series<Number, String> serie = new XYChart.Series<>();
+    serie.setName("Progreso");
+    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    for (ProgresoEntrada e : p.entradas()) {
+        serie.getData().add(new XYChart.Data<>(e.valor(), e.fecha().atZone(ZoneOffset.UTC).format(fmt)));
+    }
+    chart.getData().add(serie);
+
+    // Marcar baseline (primer registro) y current (ultimo) en color destacado
+    if (!serie.getData().isEmpty()) {
+        serie.getData().getFirst().getNode().getStyleClass().add("punto-baseline");
+        serie.getData().getLast().getNode().getStyleClass().add("punto-actual");
+    }
+    return chart;
+}
+```
+
+### D.8 — Tests
+
+`desktop/src/test/java/com/javafx/service/ProgresoServiceTest.java` — mock ProgresoDAO con MockWebServer (si esta en build.gradle, si no skip).
 
 ---
 
-### A.2 BUG 2 — "No se ha podido conectar a la base de datos" on register
+## PHASE E — BACKGROUND SYNC
 
-#### A.2.1 Root cause (two orthogonal issues — fix BOTH)
-
-**Issue 2A (message correctness):** `ApiClient.execute...` throws `ConexionException` for EVERY non-2xx response AND for transport errors. In the register controllers the `catch (ConexionException e)` branch shows a literal `"Error de conexion con la base de datos."` even when the real cause is a 400/409/500 from the API. The user sees "no se ha podido conectar a la base de datos" even though HTTP transport is OK.
-
-**Issue 2B (underlying HTTP failure):** `ApiClient.java:525` maps every non-specific server status to `ConexionException("Error de servidor (...)")`. For 500-class errors coming from `POST /api/pacientes`, `POST /api/sanitarios`, `POST /api/catalogo/discapacidades` and `POST /api/catalogo/tratamientos`, Doer MUST verify the REQUEST BODY, not the error message.
-
-#### A.2.2 Fix Issue 2A — correct the error text (minimal, deterministic)
-
-For EACH of the four register controllers (`controladorAgregarPaciente.java`, `controladorAgregarSanitario.java`, `controladorAgregarTratamiento.java`, `controladorAgregarDiscapacidad.java`) do ONLY these edits:
-
-1. Locate every `catch (ConexionException e)` block.
-2. Replace the literal message `"Error de conexion con la base de datos."` (or `"Error al conectar con la base de datos"` or the constant `ConstantesApp.MSG_ERROR_BD`) with:
+### E.1 — SyncProgresoService
 
 ```java
-"No se pudo comunicar con el servidor: " + e.getMessage()
-```
+public class SyncProgresoService {
+    private final String dniPac;
+    private final Consumer<Boolean> callback;
+    private ScheduledExecutorService executor;
+    private Instant ultimoCheck = Instant.EPOCH;
 
-3. Add a new `catch (ValidacionException ev)` branch RIGHT AFTER the `ConexionException` catch (and before `RehabiAppException`). Display `ev.getMessage()` as `TipoMensaje.ADVERTENCIA`. If `ValidacionException` is not thrown today for register flows, STILL add the catch — harmless and future-proof.
+    public SyncProgresoService(String dniPac, Consumer<Boolean> callback) {
+        this.dniPac = dniPac;
+        this.callback = callback;
+    }
 
-4. Make sure the generic `catch (RehabiAppException e)` remains LAST and shows `"Error: " + e.getMessage()` with `TipoMensaje.ERROR`.
+    public void iniciar() {
+        executor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "sync-progreso-" + dniPac);
+            t.setDaemon(true);
+            return t;
+        });
+        executor.scheduleAtFixedRate(this::comprobar, 0, 30, TimeUnit.SECONDS);
+    }
 
-5. `ConstantesApp.MSG_ERROR_BD` (util/ConstantesApp.java:107): rewrite its literal to `"No se pudo comunicar con el servidor"`. Do NOT rename the constant.
+    private void comprobar() {
+        try {
+            CheckProgresoResponse res = new ProgresoDAO().comprobarNuevosDatos(dniPac, ultimoCheck);
+            ultimoCheck = Instant.now();
+            if (res.hasNewData()) Platform.runLater(() -> callback.accept(true));
+        } catch (Exception e) {
+            // log y silencioso — no spam
+        }
+    }
 
-These edits are surgical. Doer does NOT refactor the exception hierarchy.
-
-#### A.2.3 Fix Issue 2B — verify and repair the failing POST
-
-Run this diagnostic BEFORE editing any DAO:
-
-1. Start stack per `desktop/CLAUDE.md` Runbook.
-2. Enable DEBUG on API: `SPRING_PROFILES_ACTIVE=local` already sets debug. Tail the Spring Boot console.
-3. From desktop, attempt ONE register per entity:
-   - New Paciente with all required fields + a photo.
-   - New Sanitario.
-   - New Discapacidad (codDis="DIS-TEST", nombreDis="Prueba", descripcion, protesis=false).
-   - New Tratamiento (codTrat="TRAT-TEST", nombreTrat="Prueba", definicion, idNivel=1, codDis="DIS-TEST").
-4. For each failure, record HTTP status + API-side stack trace.
-
-Apply the matrix below STRICTLY based on what the logs show:
-
-| API log says | Root cause | Exact fix |
-|--------------|-----------|-----------|
-| `Field 'xxx' is required` or 400 | DTO field name mismatch between desktop Request record and API expected JSON | Align record field names in `desktop/src/main/java/com/javafx/dto/*Request.java` to EXACTLY match API DTO. API is source of truth. |
-| `duplicate key value violates unique constraint` / 409 | Seed or prior data | NOT a bug — UI already rejects. If it doesn't, add a `catch (DuplicadoException)` in the register controller showing `TipoMensaje.ADVERTENCIA`. |
-| `cannot deserialize value of type LocalDate/LocalTime/byte[]` | Jackson config missing JSR310 or base64 for foto | In `ApiClient` ensure `ObjectMapper` has `registerModule(new JavaTimeModule())` and `disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)`. For `foto` (byte[]) verify the DTO serializes as base64 automatically (default Jackson behavior). If API expects multipart, switch the photo POST to multipart per §A.2.4. |
-| `null value in column "xxx" violates not-null` (API 500) | Desktop sends null for a column that cannot be null | Check the desktop form — a required field is empty. Add `ValidacionUtil` check BEFORE the POST, showing a clear field-level message. Do NOT silently default. |
-| `FK violation paciente_dni_san_fkey` | Selected sanitario DNI is invalid | Ensure the ComboBox of sanitarios is populated from the API (not from stale cache). |
-| `Connection refused` / transport error | API not running | Not a bug — improved error message A.2.2 already covers this. |
-
-If the log shows something NOT in this matrix, STOP and report to the developer. Do NOT guess.
-
-#### A.2.4 Photo upload special case (paciente only)
-
-If paciente register fails with `base64` or `payload too large`:
-
-1. Check current API contract: open `/api/src/main/java/.../controller/PacienteController.java` POST endpoint. Confirm whether it expects `foto` as a base64 string inside JSON OR as multipart `@RequestPart MultipartFile`.
-2. If base64 JSON (desktop default): keep as is. Make sure photo is resized BEFORE encoding. Add a guard in `controladorAgregarPaciente`:
-
-```java
-if (fotoBytes != null && fotoBytes.length > 2 * 1024 * 1024) {
-    VentanaUtil.mostrarVentanaInformativa("La foto supera 2 MB. Reducela o elige otra.", TipoMensaje.ADVERTENCIA);
-    return;
+    public void detener() {
+        if (executor != null) executor.shutdownNow();
+    }
 }
 ```
 
-3. If multipart: add a new helper `ApiClient.postMultipart(String path, Map<String,String> parts, byte[] fileBytes, String filename)` (Doer writes it following existing `post` signature). ONLY implement if the API actually requires multipart.
+### E.2-E.4 — Integracion
 
-DO NOT migrate from base64 to multipart unless the API truly demands it.
-
-#### A.2.5 Acceptance tests
-
-1. Manual: register ONE entity per type with valid data → success toast.
-2. Manual: register with ONE required field empty → clear validation message (not "BD error").
-3. Manual: register with duplicate codTrat → `TipoMensaje.ADVERTENCIA` with the API's duplicate message.
-4. Manual: stop the API → register attempt → toast `"No se pudo comunicar con el servidor: ..."` (confirms A.2.2 message fix).
-
-#### A.2.6 Unit test
-
-`desktop/src/test/java/com/javafx/Clases/ApiClientTest.java` — extend existing test file with one case per CRUD entity that uses `MockWebServer` to:
-- 201 → expect no exception.
-- 400 with JSON body `{"message":"campo dni requerido"}` → expect `ValidacionException` (if wired) or `RehabiAppException` with the server message embedded.
-- 500 → expect `ConexionException` with `"Error de servidor (500)"`.
-
-If `MockWebServer` is not in `build.gradle`, SKIP this test (do NOT add new dependency) and rely on manual verification.
+- `controladorVentanaProgresoPaciente.onCleanup()` invoca `syncService.detener()`.
+- `onNuevosDatos(true)` recarga charts y muestra Toast.
+- Si el check falla, no spam: marcar `lblEstado` con "Sin conexion — datos en cache" y reintentar al siguiente tick.
 
 ---
 
-## PHASE B — CSS VISUAL ENHANCEMENT (12 ITEMS)
+## PHASE F — TESTING (mandatory)
 
-### B.0 GLOBAL RULES FOR PHASE B
-
-- Every new rule lives in BOTH `tema_claro.css` AND `tema_oscuro.css`. Mirror structurally; only hex values differ.
-- Reuse existing palette tokens. Do NOT invent new hex codes unless unavoidable. If unavoidable, add comment `/* Revisar paleta con UI */` above the rule.
-- NO emojis. NO English comments. NO inline `setStyle(...)` in Java/FXML.
-- Append all new rules at the END of each CSS file, inside a clearly marked block:
-
-```css
-/* =========================================================== */
-/* MEJORAS VISUALES v2 — 2026-04-15                            */
-/* Phase B de PLAN.md. No mover estas reglas a otro archivo.    */
-/* =========================================================== */
-```
-
-- After writing every rule, run `./gradlew run`, visually confirm the change, then mark the checklist item.
-
-### B.1 Enhanced sidebar navigation
-
-Target selectors (verify exact names in `VentanaPrincipal.fxml`): `.boton-pestania`, `.boton-pestania:hover`, `.boton-pestania.pestania-activa` (or equivalent). If the active tab style class is named differently (e.g. `pestania-seleccionada`), use the real one.
-
-```css
-.boton-pestania {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-    -fx-border-width: 0 0 0 3;
-    -fx-padding: 10 16 10 16;
-    -fx-transition: all 180ms ease-in-out;
-}
-.boton-pestania:hover {
-    -fx-border-color: derive(-color-primario, 10%);
-    -fx-background-color: linear-gradient(to right, derive(-color-fondo, -3%), transparent);
-}
-.boton-pestania.pestania-activa {
-    -fx-border-color: -color-primario;
-    -fx-background-color: linear-gradient(to right, derive(-color-primario, 85%), transparent);
-    -fx-text-fill: -color-primario;
-    -fx-font-weight: bold;
-}
-```
-
-Dark theme: swap `derive(-color-fondo, -3%)` → `derive(-color-fondo, 8%)` and `derive(-color-primario, 85%)` → `derive(-color-primario, -60%)`.
-
-Verify `.pestania-activa` is toggled in `marcarPestaniaSeleccionada` of `controladorVentanaPrincipal`. If not, add `btn.getStyleClass().add("pestania-activa")` and remove from previous button. DO NOT rename existing classes.
-
-### B.2 Card-based content panels
-
-Target: `VBox vboxContenedorPrin*` and the header `HBox` of every main tab (Pacientes, Sanitarios, Citas, Discapacidades, Tratamientos). Add style class `panel-card` to each in the FXML — zero Java changes. Header `HBox` in each FXML: add `panel-card-header`.
-
-```css
-.panel-card {
-    -fx-background-color: -color-fondo-panel;
-    -fx-background-radius: 10;
-    -fx-border-color: -color-borde-suave;
-    -fx-border-width: 1;
-    -fx-border-radius: 10;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0.15, 0, 2);
-    -fx-padding: 0;
-}
-.panel-card-header {
-    -fx-background-color: derive(-color-fondo-panel, -4%);
-    -fx-background-radius: 10 10 0 0;
-    -fx-padding: 12 16 12 16;
-    -fx-border-color: transparent transparent -color-borde-suave transparent;
-    -fx-border-width: 0 0 1 0;
-}
-```
-
-Dark theme: `derive(...-4%)` → `derive(...+6%)`, shadow alpha 0.35.
-
-If `-color-fondo-panel` or `-color-borde-suave` tokens do not exist in the theme, define them in the root `*{}` section at the TOP of each theme file:
-
-```css
--color-fondo-panel: #ffffff;        /* claro */
--color-borde-suave: #e0e4ea;
-```
-
-```css
--color-fondo-panel: #1e222b;        /* oscuro */
--color-borde-suave: #2f3540;
-```
-
-### B.3 Improved table styling
-
-Target: `.table-view`, `.table-row-cell`, `.table-row-cell:hover`, `.table-row-cell:selected`, `.table-view .column-header`.
-
-```css
-.table-row-cell {
-    -fx-cell-size: 38;
-    -fx-border-width: 0 0 0 3;
-    -fx-border-color: transparent;
-    -fx-transition: all 150ms ease-in-out;
-}
-.table-row-cell:hover {
-    -fx-background-color: derive(-color-fondo-panel, -5%);
-    -fx-border-color: derive(-color-primario, 40%);
-}
-.table-row-cell:selected {
-    -fx-background-color: derive(-color-primario, 85%);
-    -fx-border-color: -color-primario;
-    -fx-text-fill: -color-texto;
-}
-.table-view .column-header {
-    -fx-border-color: transparent transparent -color-primario transparent;
-    -fx-border-width: 0 0 2 0;
-    -fx-background-color: derive(-color-fondo-panel, -3%);
-    -fx-padding: 8 10 8 10;
-}
-```
-
-Dark theme: hover derive `-color-fondo-panel, 6%`; selected bg `derive(-color-primario, -60%)`.
-
-### B.4 Enhanced form inputs
-
-Target: `.text-field`, `.text-field:focused`, `.combo-box`, `.date-picker`, `.spinner`.
-
-```css
-.text-field, .combo-box, .date-picker, .spinner {
-    -fx-background-radius: 6;
-    -fx-border-radius: 6;
-    -fx-border-color: -color-borde-suave;
-    -fx-border-width: 1;
-    -fx-padding: 6 10 6 10;
-}
-.text-field:focused, .combo-box:focused, .date-picker:focused, .spinner:focused {
-    -fx-effect: innershadow(gaussian, rgba(0,0,0,0.10), 4, 0, 0, 1);
-    -fx-border-color: -color-primario;
-    -fx-border-width: 0 0 0 3, 1 1 1 1;
-    -fx-border-insets: 0 0 0 0, 0 0 0 3;
-}
-.text-field {
-    -fx-prompt-text-fill: derive(-color-texto, 55%);
-    -fx-font-style: normal;
-}
-.text-field > .prompt-text {
-    -fx-font-style: italic;
-}
-.input-valido { -fx-border-color: -color-exito; }
-.input-error  { -fx-border-color: -color-error; }
-```
-
-If `-color-exito`/`-color-error` tokens missing, define:
-- Claro: `-color-exito: #2a9d52; -color-error: #c0392b;`
-- Oscuro: `-color-exito: #3cc073; -color-error: #e05a4b;`
-
-### B.5 Button refinements
-
-Target `.button-primario`, `.button-secundario`, `.button-peligro`, `.button:disabled`.
-
-```css
-.button-primario {
-    -fx-background-color: linear-gradient(to bottom, derive(-color-primario, 10%), -color-primario);
-    -fx-background-radius: 6;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.14), 4, 0, 0, 1);
-    -fx-transition: all 120ms;
-}
-.button-primario:pressed {
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.22), 8, 0, 0, 2);
-    -fx-scale-x: 0.98;
-    -fx-scale-y: 0.98;
-}
-.button:disabled {
-    -fx-opacity: 0.5;
-}
-```
-
-Mirror for `.button-secundario` and `.button-peligro` with their own palette tokens.
-
-### B.6 Enhanced separators
-
-Target `.separator`, `.separator *.line`.
-
-```css
-.separator *.line {
-    -fx-background-color: linear-gradient(to right, transparent, -color-borde-suave 50%, transparent);
-    -fx-border-color: transparent;
-    -fx-padding: 0;
-    -fx-pref-height: 1;
-}
-.separator { -fx-padding: 8 0 8 0; }
-```
-
-### B.7 Typography improvements
-
-```css
-.label-titulo {
-    -fx-letter-spacing: 0.03em;     /* JavaFX 23+ */
-    -fx-font-weight: bold;
-}
-.label-seccion {
-    -fx-font-size: 15px;
-    -fx-font-weight: 600;
-}
-```
-
-Dark theme ONLY, add:
-
-```css
-.label-titulo { -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 2, 0, 0, 1); }
-```
-
-If `-fx-letter-spacing` is not supported in the target JavaFX version, remove that single property. All other rules remain.
-
-### B.8 Tooltip and popover polish
-
-```css
-.tooltip {
-    -fx-background-color: -color-fondo-panel;
-    -fx-text-fill: -color-texto;
-    -fx-background-radius: 6;
-    -fx-padding: 6 10 6 10;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.22), 10, 0.2, 0, 3);
-    -fx-font-size: 12px;
-}
-```
-
-### B.9 Scrollbar refinement
-
-```css
-.scroll-bar:horizontal, .scroll-bar:vertical {
-    -fx-background-color: transparent;
-    -fx-pref-width: 6;
-    -fx-pref-height: 6;
-    -fx-transition: all 180ms;
-}
-.scroll-bar:hover {
-    -fx-pref-width: 8;
-    -fx-pref-height: 8;
-}
-.scroll-bar .thumb {
-    -fx-background-color: derive(-color-borde-suave, -20%);
-    -fx-background-radius: 6;
-}
-.scroll-bar .thumb:hover {
-    -fx-background-color: -color-primario;
-}
-.scroll-bar .increment-button,
-.scroll-bar .decrement-button,
-.scroll-bar .increment-arrow,
-.scroll-bar .decrement-arrow {
-    -fx-background-color: transparent;
-    -fx-padding: 0;
-    -fx-shape: "";
-}
-```
-
-### B.10 Status indicators and badges
-
-Paleta fija de niveles (agregar como tokens o inline):
-
-- agudo: `#d14b4b`
-- subagudo: `#e08a2c`
-- fortalecimiento: `#2b6fd4`
-- funcional: `#2e9d58`
-
-```css
-.badge-activo, .badge-inactivo,
-.badge-nivel-agudo, .badge-nivel-subagudo,
-.badge-nivel-fortalecimiento, .badge-nivel-funcional {
-    -fx-background-radius: 12;
-    -fx-padding: 2 10 2 10;
-    -fx-font-size: 11px;
-    -fx-font-weight: bold;
-    -fx-text-fill: white;
-}
-.badge-activo   { -fx-background-color: #2e9d58; }
-.badge-inactivo { -fx-background-color: #888a91; }
-.badge-nivel-agudo          { -fx-background-color: #d14b4b; }
-.badge-nivel-subagudo       { -fx-background-color: #e08a2c; }
-.badge-nivel-fortalecimiento{ -fx-background-color: #2b6fd4; }
-.badge-nivel-funcional      { -fx-background-color: #2e9d58; }
-```
-
-Doer does NOT wire these badges in controllers for this plan — CSS only. Follow-up task (Progression level UI) will apply them.
-
-### B.11 Login screen polish
-
-Target `VentanaSesion.fxml` root and `indicadorConexion`. Add via CSS:
-
-```css
-.login-root {
-    -fx-background-color: linear-gradient(to bottom right, derive(-color-fondo, 5%), derive(-color-fondo, -5%));
-}
-.indicador-conexion {
-    -fx-background-radius: 50%;
-    -fx-min-width: 10;
-    -fx-min-height: 10;
-    -fx-max-width: 10;
-    -fx-max-height: 10;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 3, 0.3, 0, 1);
-}
-.indicador-conexion-ok  { -fx-background-color: #2e9d58; }
-.indicador-conexion-ko  { -fx-background-color: #d14b4b; }
-.indicador-conexion-wait{ -fx-background-color: #e0b02c; }
-```
-
-In `VentanaSesion.fxml`: add `styleClass="login-root"` on the root and `styleClass="indicador-conexion"` on the circle/Pane. In `controladorSesion.java`, toggle `indicador-conexion-ok/ko/wait` — ZERO inline styles.
-
-### B.12 Modal window improvements
-
-Apply to every modal FXML root (`VentanaAgregarPaciente`, `VentanaAgregarSanitario`, `VentanaAgregarTratamiento`, `VentanaAgregarDiscapacidad`, `VentanaFiltroPacientes`, `VentanaFiltroTratamientos`, etc.):
-
-1. Add `styleClass="modal-root"` on the root VBox/AnchorPane.
-2. Add `styleClass="modal-header"` on the title HBox.
-
-```css
-.modal-root {
-    -fx-background-color: -color-fondo-panel;
-    -fx-background-radius: 10;
-    -fx-border-radius: 10;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 20, 0.25, 0, 6);
-}
-.modal-header {
-    -fx-border-color: -color-primario transparent transparent transparent;
-    -fx-border-width: 3 0 0 0;
-    -fx-background-radius: 10 10 0 0;
-    -fx-padding: 14 18 12 18;
-}
-```
-
-Open animation — use a single util, no per-modal code. Add in `VentanaUtil`:
-
-```java
-public static void animarAperturaModal(javafx.scene.Parent root) {
-    root.setOpacity(0);
-    root.setScaleX(0.97);
-    root.setScaleY(0.97);
-    javafx.animation.ParallelTransition pt = new javafx.animation.ParallelTransition(
-        new javafx.animation.FadeTransition(javafx.util.Duration.millis(160), root),
-        new javafx.animation.ScaleTransition(javafx.util.Duration.millis(160), root)
-    );
-    ((javafx.animation.FadeTransition) pt.getChildren().get(0)).setToValue(1);
-    ((javafx.animation.ScaleTransition) pt.getChildren().get(1)).setToX(1);
-    ((javafx.animation.ScaleTransition) pt.getChildren().get(1)).setToY(1);
-    pt.play();
-}
-```
-
-Call `VentanaUtil.animarAperturaModal(scene.getRoot())` from the existing `VentanaHelper.abrirModal(...)` helper (single call site). If `VentanaHelper` does not have a single entry point, add one — do NOT duplicate the call in every controller.
-
----
-
-## PHASE C — TESTING (mandatory)
-
-### C.1 Static check
+### F.1 Static check
 
 ```
 ./gradlew clean compileJava test
 ```
 
-Must pass without warnings. Fix any residual imports.
+Sin warnings. Fix cualquier import.
 
-### C.2 Manual verification matrix
+### F.2 Manual verification matrix
 
 | Check | Expected |
 |-------|----------|
-| A.1 — Ver ficha paciente from a Cita | Pacientes tab opens with DNI filter applied |
-| A.2 — Register paciente with all fields valid | Success toast, paciente appears in table |
-| A.2 — Register paciente with API stopped | Toast: "No se pudo comunicar con el servidor: ..." |
-| A.2 — Register discapacidad with duplicated codDis | Advertencia toast with API message |
-| B.1..B.12 | Visual changes match descriptions in both themes |
+| A.1 Sanitario/Discapacidad/Tratamiento cabeceras identicas | Confirmacion visual lado a lado |
+| A.2 Filtro tratamientos tiene Aceptar/Cancelar funcionales | Aplicar filtro cierra modal y filtra tabla |
+| A.3 Todas las alertas/dialogs centradas | Confirmacion visual en 6+ modales |
+| A.4 Tema oscuro: agregar paciente/sanitario sin fondo blanco | Confirmacion visual en ambas |
+| B.1 Subir PDF 5MB → exito; 11MB → rechazo; .docx → rechazo | Mensajes claros |
+| B.2 Editar tratamiento con PDF existente → muestra metadatos | Filename + KB visibles |
+| C.4 Cambiar discapacidad en tratamiento → tabla de juegos refresca | Solo aparecen los de la nueva disc. |
+| C.5 Marcar 2 juegos + guardar → POST a /api/tratamientos/{c}/videojuegos/{id} x2 | Verificar via logs API |
+| D.3 Doble-click paciente → ficha con boton Progreso | Visible y clickable |
+| D.4 Pacientes tab + Progreso sin seleccion → ADVERTENCIA | Mensaje correcto |
+| D.4 Pacientes tab + Progreso con seleccion → abre VentanaProgreso | Abre con DNI correcto |
+| D.7 Charts renderizados con baseline/current destacados | Visual |
+| E.1 Polling cada 30s mientras tab abierta | Logs del SyncProgresoService |
+| E.2 Si llega nuevo dato → Toast + recarga | Probar inyectando sesion en MongoDB |
+| E.4 Cerrar tab → polling para | Logs muestran shutdown |
 
-### C.3 TestSprite MCP
+### F.3 TestSprite MCP
 
-After manual matrix passes, delegate to TestSprite per root `CLAUDE.md` §10.2. Do NOT mark any checklist item `[x]` until TestSprite returns 100%.
-
----
-
-## D. CHECKLIST UPDATE (after TestSprite = 100%)
-
-In `desktop/CLAUDE.md` §7, flip these items, ONE commit per flip:
-
-Phase A bugs (add two NEW items under "Progression level UI" or a new "Bugfixes" subsection):
-- [x] Fix: "Ver ficha paciente" now filters Pacientes tab by DNI.
-- [x] Fix: misleading "conexion BD" error replaced by accurate server-communication message.
-
-CSS visual enhancement block — flip B.1..B.12 in order:
-- [x] Enhanced sidebar navigation
-- [x] Card-based content panels
-- [x] Improved table styling
-- [x] Enhanced form inputs
-- [x] Button refinements
-- [x] Enhanced separators
-- [x] Typography improvements
-- [x] Tooltip and popover polish
-- [x] Scrollbar refinement
-- [x] Status indicators and badges
-- [x] Login screen polish
-- [x] Modal window improvements
+Tras matriz manual OK, delegar a TestSprite por root `CLAUDE.md` §10.2. NO marcar `[x]` hasta TestSprite 100%.
 
 ---
 
-## E. ORDER OF EXECUTION
+## G. ORDER OF EXECUTION
 
-1. A.1 (Bug 1) — mirror Citas filter for Pacientes. Test.
-2. A.2.2 (message correctness) — 5 minutes edit + manual check.
-3. A.2.3 (diagnostic run) — record logs.
-4. A.2.3 matrix — apply ONLY the fix that matches the log.
-5. B.0 — define missing palette tokens in both themes.
-6. B.2, B.3, B.1 in that order (card wrap first so hover/active states have ground to stand on).
-7. B.4, B.5 — form & buttons.
-8. B.6, B.7, B.8, B.9 — separators, typography, tooltip, scrollbar.
-9. B.10 — badges CSS only.
-10. B.11 — login screen.
-11. B.12 — modal polish + VentanaUtil animation.
-12. C — static + manual + TestSprite.
-13. D — flip checklist, one commit per step.
+1. Phase A (UI fixes) — independiente, no requiere API/Data nuevos.
+2. Phase B (PDF import) — requiere endpoints API Phase 7 (api/PLAN.md). Si API no listo, pausar y arrancar Phase A.
+3. Phase C (Game association) — requiere API Phase 6 + tabla videojuego.
+4. Phase D (Progress visualization) — requiere API Phase 5 + Data Phase 5.
+5. Phase E (Background sync) — incremental sobre D.
+6. Phase F (Tests) — al final de cada fase.
 
 ---
 
-## F. NON-NEGOTIABLES
+## H. NON-NEGOTIABLES
 
-- Comments in Spanish. No English in Java/FXML/CSS.
-- No emojis anywhere.
-- No inline `setStyle(...)`.
-- No new dependencies in `build.gradle`.
-- No refactor outside §2-scope files. Touch only what this plan names.
-- No partial commits that leave the app uncompilable.
-- Do NOT mark checklist items `[x]` until TestSprite 100% per root `CLAUDE.md` §10.4.
-- If a step's diagnostic (A.2.3) reveals something outside the matrix, STOP and escalate to developer. No guessing.
+- Comentarios en castellano. Sin ingles en Java/FXML/CSS.
+- Sin emojis.
+- Sin inline `setStyle(...)`.
+- Sin nuevas dependencias en `build.gradle` excepto PDFBox (justificado en Phase B si se necesita preview).
+- Sin tocar codigo fuera del scope del plan.
+- TestSprite 100% antes de marcar `[x]` (root `CLAUDE.md` §10.4).
 
 ---
 

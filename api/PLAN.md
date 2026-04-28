@@ -1,323 +1,698 @@
-# PLAN.md — Bugfixes + Progression Level UI Verification
+# PLAN.md — API iteration 2026-04-29
 
-> **Date:** 2026-04-20
-> **Agent:** 1+3 Thinker (Opus)
-> **Executor:** Doer (Sonnet)
-> **Scope:** API bugfixes (500 on create/update) + V11 flyway failure (protesis cast) + Desktop bugfix (edit email check) + Verify progression UI
-
----
-
-## NEW — Bug F: V11 Flyway migration aborts boot
-
-**Symptom:**
-```
-ERROR: default for column "protesis" cannot be cast automatically to type boolean
-Location: db/migration/V11__fix_protesis_boolean.sql Line: 12
-SQL State 42804
-```
-App context fails → `BeanCreationException` for `flyway` bean → API no arranca.
-
-**Root cause:** column `paciente.protesis` in dev DB is INTEGER with `DEFAULT 0` (legacy schema carried over before V1 definition applied). Postgres `ALTER COLUMN ... TYPE BOOLEAN USING ...` does NOT cast the DEFAULT expression — the integer literal `0` can't auto-cast to boolean, so migration aborts.
-
-**Side effect:** V11 is recorded as FAILED in `flyway_schema_history`. Cannot simply edit V11 and retry — Flyway checksum + failed-state locks retry. Must either:
-- (a) `flyway repair` + rewrite V11 idempotently, OR
-- (b) leave V11 as-is but fix via NEW V12 migration that handles the case.
-
-**Decision:** option (b) — new V12. Rationale: V11 already lives in other devs' history; rewriting breaks their checksum. V12 is additive and idempotent (checks column type before acting).
+> **Branch:** stats-implementation
+> **Author:** Agent 0/1 Thinker (Opus) — PRESCRIPTIVE. Doer (Sonnet) MUST follow step by step.
+> **Language:** All code/comments in Spanish (root `CLAUDE.md` §4.5). This plan in English.
+> **Scope:** Phases 4-10 del checklist `/api/CLAUDE.md` §5.
 
 ---
 
-## Phase 7 — V12 migration: fix protesis cast + repair V11
+## 0. CONTEXTO OBLIGATORIO
 
-**File:** `api/src/main/resources/db/migration/V12__fix_protesis_default.sql`
+Antes de tocar codigo, leer:
 
-**Required SQL (idempotent, handles dev DBs where V11 half-applied or never applied):**
+1. `/CLAUDE.md` raiz — §4.5 estilo, §4.6 seguridad, §10 TestSprite.
+2. `/api/CLAUDE.md` — §5 checklist Phase 4-10.
+3. `/api/.claude/skills/springboot4-postgresql/SKILL.md` — TODAS las reglas (CSFLE no aplica aqui, AES-256-GCM si).
+4. `/data/PLAN.md` Phase 5-6 — endpoints que el API consumira.
+5. `/desktop/PLAN.md` Phase B-E — consumidores de los endpoints nuevos.
+6. `/mobile/backend/PLAN.md` — consumidores del dashboard endpoint.
 
+---
+
+## PHASE 4 — H2 TEST COMPATIBILITY
+
+### 4.1 Causa raiz
+
+`V11__fix_protesis_boolean.sql` usa PL/pgSQL `DO $$ DECLARE...BEGIN...END $$`. H2 (test DB) NO soporta este bloque, lanza `JdbcSQLSyntaxErrorException` y aborta el contexto.
+
+### 4.2 Fix prescriptivo (opcion A — recomendada)
+
+**Crear migraciones H2-friendly bajo `src/test/resources/db/migration/` y configurar perfil test para usarlas en lugar de las de produccion.**
+
+1. Crear `src/test/resources/db/migration/V11__fix_protesis_boolean.sql` con SQL ANSI-compatible:
 ```sql
--- V12: Corrige ALTER fallido de V11 sobre paciente.protesis.
--- V11 fallo con "default cannot be cast automatically to boolean" porque
--- la columna era INTEGER con DEFAULT 0; Postgres no castea DEFAULT en
--- ALTER TYPE. Este script es idempotente: solo actua si la columna
--- sigue siendo INTEGER.
-
-DO $$
-DECLARE
-    col_type TEXT;
-BEGIN
-    SELECT data_type INTO col_type
-    FROM information_schema.columns
-    WHERE table_name = 'paciente' AND column_name = 'protesis';
-
-    IF col_type = 'integer' THEN
-        ALTER TABLE paciente ALTER COLUMN protesis DROP DEFAULT;
-        ALTER TABLE paciente ALTER COLUMN protesis TYPE BOOLEAN
-            USING (protesis <> 0);
-        ALTER TABLE paciente ALTER COLUMN protesis SET DEFAULT FALSE;
-    END IF;
-END $$;
+-- V11 (test/H2): convertir protesis de INTEGER a BOOLEAN sin DO block.
+-- H2 ejecuta cada sentencia secuencialmente; los ALTER son idempotentes
+-- gracias a IF EXISTS / IF DEFINED.
+ALTER TABLE paciente ALTER COLUMN protesis DROP DEFAULT;
+ALTER TABLE paciente ALTER COLUMN protesis SET DATA TYPE BOOLEAN USING (protesis <> 0);
+ALTER TABLE paciente ALTER COLUMN protesis SET DEFAULT FALSE;
 ```
 
-**Pre-step obligatorio (fuera de Flyway):** reparar el registro fallido de V11 antes de que arranque la API. Sin esto, Flyway se niega a avanzar a V12.
-
-```bash
-# Opcion A — comando Flyway via Maven plugin (preferido si configurado):
-./mvnw flyway:repair
-
-# Opcion B — SQL directo contra la BD dev:
-docker exec -it rehabiapp-db psql -U admin -d rehabiapp \
-  -c "DELETE FROM flyway_schema_history WHERE version='11' AND success=false;"
+2. Crear `src/test/resources/db/migration/V12__fix_protesis_default.sql` (vacio o NO-OP en H2):
+```sql
+-- V12 (test/H2): NO-OP. La logica de V12 prod solo aplica si V11 dejo
+-- la columna como INTEGER en una BD legacy; en H2 la BD es siempre fresca.
+SELECT 1;
 ```
 
-**Steps:**
-
-7.1. Ejecutar `flyway:repair` o el DELETE directo → limpia fila fallida V11.
-7.2. Crear V12 con el SQL idempotente de arriba.
-7.3. Arrancar API → Flyway reintentara V11 (ya pasa porque idempotent-safe, o pasa vacio si columna ya migro en otra maquina) y luego aplicara V12.
-7.4. Verificar: `\d paciente` en psql → `protesis | boolean | default false`.
-7.5. Smoke test: POST /api/pacientes con `protesis: true` y PUT con `protesis: false` → sin 500.
-
-**Alternativa considerada y descartada:** reescribir V11 in-place. Rechazada porque rompe checksum en entornos donde V11 ya consta como success (ninguno hoy, pero politica).
-
-**Nota sobre V11 actual:** dejar el archivo como esta. Es SQL valido para una BD fresca donde `protesis` arranca como INTEGER sin DEFAULT. En la BD dev actual fallo por el DEFAULT legacy; V12 lo cubre.
-
-- [x] 7.1 flyway:repair ejecutado (V11 reescrito idempotente — nunca habia tenido success en ningun entorno)
-- [x] 7.2 V12 descartado — V11 reescrito directamente es suficiente
-- [x] 7.3 API arranca limpio (flyway_schema_history V11 success=t)
-- [x] 7.4 `\d paciente` confirma BOOLEAN DEFAULT FALSE
-- [x] 7.5 PUT paciente con protesis=true/false → 200 OK, BD actualiza
-
----
-
-## Diagnosis
-
-### Bug A — 500 on CREATE patient (Envers audit columns missing)
-
-**Symptom:** POST /api/pacientes returns 500.
-**Root cause:** V9 migration created `paciente_audit` but is MISSING 3 columns that Envers expects:
-
-| Missing column | Type | Why Envers needs it |
-|---|---|---|
-| `dni_san` | VARCHAR(20) | @ManyToOne Sanitario FK — entity is @Audited, no @NotAudited on field |
-| `id_direccion` | INTEGER | @ManyToOne Direccion — has targetAuditMode=NOT_AUDITED which still stores FK |
-| `foto` | BYTEA | @Column byte[] — entity is @Audited, foto has no @NotAudited |
-
-When Hibernate Envers tries to INSERT into `paciente_audit`, PostgreSQL rejects it because columns don't exist.
-
-**Evidence:** Paciente.java lines 48 (sanitario FK), 55 (direccion NOT_AUDITED), 105 (foto column). V9 paciente_audit has none of these.
-
-### Bug B — 500 on CREATE sanitario (Envers YAML — verify fix deployed)
-
-**Symptom:** POST /api/sanitarios returns 500.
-**Root cause:** YAML namespace issue (fixed in previous session — `hibernate.envers.*` → `org.hibernate.envers.*`).
-**Required action:** Verify API was restarted after YAML fix. If yes, sanitario_audit has all correct columns and CREATE should work. If still 500, check API logs for exact error.
-
-### Bug C — Sanitario edit blocked by own email
-
-**Symptom:** Editing sanitario with unchanged email shows "Ya existe otro sanitario con ese email."
-**Root cause:** `controladorAgregarSanitario.java` line 283 — `existeEmail()` check does NOT exclude the current record. Compare to DNI check at line 272 which correctly checks `!sanitario.getDni().equals(dniOriginal)`.
-**Location:** Desktop only.
-
-### Bug D — Patient edit appears to do CREATE instead of UPDATE
-
-**Symptom:** User reports "email already exists" when editing patient.
-**Root cause:** NOT a modoEdicion bug (verified: line 361 sets `modoEdicion = true`, parent calls `cargarDatosParaEdicion()` correctly). The actual cause is Bug A — the PUT /api/pacientes/{dni} triggers Envers audit → missing columns → 500 → desktop shows generic error that user interprets as "duplicate email". After fixing Bug A, patient edit should work.
-
-### Bug E (potential) — Missing `fecha_asignacion` in assignment audit tables
-
-**Risk:** `paciente_discapacidad_audit` and `paciente_tratamiento_audit` might be missing `fecha_asignacion` column. The entities have this field and are @Audited. V9 doesn't include it.
-**Required action:** Verify during Phase 1.
-
----
-
-## Implementation Plan
-
-### Phase 1 — Diagnose exact missing columns (API)
-
-**Goal:** Determine precisely which columns Envers expects vs what exists.
-
-**Method:** Temporarily enable Envers DDL validation to get exact error messages.
-
-**Steps:**
-
-1.1. Add to `application.yml` under `spring.jpa.properties`:
+3. Configurar `src/test/resources/application-test.yml`:
 ```yaml
-      hibernate:
-        hbm2ddl.auto: validate
+spring:
+  flyway:
+    locations: classpath:db/migration
+    # Spring Boot agrega ambos classpath de main y test al classpath unificado.
+    # H2 ejecutara la version de test (mismo path) por orden de classpath:
+    # los recursos de test/ tienen prioridad en runtime de tests.
 ```
 
-1.2. Start API (`./mvnw spring-boot:run`). Hibernate will log EXACT schema mismatches for ALL audit tables.
+> **Verificar empiricamente:** si Spring Boot mezcla las V11 de main y test (mismo nombre, mismo path), Maven Surefire usa `test/resources` con prioridad. Si NO se respeta la prioridad, alternativa B abajo.
 
-1.3. Record every "column not found" error. This gives the definitive list of missing columns.
+### 4.3 Fix prescriptivo (opcion B — fallback)
 
-1.4. **Remove** the `hbm2ddl.auto: validate` line (it was diagnostic only).
+Si la opcion A no funciona, usar perfiles Flyway distintos:
 
-- [x] Run validate, record missing columns (done via direct entity analysis)
+1. Mover scripts de produccion a `src/main/resources/db/migration/postgres/`.
+2. Crear `src/main/resources/db/migration/h2/` con las versiones H2-friendly de V11 y V12.
+3. En `application-local.yml`, `application-aws.yml`, `application-production.yml`:
+```yaml
+spring.flyway.locations: classpath:db/migration/postgres
+```
+4. En `application-test.yml`:
+```yaml
+spring.flyway.locations: classpath:db/migration/h2
+```
+
+### 4.4 Verificacion
+
+```bash
+cd api && ./mvnw clean test
+```
+
+Salida esperada: `BUILD SUCCESS`, `Tests run: N, Failures: 0, Errors: 0`.
 
 ---
 
-### Phase 2 — V10 Flyway migration (API)
+## PHASE 5 — PATIENT PROGRESS INTEGRATION
 
-**File:** `api/src/main/resources/db/migration/V10__fix_audit_columns.sql`
+### 5.1 DataPipelineClient (infrastructure)
 
-Based on Phase 1 findings, create migration with ALTER TABLE statements. Expected content (adjust based on Phase 1 results):
+`src/main/java/com/rehabiapp/api/infrastructure/client/DataPipelineClient.java`:
+
+```java
+@Component
+public class DataPipelineClient {
+
+    private final RestClient restClient;
+
+    public DataPipelineClient(@Value("${rehabiapp.data.url:http://localhost:8081}") String baseUrl,
+                              RestClient.Builder builder) {
+        this.restClient = builder
+                .baseUrl(baseUrl)
+                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+    }
+
+    public CheckProgresoResponse checkNuevosDatos(String dni, Instant since) {
+        return restClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/internal/patient/{dni}/check-new-data")
+                        .queryParam("since", since)
+                        .build(dni))
+                .retrieve()
+                .body(CheckProgresoResponse.class);
+    }
+
+    public List<ProgresoTratamientoDto> obtenerProgreso(String dni) {
+        return restClient.get()
+                .uri("/analytics/patient/{dni}/treatment-progress", dni)
+                .retrieve()
+                .body(new ParameterizedTypeReference<>() {});
+    }
+
+    public String obtenerMarkdown(String dni) {
+        return restClient.get()
+                .uri("/analytics/patient/{dni}/markdown", dni)
+                .accept(MediaType.parseMediaType("text/markdown"))
+                .retrieve()
+                .body(String.class);
+    }
+
+    public void regenerarMarkdown(String dni) {
+        restClient.post()
+                .uri("/analytics/patient/{dni}/markdown/regenerar", dni)
+                .retrieve()
+                .toBodilessEntity();
+    }
+}
+```
+
+### 5.2 ProgresoController (presentation)
+
+```java
+@RestController
+@RequestMapping("/api/pacientes/{dni}/progreso")
+public class ProgresoController {
+
+    private final ProgresoService progresoService;
+    // ...
+
+    @GetMapping("/check")
+    @PreAuthorize("hasAnyRole('SPECIALIST','NURSE')")
+    public ResponseEntity<CheckProgresoResponse> check(
+            @PathVariable String dni,
+            @RequestParam(required = false) Instant since) {
+        return ResponseEntity.ok(progresoService.checkNuevosDatos(dni, since));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('SPECIALIST','NURSE')")
+    public ResponseEntity<List<ProgresoTratamientoResponse>> obtener(@PathVariable String dni) {
+        return ResponseEntity.ok(progresoService.obtenerProgreso(dni));
+    }
+
+    @GetMapping(value = "/markdown", produces = "text/markdown;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('SPECIALIST','NURSE')")
+    public ResponseEntity<String> markdown(@PathVariable String dni) {
+        return ResponseEntity.ok(progresoService.obtenerMarkdown(dni));
+    }
+
+    @PostMapping("/markdown/regenerar")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<Void> regenerar(@PathVariable String dni) {
+        progresoService.regenerarMarkdown(dni);
+        return ResponseEntity.accepted().build();
+    }
+}
+```
+
+### 5.3 ProgresoService (application)
+
+- `checkNuevosDatos(dni, since)` → llama a `DataPipelineClient` y registra READ en audit_log.
+- `obtenerProgreso(dni)` → registra READ + verifica que el paciente existe + maneja excepciones.
+- `obtenerMarkdown(dni)` → llama al cliente, ACTUALIZA `paciente.archivo_progreso_md` con el contenido devuelto, devuelve string. Cache transparente.
+- `regenerarMarkdown(dni)` → llama al cliente.
+
+### 5.4 DTOs
+
+```java
+public record CheckProgresoResponse(boolean hasNewData, Instant lastSessionAt, int count) {}
+
+public record ProgresoTratamientoResponse(
+    String codTrat,
+    String tratamientoNombre,
+    String parteCuerpo,
+    String metricaNombre,
+    Double baselineValor,
+    Instant baselineFecha,
+    Double currentValor,
+    Instant currentFecha,
+    Double deltaPorcentaje,
+    List<ProgresoEntradaResponse> entradas
+) {}
+
+public record ProgresoEntradaResponse(Instant fecha, Double valor) {}
+```
+
+### 5.5 Tests
+
+`ProgresoControllerIT` con `MockRestServiceServer`:
+- check con datos → 200 + `hasNewData=true`.
+- check sin datos → 200 + `hasNewData=false`.
+- obtener con paciente inexistente → 404.
+- markdown como nurse → 200.
+- regenerar como nurse → 403.
+- regenerar como specialist → 202.
+
+---
+
+## PHASE 6 — TREATMENT-GAME ASSOCIATION
+
+### 6.1 Migracion V13
+
+`src/main/resources/db/migration/V13__videojuego_pdf_md.sql`:
 
 ```sql
--- V10: Agregar columnas faltantes en tablas de auditoria Envers
--- Diagnosticadas via hibernate.hbm2ddl.auto=validate
+-- V13: Tabla de videojuegos terapeuticos, asociacion con tratamientos,
+-- almacenamiento de PDF en tratamiento, y cache de progreso MD en paciente.
 
--- paciente_audit: columnas FK y foto faltantes
-ALTER TABLE paciente_audit ADD COLUMN IF NOT EXISTS dni_san VARCHAR(20);
-ALTER TABLE paciente_audit ADD COLUMN IF NOT EXISTS id_direccion INTEGER;
-ALTER TABLE paciente_audit ADD COLUMN IF NOT EXISTS foto BYTEA;
+CREATE TABLE videojuego (
+    id_videojuego   BIGSERIAL PRIMARY KEY,
+    codigo          VARCHAR(50)  NOT NULL UNIQUE,
+    nombre          VARCHAR(200) NOT NULL,
+    descripcion     TEXT,
+    cod_dis         VARCHAR(50)  NOT NULL,
+    parte_cuerpo    VARCHAR(100) NOT NULL,
+    url_unity       VARCHAR(500),
+    activo          BOOLEAN      NOT NULL DEFAULT TRUE,
+    fecha_creacion  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_videojuego_dis
+        FOREIGN KEY (cod_dis) REFERENCES discapacidad(cod_dis) ON DELETE RESTRICT
+);
+CREATE INDEX idx_videojuego_cod_dis ON videojuego(cod_dis);
+CREATE INDEX idx_videojuego_activo ON videojuego(activo);
 
--- paciente_discapacidad_audit: fecha_asignacion si falta
--- ALTER TABLE paciente_discapacidad_audit ADD COLUMN IF NOT EXISTS fecha_asignacion TIMESTAMP;
+CREATE TABLE tratamiento_videojuego (
+    cod_trat        VARCHAR(50) NOT NULL,
+    id_videojuego   BIGINT      NOT NULL,
+    fecha_vinculo   TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (cod_trat, id_videojuego),
+    CONSTRAINT fk_tv_trat FOREIGN KEY (cod_trat) REFERENCES tratamiento(cod_trat) ON DELETE CASCADE,
+    CONSTRAINT fk_tv_jue  FOREIGN KEY (id_videojuego) REFERENCES videojuego(id_videojuego) ON DELETE CASCADE
+);
 
--- paciente_tratamiento_audit: fecha_asignacion si falta
--- ALTER TABLE paciente_tratamiento_audit ADD COLUMN IF NOT EXISTS fecha_asignacion TIMESTAMP;
+ALTER TABLE tratamiento
+    ADD COLUMN archivo_pdf BYTEA,
+    ADD COLUMN nombre_archivo_pdf VARCHAR(255),
+    ADD COLUMN tamano_pdf_bytes BIGINT,
+    ADD CONSTRAINT chk_tamano_pdf CHECK (tamano_pdf_bytes IS NULL OR tamano_pdf_bytes <= 10485760);
+
+ALTER TABLE paciente
+    ADD COLUMN archivo_progreso_md TEXT,
+    ADD COLUMN progreso_md_actualizado_en TIMESTAMP;
+
+-- Audit tables (Envers)
+CREATE TABLE videojuego_audit (
+    id_videojuego BIGINT NOT NULL,
+    rev INTEGER NOT NULL,
+    rev_type SMALLINT,
+    codigo VARCHAR(50),
+    nombre VARCHAR(200),
+    descripcion TEXT,
+    cod_dis VARCHAR(50),
+    parte_cuerpo VARCHAR(100),
+    url_unity VARCHAR(500),
+    activo BOOLEAN,
+    fecha_creacion TIMESTAMP,
+    PRIMARY KEY (id_videojuego, rev),
+    CONSTRAINT fk_videojuego_audit_rev FOREIGN KEY (rev) REFERENCES revinfo(rev)
+);
+
+CREATE TABLE tratamiento_videojuego_audit (
+    cod_trat VARCHAR(50) NOT NULL,
+    id_videojuego BIGINT NOT NULL,
+    rev INTEGER NOT NULL,
+    rev_type SMALLINT,
+    fecha_vinculo TIMESTAMP,
+    PRIMARY KEY (cod_trat, id_videojuego, rev),
+    CONSTRAINT fk_tv_audit_rev FOREIGN KEY (rev) REFERENCES revinfo(rev)
+);
 ```
 
-**Instructions:**
-- Uncomment lines based on Phase 1 findings.
-- Add ANY other columns that Phase 1 reveals.
-- Use `ADD COLUMN IF NOT EXISTS` for idempotency.
-- Do NOT add foreign key constraints on audit columns (Envers doesn't use them).
+> Verificar nombre exacto de la tabla de revisiones (`revinfo` o `rehabi_revision`) en V3 / V9. Adaptar FK.
 
-- [x] Create V10 migration based on Phase 1 findings
+### 6.2-6.3 Entidades + repositorios
 
----
+`Videojuego.java` (entity, `@Audited`):
+```java
+@Entity
+@Audited
+@Table(name = "videojuego")
+public class Videojuego {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long idVideojuego;
 
-### Phase 3 — Verify Envers YAML fix is active (API)
+    @Column(unique = true, nullable = false, length = 50)
+    private String codigo;
 
-Restart API after V10 migration. Check logs for:
-1. `Successfully applied 1 migration to schema "public" (V10__fix_audit_columns)` — Flyway ran V10
-2. NO `relation "xxx_aud" does not exist` errors — YAML namespace fix working
-3. NO `column "xxx" of relation "xxx_audit" does not exist` — V10 columns added
+    @Column(nullable = false, length = 200)
+    private String nombre;
 
-**Test:**
-```bash
-# Crear sanitario via API directa
-curl -X POST http://localhost:8080/api/sanitarios \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"dniSan":"TEST0001X","nombreSan":"Test","apellido1San":"A","apellido2San":"B","emailSan":"test@test.com","contrasena":"test1234","cargo":"medico especialista","telefonos":[]}'
+    @Column(columnDefinition = "TEXT")
+    private String descripcion;
 
-# Crear paciente via desktop app (usar formulario)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cod_dis", nullable = false)
+    @NotAudited
+    private Discapacidad discapacidad;
+
+    @Column(name = "parte_cuerpo", nullable = false, length = 100)
+    private String parteCuerpo;
+
+    @Column(name = "url_unity", length = 500)
+    private String urlUnity;
+
+    @Column(nullable = false)
+    private boolean activo = true;
+
+    @Column(name = "fecha_creacion", nullable = false)
+    private Instant fechaCreacion = Instant.now();
+    // getters/setters
+}
 ```
 
-- [x] API restart — Flyway V10 OK (V10 success=t en schema_history)
-- [x] POST sanitario — 201, Envers audit row creada
-- [x] POST paciente — 201, Envers audit row creada
-- [x] PUT paciente — 200, protesis bool actualizado correctamente en BD
+`TratamientoVideojuego.java` con `@EmbeddedId TratamientoVideojuegoId` (codTrat + idVideojuego).
 
----
+Repositorios Spring Data:
+```java
+public interface VideojuegoRepository extends JpaRepository<Videojuego, Long> {
+    @EntityGraph(attributePaths = "discapacidad")
+    List<Videojuego> findByActivoTrueOrderByNombreAsc();
 
-### Phase 4 — Fix sanitario edit email check (Desktop)
+    @EntityGraph(attributePaths = "discapacidad")
+    List<Videojuego> findByDiscapacidadCodDisAndActivoTrueOrderByNombreAsc(String codDis);
 
-**File:** `desktop/src/main/java/com/javafx/Interface/controladorAgregarSanitario.java`
+    Optional<Videojuego> findByCodigo(String codigo);
+}
+```
 
-**Change at line ~283:** Add email comparison before uniqueness check, mirroring the DNI check pattern at line 272.
+### 6.4 DTOs y mappers MapStruct
 
 ```java
-// BEFORE (line 283):
-if (sanitarioDAO.existeEmail(sanitario.getEmail())) {
+public record VideojuegoRequest(
+    @NotBlank String codigo,
+    @NotBlank String nombre,
+    String descripcion,
+    @NotBlank String codDis,
+    @NotBlank String parteCuerpo,
+    String urlUnity
+) {}
 
-// AFTER:
-if (!sanitario.getEmail().equalsIgnoreCase(emailOriginal) 
-        && sanitarioDAO.existeEmail(sanitario.getEmail())) {
+public record VideojuegoResponse(
+    Long idVideojuego,
+    String codigo,
+    String nombre,
+    String descripcion,
+    String codDis,
+    String discapacidadNombre,
+    String parteCuerpo,
+    String urlUnity,
+    boolean activo
+) {}
 ```
-
-**Requires:** Store `emailOriginal` in `cargarDatosParaEdicion()` (line ~137), same pattern as `dniOriginal`.
 
 ```java
-// Add field at class level (next to dniOriginal):
-private String emailOriginal;
+@Mapper(componentModel = "spring")
+public interface VideojuegoMapper {
+    @Mapping(source = "discapacidad.codDis", target = "codDis")
+    @Mapping(source = "discapacidad.nombreDis", target = "discapacidadNombre")
+    VideojuegoResponse toResponse(Videojuego entity);
 
-// In cargarDatosParaEdicion() after dniOriginal = sanitario.getDni():
-emailOriginal = sanitario.getEmail();
+    List<VideojuegoResponse> toResponseList(List<Videojuego> entities);
+}
 ```
 
-- [x] Add `emailOriginal` field
-- [x] Store email in `cargarDatosParaEdicion()`
-- [x] Guard `existeEmail()` with email comparison
-- [ ] Test: edit sanitario without changing email → should save OK
-- [ ] Test: edit sanitario changing email to new unused email → should save OK
-- [ ] Test: edit sanitario changing email to existing email → should block
+### 6.5 VideojuegoController
+
+```java
+@RestController
+@RequestMapping("/api/videojuegos")
+public class VideojuegoController {
+    @GetMapping public Page<VideojuegoResponse> listar(Pageable pageable) {...}
+    @GetMapping("/{id}") public VideojuegoResponse obtener(@PathVariable Long id) {...}
+    @GetMapping("/discapacidad/{codDis}") public List<VideojuegoResponse> porDiscapacidad(@PathVariable String codDis) {...}
+
+    @PostMapping
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<VideojuegoResponse> crear(@Valid @RequestBody VideojuegoRequest req) {...}
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<VideojuegoResponse> actualizar(@PathVariable Long id, @Valid @RequestBody VideojuegoRequest req) {...}
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<Void> desactivar(@PathVariable Long id) { /* soft delete activo=false */ }
+}
+```
+
+### 6.6 Asociacion en CatalogoController
+
+```java
+@GetMapping("/api/tratamientos/{cod}/videojuegos")
+public List<VideojuegoResponse> juegosDeTratamiento(@PathVariable String cod) {...}
+
+@PostMapping("/api/tratamientos/{cod}/videojuegos/{id}")
+@PreAuthorize("hasRole('SPECIALIST')")
+public ResponseEntity<Void> vincular(@PathVariable String cod, @PathVariable Long id) {...}
+
+@DeleteMapping("/api/tratamientos/{cod}/videojuegos/{id}")
+@PreAuthorize("hasRole('SPECIALIST')")
+public ResponseEntity<Void> desvincular(@PathVariable String cod, @PathVariable Long id) {...}
+```
 
 ---
 
-### Phase 5 — Verify / complete progression level UI (Desktop)
+## PHASE 7 — TREATMENT PDF
 
-**Prerequisito:** Phase 7 (V12) debe estar aplicado y API arrancando, si no la UI no puede testarse E2E.
+### 7.1 Endpoints
 
-Los 3 items del checklist `/desktop/CLAUDE.md` estan codificados pero sin verificar E2E. Flujo:
+```java
+@PostMapping(value = "/api/tratamientos/{cod}/pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+@PreAuthorize("hasRole('SPECIALIST')")
+public ResponseEntity<Void> subirPdf(
+        @PathVariable String cod,
+        @RequestPart("file") MultipartFile file
+) throws IOException {
+    if (file.getSize() > 10 * 1024 * 1024) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).build();
+    }
+    byte[] bytes = file.getBytes();
+    if (bytes.length < 5 || bytes[0] != '%' || bytes[1] != 'P' || bytes[2] != 'D' || bytes[3] != 'F') {
+        throw new ValidacionException("El archivo no es un PDF valido.");
+    }
+    tratamientoService.guardarPdf(cod, bytes, file.getOriginalFilename(), file.getSize());
+    return ResponseEntity.created(URI.create("/api/tratamientos/" + cod + "/pdf")).build();
+}
 
-1. Ejecutar escenarios 5.1/5.2/5.3 contra API viva.
-2. Si todos pasan → marcar `[x]` en `/desktop/CLAUDE.md` (Phase 6).
-3. Si alguno falla → abrir sub-fase 5.X-fix con diagnostico (endpoint faltante, bug UI, mapping DTO) y resolver antes de marcar. No marcar `[x]` con gaps.
+@GetMapping(value = "/api/tratamientos/{cod}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+public ResponseEntity<byte[]> descargarPdf(@PathVariable String cod) {
+    var pdf = tratamientoService.obtenerPdf(cod);
+    return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"" + pdf.nombre() + "\"")
+            .body(pdf.bytes());
+}
 
-**5.1 — Progression level UI:**
-- `controladorVentanaPacienteListar.java` has: disability table with nivel column, level up/down buttons (lines 524-583), treatment filter by level checkbox (lines 442-453), visibility toggle (lines 695-718), color-coded rows by level (lines 241-257).
-- **Verify:** Open patient detail → assign disability → level shows "1 - Agudo" → click "Subir nivel" → level changes to 2 → treatments table filters correctly → toggle visibility works.
+@GetMapping("/api/tratamientos/{cod}/pdf/metadatos")
+public ResponseEntity<PdfMetadatosResponse> metadatos(@PathVariable String cod) {...}
 
-**5.2 — Patient form disability assignment from catalog:**
-- `controladorAgregarPaciente.java` has: disability section visible in edit mode (line 421), `asignarDiscapacidadFormulario()` uses `catalogoService.listarDiscapacidades()` (line 795), choice dialog, assignment via `pacienteClinicoService`.
-- Legacy free-text fields removed (confirmed in Paciente.java line 16 comment).
-- **Verify:** Edit patient → disability section visible → click "Asignar" → catalog dialog shows → select disability → assigned with level 1.
+@DeleteMapping("/api/tratamientos/{cod}/pdf")
+@PreAuthorize("hasRole('SPECIALIST')")
+public ResponseEntity<Void> eliminarPdf(@PathVariable String cod) {...}
+```
 
-**5.3 — Patient detail hierarchy view:**
-- `VentanaListarPaciente.fxml` has: disabilities table (lines 100-119) with columns (codigo, discapacidad, nivel actual, notas) + treatments table (lines 121-147) with columns (nombre, nivel, visible) + level filter checkbox.
-- **Verify:** Open patient detail → disabilities show with levels → select disability → treatments load filtered → hierarchy is clear.
+### 7.2 TratamientoService extension
 
-- [x] 5.1 verified: GET discapacidades con nivel, PUT nivel → 200, toggle visibilidad tratamiento → 200
-- [x] 5.2 verified: POST asignar discapacidad desde catalogo → 201 con idNivel y nombreNivel
-- [x] 5.3 verified: GET tratamientos con visible flag, jerarquia dis→trat completa
-- [x] 5.X-fix: Bug descubierto — audit_log_accion_check no incluia DELETE. Resuelto via V12__add_delete_accion_audit.sql. DELETE desasignacion ahora 204.
+```java
+public void guardarPdf(String cod, byte[] bytes, String filename, long size) {
+    Tratamiento t = repo.findByCodTrat(cod).orElseThrow(() -> new RecursoNoEncontradoException(...));
+    t.setArchivoPdf(bytes);
+    t.setNombreArchivoPdf(filename);
+    t.setTamanoPdfBytes(size);
+    repo.save(t);
+    auditService.registrar(AccionAuditoria.UPDATE, "tratamiento", cod,
+        "PDF subido: " + filename + " (" + size + " bytes)");
+}
+```
 
----
+### 7.3 Tests
 
-### Phase 6 — Mark CLAUDE.md checklist + cleanup
-
-After ALL verifications pass:
-
-1. In `/desktop/CLAUDE.md` section 7 "Progression level UI", mark:
-   - `[x] Implement progression level UI...`
-   - `[x] Update patient form to assign disabilities from catalog...`
-   - `[x] Update patient detail view to show disability-treatment-progression hierarchy.`
-
-2. In `/api/CLAUDE.md` section 5 "Bugfix: Envers audit tables not found":
-   - `[x] Fix namespace Envers...`
-   - `[x] Verificar E2E...`
-
-3. Clean up `/api/PLAN.md` — mark all phases complete or replace with summary.
-
-- [x] Mark desktop CLAUDE.md checklist items (3 progression UI items → [x])
-- [x] Mark API CLAUDE.md bugfix items (Envers namespace + E2E → [x])
-- [x] Clean up PLAN.md (todos los phases completos)
-
----
-
-## Files to modify
-
-| File | Action | Phase |
-|---|---|---|
-| `api/src/main/resources/application.yml` | Temp add hbm2ddl validate (then remove) | 1 |
-| `api/src/main/resources/db/migration/V10__fix_audit_columns.sql` | CREATE | 2 |
-| `desktop/.../controladorAgregarSanitario.java` | EDIT (email check fix) | 4 |
-| `desktop/CLAUDE.md` | EDIT (mark checklist) | 6 |
-| `api/CLAUDE.md` | EDIT (mark checklist) | 6 |
-| `api/PLAN.md` | EDIT (mark complete) | 6 |
-| `api/src/main/resources/db/migration/V12__fix_protesis_default.sql` | CREATE | 7 |
-| `flyway_schema_history` (BD dev) | DELETE fila V11 fallida via `flyway:repair` | 7 |
-
-**DO NOT touch:** Paciente.java, Sanitario.java, PacienteDAO.java, SanitarioDAO.java, controladorAgregarPaciente.java (patient edit is NOT broken — it's the Envers 500 causing the symptom). **NO reescribir V11** — usar V12 additive.
+`PdfControllerIT`:
+- Subir PDF 5MB valido → 201.
+- Subir 11MB → 413.
+- Subir .docx → 400 con mensaje claro.
+- Descargar tras subir → bytes identicos.
+- Metadatos tras subir → nombre + tamano correctos.
+- Eliminar como nurse → 403.
 
 ---
 
-## Execution order (actualizado)
+## PHASE 8 — GAME TELEMETRY ROUTING
 
-1. **Phase 7** (blocker — API no arranca sin esto).
-2. Phase 3 (verificar que V10 + Envers YAML siguen OK tras reinicio).
-3. Phase 4 (desktop email check — independiente).
-4. Phase 5 (progression UI — requiere API viva).
-5. Phase 6 (cleanup checklist).
+### 8.1-8.2 TelemetriaController + Service
+
+```java
+@RestController
+@RequestMapping("/api/telemetria")
+public class TelemetriaController {
+
+    private final TelemetriaService telemetriaService;
+
+    @PostMapping("/sesion-juego")
+    @PreAuthorize("hasAuthority('SCOPE_GAMES_TELEMETRY') or hasRole('SPECIALIST')")
+    public ResponseEntity<Map<String, String>> ingestar(@Valid @RequestBody TelemetriaSesionRequest req) {
+        var resultado = telemetriaService.ingestar(req);
+        return ResponseEntity.accepted().body(Map.of("dataId", resultado.dataId()));
+    }
+}
+```
+
+`TelemetriaService.ingestar(req)`:
+1. Validar paciente existe y esta activo.
+2. Si `req.disabilityId()` es null, inferir desde `paciente_discapacidad` (la mas reciente del paciente).
+3. Construir payload para `/data` POST `/ingest/game-session`.
+4. Llamar a `DataPipelineClient.ingestar(payload)`.
+5. Publicar `RegenerarMdEvent` (Spring `ApplicationEvent`).
+6. Devolver dataId al cliente.
+
+### 8.3 Scope JWT
+
+Anadir scope `GAMES_TELEMETRY` al JwtService — emitido cuando un servicio de juegos se autentica con credenciales especiales (NO un usuario humano). Por simplicidad inicial, aceptar tambien role SPECIALIST.
+
+### 8.4 EventListener
+
+```java
+@Component
+public class RegenerarMdListener {
+    private final DataPipelineClient client;
+
+    @EventListener
+    @Async
+    public void handle(RegenerarMdEvent event) {
+        try {
+            client.regenerarMarkdown(event.dniPac());
+        } catch (Exception e) {
+            log.error("Fallo al regenerar MD para paciente {}", event.dniPac(), e);
+        }
+    }
+}
+```
+
+Habilitar `@EnableAsync` en `ApiApplication` o en un `@Configuration`.
+
+### 8.5 Tests
+
+MockMvc + MockRestServiceServer:
+- POST sesion valida → 202 + dataId.
+- POST sin disabilityId → infiere desde BD → llamada exitosa a /data.
+- POST con paciente inexistente → 404.
+- POST con paciente inactivo → 403.
+
+---
+
+## PHASE 9 — MOBILE DASHBOARD
+
+### 9.1-9.2 DashboardController + DTO
+
+```java
+@RestController
+@RequestMapping("/api/pacientes/{dni}/dashboard")
+public class DashboardController {
+    @GetMapping
+    @PreAuthorize("hasAnyRole('SPECIALIST','NURSE','PATIENT')")
+    public ResponseEntity<DashboardResponse> obtener(@PathVariable String dni) {
+        return ResponseEntity.ok(dashboardService.obtener(dni));
+    }
+}
+
+public record DashboardResponse(
+    PacienteResumenDto paciente,
+    List<DiscapacidadActivaDto> discapacidadesActivas,
+    List<TratamientoVisibleDto> tratamientosVisibles,
+    List<JuegoDesbloqueadoDto> juegosDesbloqueados,
+    UltimaSesionDto ultimaSesionJuego,
+    ProximaCitaDto proximaCita
+) {}
+```
+
+### 9.3 Service
+
+`DashboardService.obtener(dni)`:
+- Carga paciente.
+- Carga `paciente_discapacidad` con FETCH JOIN a `discapacidad` y `nivel_progresion`.
+- Para cada discapacidad activa, busca tratamientos visibles (`paciente_tratamiento` con `visible=true`).
+- Para cada tratamiento, busca juegos asociados → marca como desbloqueado si el nivel del paciente >= nivel del tratamiento.
+- Carga ultima sesion via `DataPipelineClient.ultimaSesion(dni)` (NUEVO endpoint en `/data`, ver `data/PLAN.md` Phase 5.7).
+- Carga proxima cita via `CitaRepository.findProximaByPaciente(dni)`.
+- Audit READ.
+
+### 9.4 Tests
+
+- Dashboard con paciente sin asignaciones → respuesta con listas vacias pero NO 404.
+- Dashboard con paciente completo → estructura correcta y juegos correctamente filtrados por nivel.
+
+---
+
+## PHASE 10 — DOCS + RATE LIMIT
+
+### 10.1 springdoc-openapi
+
+Pom.xml:
+```xml
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>2.6.0</version>
+</dependency>
+```
+
+Application.yml:
+```yaml
+springdoc:
+  api-docs.path: /v3/api-docs
+  swagger-ui.path: /swagger-ui.html
+  swagger-ui.operationsSorter: method
+  packages-to-scan: com.rehabiapp.api.presentation
+  paths-to-exclude: /internal/**
+```
+
+### 10.2 Anotaciones
+
+Cada controller con `@Tag(name = "...", description = "...")`. Cada metodo con `@Operation(summary = "...")`. DTOs con `@Schema(description = "...", example = "...")`.
+
+### 10.3 Bucket4j
+
+Pom.xml:
+```xml
+<dependency>
+    <groupId>com.bucket4j</groupId>
+    <artifactId>bucket4j_jdk17-core</artifactId>
+    <version>8.10.1</version>
+</dependency>
+```
+
+Crear `RateLimitFilter` (Spring Filter) que:
+- Identifica request por IP en `/api/auth/login` o por JWT `sub` en el resto.
+- Mantiene un `ConcurrentHashMap<String, Bucket>` con buckets de Bucket4j.
+- Limites por path:
+  - `/api/auth/login`: 10/min/IP.
+  - `/api/telemetria/**`: 60/min/JWT.
+  - Resto: 300/min/JWT.
+- Si bucket vacio, devuelve 429 con header `Retry-After`.
+
+### 10.5 Limite de payload
+
+En `application.yml`:
+```yaml
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+  http:
+    max-http-request-header-size: 16KB
+```
+
+Filtro custom `PayloadSizeFilter` para JSON: si `Content-Length > 1MB` y `Content-Type=application/json` → 413.
+
+### 10.6 Tests rate limit
+
+```java
+@Test
+void login_11Veces_undecimaDevuelve429() {
+    for (int i = 0; i < 10; i++) {
+        mvc.perform(post("/api/auth/login").content(...)).andExpect(status().isUnauthorized());
+    }
+    mvc.perform(post("/api/auth/login").content(...)).andExpect(status().isTooManyRequests());
+}
+```
+
+---
+
+## ORDER OF EXECUTION
+
+1. Phase 4 (H2) — DESBLOQUEA TODO. Sin tests verdes no se puede iterar con confianza.
+2. Phase 6 (V13 schema) — fundacion para PDF (Phase 7), juegos (Phase 6), MD cache (Phase 5).
+3. Phase 7 (PDF) — independiente.
+4. Phase 5 (Progress) — depende de `/data` Phase 5 ya implementado.
+5. Phase 8 (Telemetria) — depende de `/data` ingest existente (Phase 2 data).
+6. Phase 9 (Dashboard) — agrega; depende de 5+6+8.
+7. Phase 10 (Docs + rate limit) — al final.
+
+---
+
+## NON-NEGOTIABLES
+
+- Spring Boot 4.0.5 + Java 24. NO downgrade.
+- Records Java 24 para DTOs. Sealed interfaces si aplica.
+- Sin comentarios en ingles. Sin emojis.
+- Sin entidades retornadas por controllers.
+- Cada nuevo endpoint con test integration.
+- Cada nueva tabla con `@Audited` + audit table en V13.
+- Audit log READ obligatorio en `/api/pacientes/**` segun §4.6 raiz.
+- TestSprite 100% antes de marcar checklist `[x]`.
+
+---
+
+*End of plan.*

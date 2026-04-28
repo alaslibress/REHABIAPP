@@ -212,48 +212,26 @@ JWT Java:  Issued by Java API, signed with Java's own key
 
 ## 6. IMPLEMENTATION CHECKLIST
 
-### Phase A: Infrastructure (COMPLETED)
+> Phases A-C (infraestructura + GraphQL + bugfixes login) completadas y eliminadas para reducir tokens. Phase D pendiente. Phase E nueva.
 
-- [x] Node.js project initialized with Express 5.
-- [x] Health endpoint (`GET /health`) returns 200 OK.
-- [x] Structured JSON logging with pino configured.
-- [x] Prometheus metrics endpoint (`GET /metrics`) enabled.
-- [x] Secret reading utility for CSI-mounted files.
-- [x] Read-only filesystem compatible (no writes outside /tmp).
-- [x] Dockerfile multi-stage (Node.js 20 Alpine, UID 1000).
-- [x] K8s manifests in `/infra/k8s/base/mobile-backend/`.
-
-### Phase B: GraphQL Application Layer (COMPLETADA)
-
-- [x] GraphQL dependencies installed (Apollo Server 4, graphql, jsonwebtoken).
-- [x] Configuration extended with JWT and GraphQL variables.
-- [x] Error code catalog centralized (`src/utils/errors.js`).
-- [x] Timezone greeting utility (`src/utils/timezone.js`).
-- [x] HTTP client for Java API (`src/services/apiClient.js`).
-- [x] Authentication service with BFF JWT (`src/services/authService.js`).
-- [x] Domain services (patient, treatment, appointment, game).
-- [x] GraphQL TypeDefs matching frontend contract.
-- [x] GraphQL Resolvers with auth protection.
-- [x] JWT authentication middleware.
-- [x] Timezone greeting middleware.
-- [x] Global error formatter.
-- [x] Apollo Server integrated with Express.
-- [x] Tests passing (16/16: 6 infrastructure + 10 GraphQL).
-- [x] K8s ConfigMap updated with new variables.
-
-### Phase C: Correccion de Errores de Login y Observabilidad (PENDIENTE)
-
-- [x] Puerto del frontend corregido (4000 → 3000) en `/mobile/frontend/src/services/graphql/client.ts`.
-- [x] Script `npm run dev` con MOCK_API=true, LOG_LEVEL=debug y pino-pretty.
-- [x] Logger centralizado en `src/logger.js` (eliminar instancias duplicadas de pino).
-- [x] Flujo login admin verificado en terminal (exito + error visibles).
-
-### Phase D: Login Inalcanzable desde Dispositivo Movil (PENDIENTE)
+### Phase D: Login inalcanzable desde dispositivo movil (pendiente)
 
 - [ ] URL dinamica con expo-constants (localhost → IP LAN automatica).
 - [ ] fetchProfile movido a pantalla de inicio (eliminar race condition con AuthGuard).
 - [ ] Errores de userStore parseados con parseGraphQLError (consistencia con authStore).
 - [ ] Flujo login verificado desde telefono fisico.
+
+### Phase E: Treatment PDF + games launcher + dashboard (current iteration)
+
+> Detalles en `/mobile/backend/PLAN.md`. Consume nuevos endpoints del API (`api/CLAUDE.md` Phase 5-9).
+
+- [ ] E.1 GraphQL TypeDef `TreatmentPdfPayload { codTrat, filename, sizeBytes, base64Content }`. Query `treatmentPdf(codTrat: String!): TreatmentPdfPayload`. Resolver llama `GET /api/tratamientos/{cod}/pdf` y serializa a base64. Limita a 10MB en respuesta.
+- [ ] E.2 GraphQL TypeDef `Game { idVideojuego, codigo, nombre, descripcion, codDis, parteCuerpo, urlUnity }`. Query `availableGames: [Game!]!`. Resolver llama al dashboard del API y devuelve `juegosDesbloqueados`.
+- [ ] E.3 GraphQL Mutation `startGame(idVideojuego: ID!): GameSessionLaunch`. Devuelve `{ urlUnity, ephemeralToken, expiresAt }` con un JWT corto (5 min, scope GAMES_PLAY) firmado por el BFF.
+- [ ] E.4 GraphQL TypeDef `PatientProgress { tratamientos: [TreatmentProgress!]!, lastUpdate }`. Query `myProgress: PatientProgress`. Resolver consume `GET /api/pacientes/{dni}/progreso`.
+- [ ] E.5 GraphQL TypeDef `Dashboard` con todos los campos del API. Query `myDashboard: Dashboard`.
+- [ ] E.6 Tests Apollo con jest mockeando `apiClient.fetch` para los 5 nuevos resolvers.
+- [ ] E.7 Documentar las queries en `/mobile/backend/README.md` o playground GraphQL.
 
 ---
 

@@ -302,6 +302,14 @@ Before performing any task, the agent MUST check and read the installed skills r
 - API delegates game data operations to /data pipeline
 - MongoDB stores high-volume semi-structured session documents
 - Data processed with aggregation pipelines for analytics
+- /data also generates per-patient Markdown progress files (cache for future AI analysis)
+- /api proxies progress queries (`/api/pacientes/{dni}/progreso/*`) to /data and caches MD in `paciente.archivo_progreso_md`
+
+### /desktop --> /api (NEW polling flow for progress)
+
+- Desktop polls `GET /api/pacientes/{dni}/progreso/check` every 30s while progress tab open
+- If `hasNewData=true`, desktop fetches `/api/pacientes/{dni}/progreso` and re-renders charts
+- Desktop never queries MongoDB directly — all goes through API
 
 ---
 

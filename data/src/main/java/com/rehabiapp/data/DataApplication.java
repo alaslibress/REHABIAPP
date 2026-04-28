@@ -2,6 +2,7 @@ package com.rehabiapp.data;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Punto de entrada del pipeline de datos de RehabiAPP.
@@ -12,6 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  *
  * Puerto por defecto: 8081 (evita colision con el API Core en 8080).
  */
+@EnableScheduling
 @SpringBootApplication
 public class DataApplication {
 

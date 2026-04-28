@@ -41,3 +41,7 @@ rehabiapp:
     kms-provider: ${CSFLE_KMS_PROVIDER:local}
     # Ruta a la clave maestra montada via CSI secrets en K8s
     master-key-path: ${CSFLE_MASTER_KEY_PATH:/mnt/secrets/csfle-master-key}
+  pseudonym:
+    # Salt para derivar tokens anonimizados de pacientes. Separado de los datos.
+    # En produccion se inyecta via K8s Secret (PSEUDONYM_SALT).
+    salt: ${PSEUDONYM_SALT:changeme-dev-salt-rehabiapp}

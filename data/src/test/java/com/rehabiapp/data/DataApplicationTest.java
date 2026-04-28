@@ -1,22 +1,32 @@
 package com.rehabiapp.data;
 
+import com.rehabiapp.data.domain.repository.GameSessionRepository;
+import com.rehabiapp.data.domain.repository.PatientProgressRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
  * Test de arranque del contexto de Spring Boot.
  *
- * Verifica que la configuracion de beans, controladores y componentes
- * se carga correctamente sin errores al iniciar la aplicacion.
- *
- * MongoDB se excluye de la autoconfiguracion mediante el perfil "test"
- * definido en src/test/resources/application-test.yml para evitar
- * dependencia de una instancia MongoDB real durante los tests.
+ * MongoDB se excluye via perfil "test" y se sustituye por mocks de Mockito
+ * para satisfacer las dependencias de beans que requieren MongoTemplate
+ * y los repositorios Spring Data MongoDB.
  */
 @SpringBootTest
 @ActiveProfiles("test")
 class DataApplicationTest {
+
+    @MockitoBean
+    MongoTemplate mongoTemplate;
+
+    @MockitoBean
+    GameSessionRepository gameSessionRepository;
+
+    @MockitoBean
+    PatientProgressRepository patientProgressRepository;
 
     @Test
     void contextLoads() {

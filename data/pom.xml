@@ -58,6 +58,12 @@
             <version>${logstash-logback-encoder.version}</version>
         </dependency>
 
+        <!-- Validacion de beans para DTOs de ingesta -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

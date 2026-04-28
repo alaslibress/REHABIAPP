@@ -1,403 +1,530 @@
-# PLAN.md — Data Pipeline: Kubernetes Readiness
+# PLAN.md — Data iteration 2026-04-29
 
-> **Agent:** Sonnet (Doer) under Agent 1 (API + Data)
-> **Domain:** `/data/`
-> **Prerequisites:** Read `data/CLAUDE.md` and `data/.claude/skills/springboot4-mongodb/SKILL.md` BEFORE starting.
-> **Scope:** Make the Spring Boot 4 data pipeline container-ready for the K8s manifests defined in `/infra/PLAN.md`.
-
----
-
-## Context
-
-The data pipeline is an INTERNAL service — it receives game telemetry ONLY from the Core API, stores it in MongoDB, and provides analytics via aggregation pipelines. It is NEVER exposed to external traffic.
-
-The skill `springboot4-mongodb/SKILL.md` mandates Spring Boot 4.0.5 + Java 24 (overriding the original Node.js stack in CLAUDE.md). All implementation MUST use Spring Boot.
-
-The `/infra/` K8s manifests expect this service to:
-- Run on port 8081
-- Expose Actuator health endpoints for probes
-- Support Spring profiles (`local`, `aws`)
-- Read secrets from CSI-mounted files at `/mnt/secrets/` (AWS)
-- Run as UID 1000 with read-only filesystem
+> **Branch:** stats-implementation
+> **Author:** Agent 0/1 Thinker (Opus) — PRESCRIPTIVE.
+> **Language:** code/comments en Spanish. Plan en English.
+> **Scope:** Phases 5-7 del checklist `/data/CLAUDE.md` §6.
 
 ---
 
-## Step 1: Initialize Spring Boot project
+## 0. CONTEXTO OBLIGATORIO
 
-If not already initialized:
-- Spring Boot 4.0.5, Java 24, Maven.
-- GroupId: `com.rehabiapp`, ArtifactId: `data`.
-- Dependencies: Spring Web, Spring Data MongoDB, Spring Boot Actuator, Micrometer Prometheus.
+1. `/CLAUDE.md` raiz §4.5, §4.6.
+2. `/data/CLAUDE.md` §6.
+3. `/data/.claude/skills/springboot4-mongodb/SKILL.md` (CSFLE, agregaciones server-side, anonimizacion).
+4. `/api/PLAN.md` Phase 5, 8, 9 — consumidores de los nuevos endpoints.
+5. Plantilla MD y formato deseado: ver §6.4 abajo.
 
 ---
 
-## Step 2: Configure server port
+## PHASE 5 — TREATMENT PROGRESS AGGREGATION
 
-### `src/main/resources/application.yml`
+### 5.1 TreatmentMetricResolver
 
-```yaml
-server:
-  port: ${SERVER_PORT:8081}
-  tomcat:
-    basedir: /tmp
+`src/main/java/com/rehabiapp/data/util/TreatmentMetricResolver.java`:
+
+```java
+@Component
+@ConfigurationProperties(prefix = "rehabiapp.metric-map")
+public class TreatmentMetricResolver {
+
+    // Mapping codigo de tratamiento -> nombre del campo en MovementMetrics
+    private Map<String, String> prefixToField = Map.of(
+        "ROM-", "rangeOfMotionDegrees",
+        "VEL-", "averageSpeed",
+        "FUERZA-", "maxSpeed"
+    );
+
+    private Map<String, String> prefixToLabel = Map.of(
+        "ROM-", "Rango de movimiento (grados)",
+        "VEL-", "Velocidad media (m/s)",
+        "FUERZA-", "Velocidad maxima (m/s)"
+    );
+
+    public String resolverCampo(String codTrat) {
+        return prefixToField.entrySet().stream()
+            .filter(e -> codTrat.startsWith(e.getKey()))
+            .map(Map.Entry::getValue)
+            .findFirst()
+            .orElse("rangeOfMotionDegrees");  // fallback
+    }
+
+    public String resolverLabel(String codTrat) {
+        return prefixToLabel.entrySet().stream()
+            .filter(e -> codTrat.startsWith(e.getKey()))
+            .map(Map.Entry::getValue)
+            .findFirst()
+            .orElse("Metrica");
+    }
+
+    // setters para @ConfigurationProperties
+}
 ```
 
-Port MUST default to 8081 to avoid collision with the Core API on 8080.
-
----
-
-## Step 3: Configure Actuator health probes
-
-```yaml
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus
-  endpoint:
-    health:
-      probes:
-        enabled: true
-      show-details: never
-  health:
-    livenessState:
-      enabled: true
-    readinessState:
-      enabled: true
-```
-
-Endpoints:
-- `GET /actuator/health/liveness` — K8s livenessProbe
-- `GET /actuator/health/readiness` — K8s readinessProbe (includes MongoDB connectivity check)
-- `GET /actuator/prometheus` — Prometheus metrics scraping
-
----
-
-## Step 4: Configure Spring profiles
-
-### 4.1 `application-local.yml`
-
-```yaml
-spring:
-  data:
-    mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/rehabiapp_telemetry}
-logging:
-  level:
-    com.rehabiapp: DEBUG
-    org.springframework.data.mongodb: DEBUG
-```
-
-### 4.2 `application-aws.yml`
-
-```yaml
-spring:
-  config:
-    import: optional:configtree:file:/mnt/secrets/
-  data:
-    mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI}
-      auto-index-creation: false
-logging:
-  level:
-    root: INFO
-```
-
-In AWS, the MongoDB URI (including DocumentDB connection string with TLS) is injected via CSI-mounted secrets. `auto-index-creation: false` because indexes are managed explicitly per the skill.
-
----
-
-## Step 5: Configure structured JSON logging
-
-### 5.1 Add dependency to `pom.xml`
-
-```xml
-<dependency>
-    <groupId>net.logstash.logback</groupId>
-    <artifactId>logstash-logback-encoder</artifactId>
-    <version>7.4</version>
-</dependency>
-```
-
-### 5.2 Create `src/main/resources/logback-spring.xml`
-
-```xml
-<configuration>
-    <springProfile name="local">
-        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-            </encoder>
-        </appender>
-        <root level="INFO"><appender-ref ref="CONSOLE" /></root>
-    </springProfile>
-    <springProfile name="aws,production">
-        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder" />
-        </appender>
-        <root level="INFO"><appender-ref ref="JSON" /></root>
-    </springProfile>
-</configuration>
-```
-
----
-
-## Step 6: Configure Prometheus metrics
-
-### `pom.xml`
-
-```xml
-<dependency>
-    <groupId>io.micrometer</groupId>
-    <artifactId>micrometer-registry-prometheus</artifactId>
-</dependency>
-```
-
----
-
-## Step 7: Configure CSFLE foundation (per skill requirement)
-
-The `springboot4-mongodb` skill MANDATES Client-Side Field Level Encryption (CSFLE). At this stage, set up the configuration structure:
-
-### 7.1 `application.yml`
-
+Anadir en `application.yml`:
 ```yaml
 rehabiapp:
-  csfle:
-    enabled: ${CSFLE_ENABLED:false}
-    key-vault-namespace: "encryption.__keyVault"
-    kms-provider: ${CSFLE_KMS_PROVIDER:local}
-    master-key-path: ${CSFLE_MASTER_KEY_PATH:/mnt/secrets/csfle-master-key}
+  metric-map:
+    prefix-to-field:
+      "[ROM-]": rangeOfMotionDegrees
+      "[VEL-]": averageSpeed
+      "[FUERZA-]": maxSpeed
+    prefix-to-label:
+      "[ROM-]": "Rango de movimiento (grados)"
+      "[VEL-]": "Velocidad media (m/s)"
+      "[FUERZA-]": "Velocidad maxima (m/s)"
 ```
 
-### 7.2 Implementation notes for the Doer
+### 5.2 TreatmentProgressPipeline
 
-- In local profile: CSFLE can be disabled or use a local master key file.
-- In AWS profile: CSFLE uses AWS KMS. The IRSA role attached to the ServiceAccount grants access to the KMS key.
-- The actual CSFLE MongoClient configuration (auto-encryption settings, JSON Schema per collection) is implemented when the data models are created — not in this K8s readiness phase.
+> NOTA: el modelo actual `GameSession` NO tiene `codTrat` ni `parteCuerpo`. La asociacion paciente-tratamiento esta en PostgreSQL (tabla `paciente_tratamiento`). Para enriquecer las sesiones se necesita uno de:
+> A) que la API enriquezca el ingest con `codTrat` y `parteCuerpo` (preferible, requiere actualizar `GameSessionIngestionRequest`).
+> B) que el data pipeline llame al API para resolver tratamiento (overhead alto, descartado).
+
+**Decision:** Opcion A. Actualizar `GameSession` y `GameSessionIngestionRequest` para incluir:
+- `codTrat: String` (opcional, null si Unity no manda)
+- `parteCuerpo: String` (opcional)
+
+Si vienen null, fallback: el paciente tiene N tratamientos visibles → asignar al ultimo activo (heuristica). Documentado.
+
+#### Pipeline:
+
+```java
+@Component
+public class TreatmentProgressPipeline {
+
+    private final MongoTemplate mongoTemplate;
+    private final TreatmentMetricResolver resolver;
+
+    public List<TreatmentProgressDto> execute(String patientDni) {
+        // Stage 1: $match paciente
+        // Stage 2: $addFields day (date truncado), metricValue (metrica seleccionada por codTrat)
+        // Stage 3: $group por (codTrat, parteCuerpo, day) -> avg metricValue
+        // Stage 4: $group por (codTrat, parteCuerpo) -> push entradas[], min(day) baseline, max(day) current
+        // Stage 5: $project con baseline, current, deltaPorcentaje calculado, entradas[] ordenadas
+
+        AggregationOperation match = ctx -> new Document("$match",
+                new Document("patientDni", patientDni)
+                .append("codTrat", new Document("$ne", null)));
+
+        AggregationOperation addFields = ctx -> new Document("$addFields", new Document()
+                .append("day", new Document("$dateTrunc", new Document()
+                        .append("date", "$sessionStart")
+                        .append("unit", "day")))
+                .append("metricValue", new Document("$switch", new Document()
+                        .append("branches", List.of(
+                            new Document("case", new Document("$gt", List.of(
+                                new Document("$indexOfBytes", List.of("$codTrat", "ROM-")), -1)))
+                                .append("then", "$movementMetrics.rangeOfMotionDegrees"),
+                            new Document("case", new Document("$gt", List.of(
+                                new Document("$indexOfBytes", List.of("$codTrat", "VEL-")), -1)))
+                                .append("then", "$movementMetrics.averageSpeed"),
+                            new Document("case", new Document("$gt", List.of(
+                                new Document("$indexOfBytes", List.of("$codTrat", "FUERZA-")), -1)))
+                                .append("then", "$movementMetrics.maxSpeed")
+                        ))
+                        .append("default", "$movementMetrics.rangeOfMotionDegrees")
+                ))
+        );
+
+        AggregationOperation groupDay = ctx -> new Document("$group", new Document()
+                .append("_id", new Document()
+                    .append("codTrat", "$codTrat")
+                    .append("parteCuerpo", "$parteCuerpo")
+                    .append("day", "$day"))
+                .append("valorPromedio", new Document("$avg", "$metricValue"))
+                .append("patientToken", new Document("$first", "$patientToken"))
+                .append("tratamientoNombre", new Document("$first", "$tratamientoNombre"))
+        );
+
+        AggregationOperation sortDay = ctx -> new Document("$sort",
+                new Document("_id.day", 1));
+
+        AggregationOperation groupTrat = ctx -> new Document("$group", new Document()
+                .append("_id", new Document()
+                    .append("codTrat", "$_id.codTrat")
+                    .append("parteCuerpo", "$_id.parteCuerpo"))
+                .append("patientToken", new Document("$first", "$patientToken"))
+                .append("tratamientoNombre", new Document("$first", "$tratamientoNombre"))
+                .append("entradas", new Document("$push",
+                    new Document("fecha", "$_id.day").append("valor", "$valorPromedio")))
+                .append("baselineFecha", new Document("$min", "$_id.day"))
+                .append("currentFecha", new Document("$max", "$_id.day"))
+                .append("baselineValor", new Document("$first", "$valorPromedio"))
+                .append("currentValor", new Document("$last", "$valorPromedio"))
+        );
+
+        AggregationOperation project = ctx -> new Document("$project", new Document()
+                .append("_id", 0)
+                .append("patientToken", 1)
+                .append("codTrat", "$_id.codTrat")
+                .append("parteCuerpo", "$_id.parteCuerpo")
+                .append("tratamientoNombre", 1)
+                .append("baseline", new Document()
+                    .append("fecha", "$baselineFecha")
+                    .append("valor", "$baselineValor"))
+                .append("current", new Document()
+                    .append("fecha", "$currentFecha")
+                    .append("valor", "$currentValor"))
+                .append("entradas", 1)
+                .append("deltaPorcentaje", new Document("$cond", List.of(
+                    new Document("$eq", List.of("$baselineValor", 0)),
+                    null,
+                    new Document("$multiply", List.of(
+                        new Document("$divide", List.of(
+                            new Document("$subtract", List.of("$currentValor", "$baselineValor")),
+                            "$baselineValor")),
+                        100))
+                )))
+        );
+
+        var pipeline = Aggregation.newAggregation(match, addFields, groupDay, sortDay, groupTrat, project);
+        var results = mongoTemplate.aggregate(pipeline, "game_sessions", TreatmentProgressDto.class)
+                .getMappedResults();
+
+        // Anadir metricaNombre via resolver (post-process en Java porque depende de mapping)
+        return results.stream()
+            .map(r -> r.withMetricaNombre(resolver.resolverLabel(r.codTrat())))
+            .toList();
+    }
+}
+```
+
+### 5.3 TreatmentProgressService
+
+```java
+@Service
+public class TreatmentProgressService {
+    private final TreatmentProgressPipeline pipeline;
+    private final TreatmentProgressRepository repository;
+
+    public List<TreatmentProgressDto> getOrCompute(String patientDni) {
+        var fresh = pipeline.execute(patientDni);
+        // Upsert por patientDni + codTrat + parteCuerpo
+        repository.upsertAll(fresh);
+        return fresh;
+    }
+}
+```
+
+`TreatmentProgressRepository` es un @Repository custom con MongoTemplate (no Spring Data por flexibilidad del upsert).
+
+### 5.4 Endpoint en AnalyticsController
+
+```java
+@GetMapping("/patient/{dni}/treatment-progress")
+public ResponseEntity<List<TreatmentProgressDto>> treatmentProgress(@PathVariable String dni) {
+    return ResponseEntity.ok(treatmentProgressService.getOrCompute(dni));
+}
+
+@GetMapping("/patient/{dni}/last-session")
+public ResponseEntity<LastSessionDto> lastSession(@PathVariable String dni) {
+    return ResponseEntity.ok(analyticsService.getLastSession(dni));
+}
+```
+
+`LastSessionDto`:
+```java
+public record LastSessionDto(
+    String patientToken,
+    String gameId,
+    String codTrat,
+    Instant sessionStart,
+    Double score
+) {}
+```
+
+### 5.5 DTO TreatmentProgressDto
+
+```java
+public record TreatmentProgressDto(
+    String patientToken,
+    String codTrat,
+    String tratamientoNombre,
+    String parteCuerpo,
+    String metricaNombre,                // populated post-aggregation via resolver
+    BaselineCurrent baseline,
+    BaselineCurrent current,
+    Double deltaPorcentaje,
+    List<EntradaDto> entradas
+) {
+    public record BaselineCurrent(Instant fecha, Double valor) {}
+    public record EntradaDto(Instant fecha, Double valor) {}
+
+    public TreatmentProgressDto withMetricaNombre(String label) {
+        return new TreatmentProgressDto(patientToken, codTrat, tratamientoNombre, parteCuerpo,
+            label, baseline, current, deltaPorcentaje, entradas);
+    }
+}
+```
+
+### 5.6 Endpoint interno
+
+`InternalController` en `internal/`:
+
+```java
+@RestController
+@RequestMapping("/internal/patient")
+public class InternalController {
+
+    private final GameSessionRepository gameSessionRepository;
+
+    @GetMapping("/{dni}/check-new-data")
+    public ResponseEntity<CheckNewDataResponse> checkNewData(
+            @PathVariable String dni,
+            @RequestParam(required = false) Instant since
+    ) {
+        Instant ref = since != null ? since : Instant.EPOCH;
+        long count = gameSessionRepository.countByPatientDniAndReceivedAtAfter(dni, ref);
+        Instant last = gameSessionRepository.findTopByPatientDniOrderByReceivedAtDesc(dni)
+            .map(GameSession::receivedAt).orElse(null);
+        return ResponseEntity.ok(new CheckNewDataResponse(count > 0, last, (int) count));
+    }
+}
+
+public record CheckNewDataResponse(boolean hasNewData, Instant lastSessionAt, int count) {}
+```
+
+Anadir metodos al repositorio:
+```java
+long countByPatientDniAndReceivedAtAfter(String patientDni, Instant since);
+Optional<GameSession> findTopByPatientDniOrderByReceivedAtDesc(String patientDni);
+```
+
+### 5.8 Tests
+
+`TreatmentProgressPipelineIT` con `@DataMongoTest` + Testcontainers MongoDB:
+- Insertar 5 sesiones del mismo paciente, mismo tratamiento, fechas distintas.
+- Ejecutar pipeline.
+- Asertar baseline = primera sesion, current = ultima, entradas.size = 5, delta calculado.
 
 ---
 
-## Step 8: Create health check endpoint (non-actuator)
+## PHASE 6 — MARKDOWN GENERATION
 
-For compatibility with the Dockerfile HEALTHCHECK (which runs outside K8s context):
+### 6.1 MdGeneratorService
 
-### `src/main/java/com/rehabiapp/data/presentation/HealthController.java`
+```java
+@Service
+public class MdGeneratorService {
 
-Simple controller returning 200 OK at `/health`. In K8s, the actuator probes are used instead, but the Dockerfile HEALTHCHECK uses this simpler endpoint.
+    private final TreatmentProgressService progressService;
+    private final GameSessionRepository sessionRepository;
+
+    public String generar(String patientDni) {
+        var token = pseudonymUtil.tokenize(patientDni);
+        var progresos = progressService.getOrCompute(patientDni);
+        var ultimasSesiones = sessionRepository.findTop20ByPatientDniOrderBySessionStartDesc(patientDni);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("# Progreso del paciente\n\n");
+        sb.append("**Token anonimo:** `").append(token).append("`\n");
+        sb.append("**Generado:** ").append(Instant.now()).append("\n\n");
+
+        sb.append("## Resumen ejecutivo\n\n");
+        if (progresos.isEmpty()) {
+            sb.append("Sin datos de progreso disponibles.\n\n");
+        } else {
+            sb.append("| Tratamiento | Parte | Baseline | Actual | Delta |\n");
+            sb.append("|---|---|---|---|---|\n");
+            for (var p : progresos) {
+                sb.append("| ").append(p.tratamientoNombre()).append(" | ")
+                  .append(p.parteCuerpo()).append(" | ")
+                  .append(format(p.baseline().valor())).append(" | ")
+                  .append(format(p.current().valor())).append(" | ")
+                  .append(formatDelta(p.deltaPorcentaje())).append(" |\n");
+            }
+        }
+
+        sb.append("\n## Detalle por tratamiento\n\n");
+        for (var p : progresos) {
+            sb.append("### ").append(p.tratamientoNombre()).append(" (").append(p.parteCuerpo()).append(")\n\n");
+            sb.append("- Metrica: ").append(p.metricaNombre()).append("\n");
+            sb.append("- Baseline (").append(p.baseline().fecha()).append("): ").append(format(p.baseline().valor())).append("\n");
+            sb.append("- Actual (").append(p.current().fecha()).append("): ").append(format(p.current().valor())).append("\n");
+            sb.append("- Evolucion ").append(p.entradas().size()).append(" puntos\n\n");
+        }
+
+        sb.append("\n## Ultimas sesiones\n\n");
+        sb.append("| Fecha | Juego | Score | Completada |\n");
+        sb.append("|---|---|---|---|\n");
+        for (var s : ultimasSesiones) {
+            sb.append("| ").append(s.sessionStart()).append(" | ")
+              .append(s.gameId()).append(" | ")
+              .append(format(s.score())).append(" | ")
+              .append(s.completed() ? "Si" : "No").append(" |\n");
+        }
+
+        sb.append("\n## Notas para analisis automatico (IA)\n\n");
+        sb.append("Este documento se actualiza automaticamente con cada nueva sesion ingestada.\n");
+        sb.append("Total de sesiones consideradas: ").append(ultimasSesiones.size()).append("\n");
+
+        return sb.toString();
+    }
+    // helpers format / formatDelta omitidos
+}
+```
+
+### 6.2 MarkdownService + Repository
+
+```java
+@Service
+public class MarkdownService {
+    private final MdGeneratorService generator;
+    private final PatientMarkdownRepository repository;
+
+    public String getOrGenerate(String dni) {
+        var cached = repository.findByPatientDni(dni);
+        if (cached.isPresent() && !esStale(cached.get())) {
+            return cached.get().content();
+        }
+        return regenerar(dni);
+    }
+
+    public String regenerar(String dni) {
+        String md = generator.generar(dni);
+        repository.upsert(dni, md);
+        return md;
+    }
+
+    private boolean esStale(PatientMarkdown md) {
+        return md.updatedAt().isBefore(Instant.now().minus(15, ChronoUnit.MINUTES));
+    }
+}
+```
+
+`PatientMarkdownRepository` con upsert custom via MongoTemplate.
+
+### 6.3 Endpoints AnalyticsController
+
+```java
+@GetMapping(value = "/patient/{dni}/markdown", produces = "text/markdown;charset=UTF-8")
+public ResponseEntity<String> markdown(@PathVariable String dni) {
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType("text/markdown;charset=UTF-8"))
+        .body(markdownService.getOrGenerate(dni));
+}
+
+@PostMapping("/patient/{dni}/markdown/regenerar")
+public ResponseEntity<Void> regenerar(@PathVariable String dni) {
+    markdownService.regenerar(dni);
+    return ResponseEntity.accepted().build();
+}
+```
+
+### 6.5 MarkdownRefreshScheduler
+
+```java
+@Component
+public class MarkdownRefreshScheduler {
+    private final MarkdownService markdownService;
+    private final MongoTemplate mongoTemplate;
+
+    @Scheduled(cron = "0 */15 * * * *", zone = "UTC")
+    public void refresh() {
+        // Encuentra hasta 50 pacientes cuya ultima sesion sea posterior a la generacion del MD
+        var pipeline = Aggregation.newAggregation(
+            // (pseudo) lookup desde game_sessions: maxReceivedAt por patientDni
+            // join con patient_markdown.updatedAt
+            // filter maxReceivedAt > updatedAt
+            // limit 50
+        );
+        var pacientes = mongoTemplate.aggregate(pipeline, "game_sessions", PendienteDto.class)
+            .getMappedResults();
+        for (var p : pacientes) {
+            try {
+                markdownService.regenerar(p.patientDni());
+            } catch (Exception e) {
+                log.error("Fallo regenerando MD para {}", p.patientToken(), e);
+            }
+        }
+    }
+}
+```
+
+### 6.6 Tests
+
+`MdGeneratorServiceTest` con golden file:
+- Insertar dataset conocido (2 tratamientos, 5 sesiones).
+- Generar MD.
+- Comparar con `src/test/resources/golden/markdown-paciente-test.md` (whitespace-tolerant).
 
 ---
 
-## Step 9: Verify Dockerfile compatibility
+## PHASE 7 — OBSERVABILITY
 
-Ensure Maven produces a single fat JAR:
+### 7.1 Counters
 
-```xml
-<build>
-    <plugins>
-        <plugin>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-maven-plugin</artifactId>
-        </plugin>
-    </plugins>
-</build>
+```java
+@Component
+public class DataMetrics {
+    private final Counter ingestCounter;
+    private final Counter mdRegeneratedCounter;
+
+    public DataMetrics(MeterRegistry registry) {
+        this.ingestCounter = Counter.builder("rehabiapp.data.ingest.sessions")
+            .description("Sesiones de juego ingestadas")
+            .register(registry);
+        this.mdRegeneratedCounter = Counter.builder("rehabiapp.data.markdown.regenerations")
+            .description("Markdowns regenerados")
+            .register(registry);
+    }
+
+    public void incIngest() { ingestCounter.increment(); }
+    public void incMd() { mdRegeneratedCounter.increment(); }
+}
 ```
 
-The Dockerfile at `infra/docker/data/Dockerfile` copies `data/target/*.jar`.
+Inyectar en `IngestService.ingestSession(...)` y `MarkdownService.regenerar(...)`.
+
+### 7.2 Pipeline timer
+
+```java
+Timer.Sample sample = Timer.start(registry);
+// ... ejecutar pipeline ...
+sample.stop(Timer.builder("rehabiapp.data.pipeline.duration")
+    .tag("pipeline", "treatment-progress")
+    .register(registry));
+```
+
+### 7.3 Logs estructurados
+
+En `MdGeneratorService.generar(...)`, al final:
+```java
+log.info("md_regenerated dni={} sessionCount={} durationMs={}",
+    pseudonymUtil.tokenize(dni), sessions.size(), durationMs);
+```
 
 ---
 
-## Checklist
+## ORDER OF EXECUTION
 
-- [x] Step 1: Spring Boot 4 project initialized (Maven, Java 24)
-- [x] Step 2: Server port configured to 8081
-- [x] Step 3: Actuator health probes enabled
-- [x] Step 4: Spring profiles configured (local + aws)
-- [x] Step 5: Structured JSON logging configured
-- [x] Step 6: Prometheus metrics endpoint enabled
-- [x] Step 7: CSFLE configuration structure created
-- [x] Step 8: /health endpoint created for Dockerfile HEALTHCHECK
-- [x] Step 9: Maven produces single fat JAR
+1. Phase 5.1 (resolver) + 5.2 (pipeline) — fundacion.
+2. Phase 5.3-5.5 (servicios + DTOs + endpoints).
+3. Phase 5.6-5.7 (endpoints internos para API).
+4. Phase 5.8 (tests).
+5. Phase 6.1-6.4 (MD generator + service + endpoints).
+6. Phase 6.5 (scheduler).
+7. Phase 6.6 (tests con golden files).
+8. Phase 7 (metricas).
 
 ---
 
-## Step 10: Containerization and Kubernetes Deployment
+## DEPENDENCIES
 
-This step establishes the Docker containerization and Kubernetes deployment strategy for the Data pipeline service. Base K8s manifests exist at `/infra/k8s/base/data/`. Database StatefulSets exist at `/infra/k8s/base/postgresql/` and `/infra/k8s/base/mongodb/`.
+- API debe enriquecer ingest con `codTrat` y `parteCuerpo`. Coordinar con `api/PLAN.md` Phase 8 (TelemetriaService).
+- Mientras la API no envie `codTrat`, las sesiones existentes NO aparecen en treatment-progress (filter `codTrat != null`). Aceptable para MVP.
 
-### 10.1: Create Java Dockerfile at `/data/Dockerfile` (CRITICAL FIX)
+---
 
-**WARNING**: The existing Dockerfile at `/infra/docker/data/Dockerfile` uses `node:20-alpine` with `npm ci` and `node src/index.js`. This is WRONG — the Data service is now Spring Boot 4.0.0 + Java 24 (see `/data/pom.xml`). A new Java-based Dockerfile must be created.
+## NON-NEGOTIABLES
 
-Create multi-stage Dockerfile at `/data/Dockerfile`:
+- Spring Boot 4 + Java 24. Records para todos los DTOs.
+- Agregaciones server-side MongoDB. Nunca cargar todo en memoria.
+- Anonimizacion: respuestas con patientToken, dni solo en path/storage (CSFLE).
+- Logs estructurados JSON.
+- Tests por cada nuevo pipeline y endpoint.
 
-**Stage 1 - Builder:**
-```dockerfile
-FROM eclipse-temurin:24-jdk-alpine AS builder
-WORKDIR /build
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
-COPY src src
-RUN ./mvnw clean package -DskipTests -B
-```
+---
 
-**Stage 2 - Runtime:**
-```dockerfile
-FROM eclipse-temurin:24-jre-alpine AS runtime
-RUN addgroup -g 1000 appgroup && adduser -u 1000 -G appgroup -D -h /app appuser
-WORKDIR /app
-RUN mkdir -p /app/tmp /app/cache && chown -R 1000:1000 /app
-COPY --from=builder --chown=1000:1000 /build/target/*.jar /app/app.jar
-USER 1000:1000
-EXPOSE 8081
-HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
-  CMD wget -qO- http://localhost:8081/actuator/health/liveness || exit 1
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Djava.io.tmpdir=/app/tmp", "-jar", "app.jar"]
-```
-
-Create `/data/.dockerignore`:
-```
-target/
-.mvn/repository/
-.git
-.idea
-*.iml
-.env
-.env.*
-```
-
-**Action on old Dockerfile**: Delete `/infra/docker/data/Dockerfile` (Node.js — obsolete and incorrect).
-
-**Note**: Build context is `/data/` directory (not monorepo root): `docker build -t rehabiapp-data:dev -f data/Dockerfile data/`
-
-### 10.2: Update Deployment to 3 replicas
-
-Modify existing K8s manifests for high availability:
-
-- `/infra/k8s/base/data/deployment.yaml`: change `replicas: 2` to `replicas: 3`
-- `/infra/k8s/base/data/hpa.yaml`: change `minReplicas: 2` to `minReplicas: 3`
-
-### 10.3: Create ConfigMap `rehabiapp-data-config`
-
-Create `/infra/k8s/base/data/configmap.yaml`:
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rehabiapp-data-config
-  namespace: rehabiapp-data
-  labels:
-    app: rehabiapp-data
-    tier: backend
-data:
-  SPRING_PROFILES_ACTIVE: "production"
-  SERVER_PORT: "8081"
-  JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
-  CSFLE_ENABLED: "false"
-  CSFLE_KMS_PROVIDER: "local"
-  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus"
-```
-
-Update `/infra/k8s/base/data/kustomization.yaml` to include `- configmap.yaml` in resources list.
-
-### 10.4: Refactor Deployment environment variables
-
-Modify the Deployment container spec to separate general config (ConfigMap) from credentials (Secrets):
-
-```yaml
-envFrom:
-  - configMapRef:
-      name: rehabiapp-data-config
-env:
-  - name: SPRING_DATA_MONGODB_URI
-    valueFrom:
-      secretKeyRef:
-        name: mongodb-credentials
-        key: uri
-```
-
-Remove hardcoded env entries (`SPRING_PROFILES_ACTIVE`, `SERVER_PORT`) now provided by ConfigMap.
-
-### 10.5: Verify MongoDB StatefulSet (no changes needed)
-
-Already exists at `/infra/k8s/base/mongodb/statefulset.yaml`:
-
-| Property | Value |
-|----------|-------|
-| Image | `bitnami/mongodb:7.0` |
-| Replicas | 1 (databases are NOT scaled to 3) |
-| PVC | 5Gi ReadWriteOnce via `volumeClaimTemplates` |
-| Mount | `/bitnami/mongodb` |
-| Credentials | Secret `mongodb-credentials` |
-| Probes | `mongosh --eval "db.adminCommand('ping')"` |
-| NetworkPolicy | Ingress ONLY from pod `rehabiapp-data`; Egress ONLY to kube-dns |
-
-The PVC ensures total data persistence (all collections, indexes) across pod restarts and rescheduling. **No modifications needed.**
-
-### 10.6: Verify PostgreSQL StatefulSet (no changes needed)
-
-Already exists at `/infra/k8s/base/postgresql/statefulset.yaml`:
-
-| Property | Value |
-|----------|-------|
-| Image | `bitnami/postgresql:16` |
-| Replicas | 1 |
-| PVC | 5Gi ReadWriteOnce via `volumeClaimTemplates` |
-| Mount | `/var/lib/postgresql/data` |
-| DB Name | `rehabiapp` |
-| Credentials | Secret `postgresql-credentials` |
-| Probes | `pg_isready` |
-| NetworkPolicy | Ingress ONLY from pod `rehabiapp-api`; Egress ONLY to kube-dns |
-
-The PVC guarantees persistence of ALL tables (including `audit_log`) and data across pod restarts. **Note**: PostgreSQL is consumed by the API service, not by Data directly. Included here for completeness of the data layer architecture. **No modifications needed.**
-
-### 10.7: Data service K8s topology
-
-Complete Kubernetes architecture reference for the implementer:
-
-| Resource | Name | Specification |
-|----------|------|---------------|
-| Deployment | `rehabiapp-data` | 3 replicas, port 8081 (INTERNAL — no Ingress exposure) |
-| Service | `rehabiapp-data` | ClusterIP, port 8081 |
-| ConfigMap | `rehabiapp-data-config` | 6 configuration keys |
-| Secret | `mongodb-credentials` | MongoDB connection URI |
-| StatefulSet | `mongodb` | 1 replica, 5Gi PVC, bitnami/mongodb:7.0 |
-| StatefulSet | `postgresql` | 1 replica, 5Gi PVC, bitnami/postgresql:16 |
-| HPA | `rehabiapp-data` | min 3, max 4 replicas, CPU 70% |
-| PDB | `rehabiapp-data` | minAvailable: 1 |
-| NetworkPolicy | `allow-data-traffic` | Ingress: ONLY from namespace `rehabiapp-api`; Egress: MongoDB:27017 + kube-dns |
-| ServiceAccount | `rehabiapp-data-sa` | IRSA in AWS overlay |
-
-**Probes:**
-- Startup: `GET /actuator/health/liveness:8081` (initialDelaySeconds: 10, failureThreshold: 30)
-- Liveness: `GET /actuator/health/liveness:8081` (periodSeconds: 10)
-- Readiness: `GET /actuator/health/readiness:8081` (periodSeconds: 5)
-
-**Resources per pod:**
-- Requests: 200m CPU, 512Mi memory
-- Limits: 1000m CPU, 1Gi memory
-
-**Security (ENS Alto):**
-- Non-root user UID 1000:1000
-- `readOnlyRootFilesystem: true` (emptyDir volumes at `/tmp` and `/app/cache`)
-- `allowPrivilegeEscalation: false`
-- Drop ALL capabilities
-- seccomp profile: RuntimeDefault
-
-### Checklist Step 10
-
-- [x] Step 10.1: Java Dockerfile created at `/data/Dockerfile` (multi-stage, Eclipse Temurin 24, NOT Node.js)
-- [x] Step 10.1: `.dockerignore` created at `/data/.dockerignore`
-- [ ] Step 10.1: Obsolete Node.js Dockerfile at `/infra/docker/data/Dockerfile` deleted
-- [ ] Step 10.2: Deployment replicas updated from 2 to 3
-- [ ] Step 10.2: HPA minReplicas updated from 2 to 3
-- [ ] Step 10.3: ConfigMap `rehabiapp-data-config` created at `/infra/k8s/base/data/configmap.yaml`
-- [ ] Step 10.3: Kustomization updated to include configmap.yaml
-- [ ] Step 10.4: Deployment env refactored with `envFrom` ConfigMap + `env` Secret ref for MongoDB
-- [ ] Step 10.5: MongoDB StatefulSet verified (5Gi PVC, bitnami/mongodb:7.0)
-- [ ] Step 10.6: PostgreSQL StatefulSet verified (5Gi PVC, bitnami/postgresql:16)
-- [ ] Verification: `docker build -t rehabiapp-data:dev -f data/Dockerfile data/` succeeds
-- [ ] Verification: `kubectl kustomize infra/k8s/overlays/local/` valid
+*End of plan.*

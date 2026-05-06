@@ -4,6 +4,7 @@ import { useAppointmentsStore } from './appointmentsStore';
 import { useGamesStore } from './gamesStore';
 import { useTreatmentsStore } from './treatmentsStore';
 import { useProgressStore } from './progressStore';
+import { useErrorStore } from './errorStore';
 import { scheduleAppointmentReminder } from '../utils/notifications';
 import type { Appointment } from '../types/appointments';
 
@@ -26,45 +27,51 @@ export const useBootstrapStore = create<BootstrapState>(function (set) {
     // Hidrata todos los stores en paralelo una sola vez al iniciar sesion
     hydrate: async function () {
       set({ hydrating: true, refreshing: true });
+      // Suprimir popups durante el bootstrap — cada tab muestra su propio empty state.
+      // Los errores siguen registrados via console.warn para depuracion.
+      useErrorStore.getState().setSilent(true);
 
       try {
-      const resultados = await Promise.allSettled([
-        useUserStore.getState().fetchProfile(),
-        useAppointmentsStore.getState().fetch(),
-        useGamesStore.getState().fetch(),
-        useTreatmentsStore.getState().fetch(),
-        useProgressStore.getState().fetch(),
-      ]);
+        const resultados = await Promise.allSettled([
+          useUserStore.getState().fetchProfile(),
+          useAppointmentsStore.getState().fetch(),
+          useAppointmentsStore.getState().fetchPast(),
+          useGamesStore.getState().fetch(),
+          useTreatmentsStore.getState().fetch(),
+          useProgressStore.getState().fetch(),
+        ]);
 
-      // Registrar errores parciales sin bloquear el resto
-      resultados.forEach(function (resultado, indice) {
-        if (resultado.status === 'rejected') {
-          if (__DEV__) {
-            console.warn(`[Bootstrap] Fallo el store ${indice}:`, resultado.reason);
-          }
-        }
-      });
-
-      // Programar recordatorios locales para las citas proximas
-      try {
-        const citas = useAppointmentsStore.getState().items as Appointment[];
-        const hoy = Date.now();
-        for (const cita of citas) {
-          if (cita.status === 'SCHEDULED') {
-            const [anio, mes, dia] = cita.date.split('-').map(Number);
-            const [hora, min] = cita.time.split(':').map(Number);
-            const fechaCita = new Date(anio, mes - 1, dia, hora, min).getTime();
-            if (fechaCita > hoy) {
-              await scheduleAppointmentReminder(cita);
+        // Registrar errores parciales sin bloquear el resto
+        resultados.forEach(function (resultado, indice) {
+          if (resultado.status === 'rejected') {
+            if (__DEV__) {
+              console.warn(`[Bootstrap] Fallo el store ${indice}:`, resultado.reason);
             }
           }
-        }
-      } catch {
-        // No bloquear la hidratacion si fallan las notificaciones
-      }
+        });
 
-      set({ hydrated: true, hydrating: false, lastHydratedAt: Date.now() });
+        // Programar recordatorios locales para las citas proximas
+        try {
+          const citas = useAppointmentsStore.getState().items as Appointment[];
+          const hoy = Date.now();
+          for (const cita of citas) {
+            if (cita.status === 'SCHEDULED') {
+              const [anio, mes, dia] = cita.date.split('-').map(Number);
+              const [hora, min] = cita.time.split(':').map(Number);
+              const fechaCita = new Date(anio, mes - 1, dia, hora, min).getTime();
+              if (fechaCita > hoy) {
+                await scheduleAppointmentReminder(cita);
+              }
+            }
+          }
+        } catch {
+          // No bloquear la hidratacion si fallan las notificaciones
+        }
+
+        set({ hydrated: true, hydrating: false, lastHydratedAt: Date.now() });
       } finally {
+        // Reactivar popups para errores futuros (acciones del usuario)
+        useErrorStore.getState().setSilent(false);
         set({ refreshing: false });
       }
     },

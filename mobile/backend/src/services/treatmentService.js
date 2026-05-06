@@ -19,14 +19,24 @@ async function obtenerTratamientos(dniPac, javaToken, filtros = {}) {
   let lista = Array.isArray(data) ? data : [];
 
   // Mapeo Java PacienteTratamientoResponse -> GraphQL Treatment
-  // Faltan: description, type, progressionLevel (pendiente enriquecimiento desde catalogo)
+  // Campos NO presentes en la respuesta Java actual se rellenan con valores
+  // sintieticos deterministas para mantener el contrato con el frontend.
+  // Cuando /api Phase 6 enriquezca el endpoint, sustituir los defaults por la
+  // respuesta real.
   lista = lista.map((t) => ({
     id: t.codTrat,
+    codTrat: t.codTrat,
     name: t.nombreTrat,
-    description: null,            // No viene en PacienteTratamientoResponse
-    type: 'TEXT_INSTRUCTION',     // Default — pendiente distincion por tipo en API Java
+    description: t.descripcionTrat || null,
+    type: 'TEXT_INSTRUCTION',
     visible: t.visible,
-    progressionLevel: 0,          // Pendiente vinculacion con nivel de progresion del paciente
+    progressionLevel: t.idNivel || 0,
+    disabilityCode: t.codDis || null,
+    summary: t.resumen || null,
+    materials: Array.isArray(t.materiales) ? t.materiales : [],
+    medication: Array.isArray(t.medicacion) ? t.medicacion : [],
+    documentUrl: t.urlDocumento || null,
+    hasDocument: Boolean(t.tienePdf),
   }));
 
   // Filtrar en el BFF por nivel de progresion si se solicita

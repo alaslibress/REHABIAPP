@@ -28,6 +28,13 @@ const commonTypeDefs = gql`
     COMPLETED
     CANCELLED
   }
+
+  # Sexo registrado en la ficha clinica del paciente
+  enum SexoPaciente {
+    MASCULINO
+    FEMENINO
+    OTRO
+  }
 `;
 
 module.exports = commonTypeDefs;

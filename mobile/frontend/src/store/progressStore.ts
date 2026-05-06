@@ -24,11 +24,20 @@ export const useProgressStore = create<ProgressState>(function (set, get) {
     hydrated: false,
 
     fetch: async function () {
-      const { data } = await client.query({
-        query: GET_MY_BODY_PART_PROGRESS,
-        fetchPolicy: 'network-only',
-      });
-      set({ bodyParts: data.myBodyPartProgress ?? [], hydrated: true });
+      try {
+        const { data } = await client.query({
+          query: GET_MY_BODY_PART_PROGRESS,
+          fetchPolicy: 'network-only',
+        });
+        set({ bodyParts: data.myBodyPartProgress ?? [], hydrated: true });
+      } catch (err) {
+        // El bootstrap NO debe bloquearse por un fallo en el progreso.
+        // Marcamos hydrated:true con bodyParts vacio — la pantalla mostrara empty state.
+        if (__DEV__) {
+          console.warn('[progressStore] Fallo al cargar bodyParts:', (err as Error)?.message);
+        }
+        set({ bodyParts: [], hydrated: true });
+      }
     },
 
     loadMetrics: async function (bodyPartId) {

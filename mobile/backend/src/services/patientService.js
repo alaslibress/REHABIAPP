@@ -36,6 +36,12 @@ async function obtenerPerfil(dniPac, javaToken) {
     // La direccion es un objeto relacional en Java — no disponible directamente
     address: null,
     active: data.activo,
+    // Campos nuevos expuestos a la app movil (Phase G.1).
+    // numSs y sexo ya vienen en el mock; avatarDataUri es null hasta que el API Java
+    // exponga el campo (sera GET /api/pacientes/{dni}/avatar en una iteracion futura).
+    numSs: data.numSs || null,
+    sexo: data.sexo || null,
+    avatarDataUri: data.avatarDataUri || null,
   };
 }
 

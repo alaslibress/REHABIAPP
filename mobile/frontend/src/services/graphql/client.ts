@@ -1,11 +1,10 @@
-import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/client';
+import { ApolloClient, InMemoryCache, createHttpLink, from, CombinedGraphQLErrors } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import type { AuthToken } from '../../types/auth';
-import { useAuthStore } from '../../store/authStore';
 
 const TOKEN_KEY = 'auth_token';
 
@@ -101,6 +100,9 @@ async function cerrarSesionPorExpiracion(): Promise<void> {
   if (cierreEnCurso) return;
   cierreEnCurso = true;
   try {
+    // Carga perezosa para romper el ciclo authStore <-> client
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useAuthStore } = require('../../store/authStore') as typeof import('../../store/authStore');
     await useAuthStore.getState().logout();
   } catch {
     // Si logout falla (p.ej. SecureStore no disponible), forzamos el reset minimo
@@ -110,14 +112,16 @@ async function cerrarSesionPorExpiracion(): Promise<void> {
   }
 }
 
-// Link de errores globales — logging estructurado + auto-logout por sesion expirada
-const errorLink = onError(function ({ graphQLErrors, networkError, operation }) {
+// Link de errores globales — logging estructurado + auto-logout por sesion expirada.
+// Apollo Client v4 entrega un unico `error` por callback: usar CombinedGraphQLErrors.is(...)
+// para distinguir entre errores GraphQL y errores de red.
+const errorLink = onError(function ({ error, operation }) {
   const operacion = operation.operationName || 'operacion_anonima';
   const variables = sanitizarVariables(operation.variables);
 
-  if (graphQLErrors) {
+  if (CombinedGraphQLErrors.is(error)) {
     let sesionExpirada = false;
-    for (const err of graphQLErrors) {
+    for (const err of error.errors) {
       const code = err.extensions?.code ?? 'SIN_CODIGO';
       if (SESSION_EXPIRED_CODES.has(code as string)) {
         sesionExpirada = true;
@@ -133,19 +137,20 @@ const errorLink = onError(function ({ graphQLErrors, networkError, operation }) 
       // Disparar cierre de sesion fuera del flujo de la peticion
       void cerrarSesionPorExpiracion();
     }
+    return;
   }
 
-  if (networkError) {
-    const statusCode = 'statusCode' in networkError ? (networkError as any).statusCode : 'N/A';
-    if (statusCode === 401) {
-      void cerrarSesionPorExpiracion();
-    }
-    console.error(
-      `[Red] Error de conexion | operacion="${operacion}" | ` +
-      `status=${statusCode} | mensaje="${networkError.message}" | ` +
-      `variables=${JSON.stringify(variables)}`
-    );
+  // Error de red (servidor inalcanzable, timeout, fetch fallido, etc.)
+  const networkError = error as any;
+  const statusCode = networkError?.statusCode ?? 'N/A';
+  if (statusCode === 401) {
+    void cerrarSesionPorExpiracion();
   }
+  console.error(
+    `[Red] Error de conexion | operacion="${operacion}" | ` +
+    `status=${statusCode} | mensaje="${networkError?.message ?? 'sin_mensaje'}" | ` +
+    `variables=${JSON.stringify(variables)}`
+  );
 });
 
 export const client = new ApolloClient({

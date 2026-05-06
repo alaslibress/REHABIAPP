@@ -214,24 +214,42 @@ JWT Java:  Issued by Java API, signed with Java's own key
 
 > Phases A-C (infraestructura + GraphQL + bugfixes login) completadas y eliminadas para reducir tokens. Phase D pendiente. Phase E nueva.
 
-### Phase D: Login inalcanzable desde dispositivo movil (pendiente)
+### Phase D: Login inalcanzable desde dispositivo movil (cerrada)
 
-- [ ] URL dinamica con expo-constants (localhost → IP LAN automatica).
-- [ ] fetchProfile movido a pantalla de inicio (eliminar race condition con AuthGuard).
-- [ ] Errores de userStore parseados con parseGraphQLError (consistencia con authStore).
-- [ ] Flujo login verificado desde telefono fisico.
+- [x] URL dinamica con expo-constants (localhost → IP LAN automatica). Implementado en frontend `client.ts` via `resolverUrlGraphQL()` — extrae IP de `Constants.expoConfig.hostUri`.
+- [x] fetchProfile movido a pantalla de inicio — race condition resuelta via `bootstrapStore.hydrate` con `Promise.allSettled` + modo silencioso (Phase 5-bridge F.2).
+- [x] Errores de userStore parseados con `parseGraphQLError` — `userStore.fetchProfile` ya lanza `parseGraphQLError(err)` en su catch.
+- [x] Flujo login verificado desde telefono fisico — Checkpoint B confirmado por el developer en Pixel 8 (2026-05-05).
+
+### Phase H: Integracion real con Java API (MOCK_API=false) (2026-05-05)
+
+- [x] H.1 `authService.js` — en modo real llama a `POST /api/auth/login-paciente` con body `{identifier, contrasena}` en lugar del antiguo `POST /api/auth/login` (que solo autentica sanitarios). En modo mock llama al mismo endpoint nuevo — `apiClient.js` lo maneja identico.
+- [x] H.2 `apiClient.js` mock handler unificado: `path === '/api/auth/login' || path === '/api/auth/login-paciente'` → ambos devuelven el mismo mock token. Retrocompatible con cualquier llamada residual al endpoint de sanitarios.
+- [x] H.3 `POST /api/auth/refresh-paciente` implementado en /api Phase 13. BFF actualizado: `authService.js` llama a `/api/auth/refresh-paciente`; `apiClient.js` mock handler cubre ambos paths de refresh. 37/37 API tests + 31/31 BFF tests verdes.
 
 ### Phase E: Treatment PDF + games launcher + dashboard (current iteration)
 
 > Detalles en `/mobile/backend/PLAN.md`. Consume nuevos endpoints del API (`api/CLAUDE.md` Phase 5-9).
 
-- [ ] E.1 GraphQL TypeDef `TreatmentPdfPayload { codTrat, filename, sizeBytes, base64Content }`. Query `treatmentPdf(codTrat: String!): TreatmentPdfPayload`. Resolver llama `GET /api/tratamientos/{cod}/pdf` y serializa a base64. Limita a 10MB en respuesta.
-- [ ] E.2 GraphQL TypeDef `Game { idVideojuego, codigo, nombre, descripcion, codDis, parteCuerpo, urlUnity }`. Query `availableGames: [Game!]!`. Resolver llama al dashboard del API y devuelve `juegosDesbloqueados`.
-- [ ] E.3 GraphQL Mutation `startGame(idVideojuego: ID!): GameSessionLaunch`. Devuelve `{ urlUnity, ephemeralToken, expiresAt }` con un JWT corto (5 min, scope GAMES_PLAY) firmado por el BFF.
-- [ ] E.4 GraphQL TypeDef `PatientProgress { tratamientos: [TreatmentProgress!]!, lastUpdate }`. Query `myProgress: PatientProgress`. Resolver consume `GET /api/pacientes/{dni}/progreso`.
-- [ ] E.5 GraphQL TypeDef `Dashboard` con todos los campos del API. Query `myDashboard: Dashboard`.
-- [ ] E.6 Tests Apollo con jest mockeando `apiClient.fetch` para los 5 nuevos resolvers.
-- [ ] E.7 Documentar las queries en `/mobile/backend/README.md` o playground GraphQL.
+- [x] E.1 GraphQL TypeDef `TreatmentPdfPayload { codTrat, filename, sizeBytes, base64Content }`. Query `treatmentPdf(codTrat: String!): TreatmentPdfPayload`. Resolver llama `GET /api/tratamientos/{cod}/pdf` y serializa a base64. Limita a 10MB en respuesta.
+- [x] E.2 GraphQL TypeDef `Game { idVideojuego, codigo, nombre, descripcion, codDis, parteCuerpo, urlUnity }`. Query `availableGames: [Game!]!`. Resolver llama al dashboard del API y devuelve `juegosDesbloqueados`.
+- [x] E.3 GraphQL Mutation `startGame(idVideojuego: ID!): GameSessionLaunch`. Devuelve `{ urlUnity, ephemeralToken, expiresAt }` con un JWT corto (5 min, scope GAMES_PLAY) firmado por el BFF.
+- [x] E.4 GraphQL TypeDef `PatientProgress { tratamientos: [TreatmentProgress!]!, lastUpdate }`. Query `myProgress: PatientProgress`. Resolver consume `GET /api/pacientes/{dni}/progreso`.
+- [x] E.5 GraphQL TypeDef `Dashboard` con todos los campos del API. Query `myDashboard: Dashboard`.
+- [x] E.6 Tests Apollo con jest mockeando `apiClient.fetch` para los 5 nuevos resolvers.
+- [x] E.7 Documentar las queries en `/mobile/backend/README.md` o playground GraphQL.
+
+### Phase G: Frontend ↔ BFF Schema Sync (2026-05-05)
+
+- [x] G.1 `me` expone `numSs: String`, `sexo: SexoPaciente`, `avatarDataUri: String`. Enum `SexoPaciente {MASCULINO,FEMENINO,OTRO}` en common.js. patientService mapea los campos. Test verde.
+- [x] G.2 `myTreatments` expone `codTrat, disabilityCode, summary, materials: [String!]!, medication: [String!]!, documentUrl, hasDocument`. Mock MOCK_TRATAMIENTOS_ADMIN enriquecido con todos los campos. treatmentService actualizado. Test verde.
+- [x] G.3 `treatmentDocument(codTrat: ID!): TreatmentDocument` nueva query. Tipo `TreatmentDocument {fileName, mimeType, base64, url}`. Resolver reutiliza treatmentPdfService. Test verde.
+- [x] G.4 `myBodyPartProgress: [BodyPartProgress!]!` y `bodyPartMetrics(bodyPartId: BodyPartId!): [BodyPartMetric!]!`. Nuevo archivo bodyProgress.js (typedef + resolver + service). 15 partes del cuerpo con progreso determinista derivado de discapacidades. Tests (2) verdes.
+- [x] G.5 `myAssignedGames: [AssignedGame!]!`. Tipo `AssignedGame {id,name,description,thumbnailUrl,webglUrl,difficulty,assignedAt}`. Enum `GameDifficulty`. Resolver llama gameService.obtenerJuegosAsignados. Test verde.
+- [x] G.6 `requestAppointment(...): AppointmentRequest!`. Tipo `AppointmentRequest` con `estado: AppointmentRequestStatus`. Mock devuelve PENDING. Test verde.
+- [x] G.7 `registerDeviceToken` y `unregisterDeviceToken` stubs en nuevo modulo settings.js. Devuelven true, solo loguean. Test verde.
+- [x] G.8 `myProgressSummary: ProgressSummary` (tipo plano {totalSessions,averageScore,improvementRate,lastSessionDate}) para compatibilidad con GET_MY_PROGRESS del frontend.
+- [x] 25/25 tests verdes (`npm test`). Checkpoint A cumplido.
 
 ---
 

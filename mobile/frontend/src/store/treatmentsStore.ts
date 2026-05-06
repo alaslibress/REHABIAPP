@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { client } from '../services/graphql/client';
@@ -18,76 +20,85 @@ type TreatmentsState = {
   reset: () => void;
 };
 
-export const useTreatmentsStore = create<TreatmentsState>(function (set, get) {
-  return {
-    items: [],
-    disabilities: [],
-    loading: false,
-    hydrated: false,
+export const useTreatmentsStore = create<TreatmentsState>()(
+  persist(
+    function (set) {
+      return {
+        items: [],
+        disabilities: [],
+        loading: false,
+        hydrated: false,
 
-    fetch: async function () {
-      set({ loading: true });
-      try {
-        const [treatRes, disRes] = await Promise.all([
-          client.query({ query: GET_MY_TREATMENTS, fetchPolicy: 'network-only' }),
-          client.query({ query: GET_MY_DISABILITIES, fetchPolicy: 'network-only' }),
-        ]);
+        fetch: async function () {
+          set({ loading: true });
+          try {
+            const [treatRes, disRes] = await Promise.all([
+              client.query({ query: GET_MY_TREATMENTS, fetchPolicy: 'network-only' }),
+              client.query({ query: GET_MY_DISABILITIES, fetchPolicy: 'network-only' }),
+            ]);
 
-        const rawDisabilities: Disability[] = (disRes.data.myDisabilities ?? []).map(
-          function (d: { id: string; name: string; description: string | null; currentLevel: number }) {
-            return { ...d, codDis: d.id };
+            const rawDisabilities: Disability[] = (disRes.data.myDisabilities ?? []).map(
+              function (d: { id: string; name: string; description: string | null; currentLevel: number }) {
+                return { ...d, codDis: d.id };
+              }
+            );
+
+            set({
+              items: treatRes.data.myTreatments ?? [],
+              disabilities: rawDisabilities,
+              hydrated: true,
+            });
+          } catch (err) {
+            const appError = parseGraphQLError(err);
+            useErrorStore.getState().showError(appError);
+          } finally {
+            set({ loading: false });
           }
-        );
+        },
 
-        set({
-          items: treatRes.data.myTreatments ?? [],
-          disabilities: rawDisabilities,
-          hydrated: true,
-        });
-      } catch (err) {
-        const appError = parseGraphQLError(err);
-        useErrorStore.getState().showError(appError);
-      } finally {
-        set({ loading: false });
-      }
+        downloadPdf: async function (codTrat: string): Promise<string> {
+          try {
+            const { data } = await client.query({
+              query: GET_TREATMENT_DOCUMENT,
+              variables: { codTrat },
+              fetchPolicy: 'network-only',
+            });
+
+            const doc = data.treatmentDocument;
+            const fileUri = `${FileSystem.cacheDirectory}${doc.fileName}`;
+
+            if (doc.base64) {
+              await FileSystem.writeAsStringAsync(fileUri, doc.base64, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+            } else if (doc.url) {
+              await FileSystem.downloadAsync(doc.url, fileUri);
+            } else {
+              throw new Error('No base64 ni url disponible');
+            }
+
+            await Sharing.shareAsync(fileUri, { mimeType: doc.mimeType, UTI: 'com.adobe.pdf' });
+            return fileUri;
+          } catch (err) {
+            const appError = parseGraphQLError(err);
+            if (appError.code !== 'DOCUMENT_DOWNLOAD_FAILED') {
+              appError.code = 'DOCUMENT_DOWNLOAD_FAILED';
+              appError.subtitle = 'Error al descargar';
+              appError.message = 'No se pudo descargar el documento. Intentalo mas tarde.';
+            }
+            throw appError;
+          }
+        },
+
+        reset: function () {
+          set({ items: [], disabilities: [], loading: false, hydrated: false });
+        },
+      };
     },
-
-    downloadPdf: async function (codTrat: string): Promise<string> {
-      try {
-        const { data } = await client.query({
-          query: GET_TREATMENT_DOCUMENT,
-          variables: { codTrat },
-          fetchPolicy: 'network-only',
-        });
-
-        const doc = data.treatmentDocument;
-        const fileUri = `${FileSystem.cacheDirectory}${doc.fileName}`;
-
-        if (doc.base64) {
-          await FileSystem.writeAsStringAsync(fileUri, doc.base64, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-        } else if (doc.url) {
-          await FileSystem.downloadAsync(doc.url, fileUri);
-        } else {
-          throw new Error('No base64 ni url disponible');
-        }
-
-        await Sharing.shareAsync(fileUri, { mimeType: doc.mimeType, UTI: 'com.adobe.pdf' });
-        return fileUri;
-      } catch (err) {
-        const appError = parseGraphQLError(err);
-        if (appError.code !== 'DOCUMENT_DOWNLOAD_FAILED') {
-          appError.code = 'DOCUMENT_DOWNLOAD_FAILED';
-          appError.subtitle = 'Error al descargar';
-          appError.message = 'No se pudo descargar el documento. Intentalo mas tarde.';
-        }
-        throw appError;
-      }
-    },
-
-    reset: function () {
-      set({ items: [], disabilities: [], loading: false, hydrated: false });
-    },
-  };
-});
+    {
+      name: '@rehabiapp/treatments-store',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ items: state.items, disabilities: state.disabilities }),
+    }
+  )
+);

@@ -8,6 +8,9 @@ const patientTypeDefs = require('./patient');
 const treatmentTypeDefs = require('./treatment');
 const appointmentTypeDefs = require('./appointment');
 const gameTypeDefs = require('./game');
+const dashboardTypeDefs = require('./dashboard');
+const bodyProgressTypeDefs = require('./bodyProgress');
+const settingsTypeDefs = require('./settings');
 
 // El orden importa: common primero (define enums usados por los demas)
 module.exports = [
@@ -17,4 +20,7 @@ module.exports = [
   treatmentTypeDefs,
   appointmentTypeDefs,
   gameTypeDefs,
+  dashboardTypeDefs,
+  bodyProgressTypeDefs,
+  settingsTypeDefs,
 ];

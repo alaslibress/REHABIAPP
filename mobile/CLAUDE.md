@@ -117,30 +117,39 @@ npm test
 
 ### Phase 4 — Patient features (current iteration)
 
-- [ ] 4.1 Patient profile screen (`me` query — datos personales).
-- [ ] 4.2 Discapacidades asignadas con nivel actual.
-- [ ] 4.3 Lista de tratamientos filtrada por discapacidad y nivel.
-- [ ] 4.4 **NUEVO** Boton "Descargar PDF" por tratamiento — descarga el PDF asociado al tratamiento desde el BFF (cache local con expo-file-system, share via expo-sharing).
-- [ ] 4.5 **NUEVO** Tab "Juegos" con lista de videojuegos desbloqueados (filtrados por tratamientos asignados + nivel del paciente). Por cada juego, boton "Jugar" que abre WebView con `url_unity` + JWT inyectado.
-- [ ] 4.6 Historial de sesiones con grafico de progreso (consume el endpoint `/api/pacientes/{dni}/progreso` via BFF).
-- [ ] 4.7 Lista de citas (proximas y pasadas).
+- [x] 4.1 Patient profile screen (`me` query — datos personales).
+- [x] 4.2 Discapacidades asignadas con nivel actual.
+- [x] 4.3 Lista de tratamientos filtrada por discapacidad y nivel.
+- [x] 4.4 **NUEVO** Boton "Descargar PDF" por tratamiento — descarga el PDF asociado al tratamiento desde el BFF (cache local con expo-file-system, share via expo-sharing).
+- [x] 4.5 **NUEVO** Tab "Juegos" con lista de videojuegos desbloqueados (filtrados por tratamientos asignados + nivel del paciente). Por cada juego, boton "Jugar" que abre WebView con `url_unity` + JWT inyectado.
+- [x] 4.6 Historial de sesiones con grafico de progreso (consume el endpoint `/api/pacientes/{dni}/progreso` via BFF).
+- [x] 4.7 Lista de citas (proximas y pasadas).
 
 ### Phase 5 — Advanced features (current iteration)
 
-- [ ] 5.1 Agenda de citas (date/time picker + practitioner selection).
+- [x] 5.1 Agenda de citas — AppointmentRequestForm (date/time picker + motivo + contacto), historial de citas pasadas con EstadoBadge, pull-to-refresh, modal de confirmacion de cancelacion.
 - [ ] 5.2 AI WhatsApp chatbot (booking automatico — pendiente integracion).
-- [ ] 5.3 Push notifications (recordatorios de citas).
-- [ ] 5.4 Offline-first cache para datos criticos del paciente.
+- [x] 5.3 Push notifications (recordatorios de citas) — scheduleAppointmentReminder/cancelAppointmentReminder en appointmentsStore + bootstrapStore. Lazy-load de expo-notifications para compatibilidad Expo Go.
+- [x] 5.4 Offline-first cache — persist middleware (zustand/middleware + AsyncStorage) aplicado a userStore, treatmentsStore, gamesStore, appointmentsStore. Solo se persisten datos clinicos (no loading/hydrated states).
 
 ### Phase 6 — BFF endpoints for new features (current iteration)
 
 > Detalles en `/mobile/backend/PLAN.md`.
 
-- [ ] 6.1 GraphQL query `treatmentPdf(codTrat: String!): TreatmentPdfPayload` — proxies a `GET /api/tratamientos/{cod}/pdf`. Devuelve `{ filename, sizeBytes, base64Content }`.
-- [ ] 6.2 GraphQL query `availableGames: [Game!]!` — proxies a `GET /api/pacientes/{dni}/dashboard` y devuelve `juegosDesbloqueados`.
-- [ ] 6.3 GraphQL mutation `startGame(idVideojuego: ID!): GameSessionLaunch` — devuelve URL de Unity con JWT corto efimero (5 min) en query param.
-- [ ] 6.4 GraphQL query `myProgress: PatientProgress` — proxies a `GET /api/pacientes/{dni}/progreso`. Devuelve estructura compatible con grafico react-native-chart-kit.
-- [ ] 6.5 GraphQL query `myDashboard: Dashboard` — proxies a `GET /api/pacientes/{dni}/dashboard`.
+- [x] 6.1 GraphQL query `treatmentPdf(codTrat: String!): TreatmentPdfPayload` — proxies a `GET /api/tratamientos/{cod}/pdf`. Devuelve `{ filename, sizeBytes, base64Content }`.
+- [x] 6.2 GraphQL query `availableGames: [Game!]!` — proxies a `GET /api/pacientes/{dni}/dashboard` y devuelve `juegosDesbloqueados`.
+- [x] 6.3 GraphQL mutation `startGame(idVideojuego: ID!): GameSessionLaunch` — devuelve URL de Unity con JWT corto efimero (5 min) en query param.
+- [x] 6.4 GraphQL query `myProgress: PatientProgress` — proxies a `GET /api/pacientes/{dni}/progreso`. Devuelve estructura compatible con grafico react-native-chart-kit.
+- [x] 6.5 GraphQL query `myDashboard: Dashboard` — proxies a `GET /api/pacientes/{dni}/dashboard`.
+
+### Phase G — BFF Schema Sync (2026-05-05)
+
+- [x] G.1-G.8 Completados (ver mobile/backend/CLAUDE.md Phase G). BFF schema alineado con frontend Phase 4 queries. 25/25 tests verdes.
+
+### Phase 5-bridge — Frontend Bootstrap Hardening (2026-05-05)
+
+- [x] F.1 `progressStore.fetch` envuelto en try/catch con fallback a `bodyParts: []` y `hydrated: true` para evitar que una query fallida bloquee el bootstrap.
+- [x] F.2 `errorStore` expone `silent: boolean` + `setSilent(boolean)`. `bootstrapStore.hydrate` activa modo silencioso al entrar y lo restaura en finally — los popups de error quedan desactivados durante el bootstrap inicial.
 
 ---
 

@@ -136,4 +136,33 @@ async function cancelarCita(appointmentId, javaToken) {
   };
 }
 
-module.exports = { obtenerCitas, reservarCita, cancelarCita };
+/**
+ * Crea una solicitud de cita (no una cita confirmada).
+ * En mock: genera un id sintieticamente y devuelve estado PENDING.
+ * En produccion: POST /api/citas/solicitudes (endpoint pendiente en /api Phase 12).
+ *
+ * @param {string} dniPac
+ * @param {{ fechaPreferida, horaPreferida, motivo, telefono?, email? }} args
+ * @param {string|null} _javaToken
+ * @returns {Promise<object>} AppointmentRequest
+ */
+async function solicitarCita(dniPac, args, _javaToken) {
+  // Validacion ligera (la API Java validara con mas detalle cuando se conecte real).
+  if (!args.motivo || args.motivo.trim().length < 5) {
+    const { crearError: crearErrorLocal } = require('../utils/errors');
+    throw crearErrorLocal('VALIDATION_ERROR');
+  }
+
+  // Id sintietico estable: dni + timestamp.
+  const id = `REQ-${dniPac}-${Date.now()}`;
+  return {
+    id,
+    fechaPreferida: args.fechaPreferida,
+    horaPreferida: args.horaPreferida,
+    motivo: args.motivo,
+    estado: 'PENDING',
+    createdAt: new Date().toISOString(),
+  };
+}
+
+module.exports = { obtenerCitas, reservarCita, cancelarCita, solicitarCita };

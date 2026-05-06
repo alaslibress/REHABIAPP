@@ -49,6 +49,18 @@ export function initNotifications() {
   }
 }
 
+// Devuelve true si el permiso de notificaciones ya esta concedido.
+// No-op (false) si el modulo no esta disponible.
+export async function isPermissionGranted(): Promise<boolean> {
+  if (!Notifications) return false;
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === 'granted';
+  } catch {
+    return false;
+  }
+}
+
 // Solicita permiso de notificaciones al usuario.
 // Devuelve false si el modulo no esta disponible.
 export async function requestPermission(): Promise<boolean> {

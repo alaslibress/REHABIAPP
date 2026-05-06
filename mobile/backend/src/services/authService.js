@@ -66,8 +66,8 @@ async function login(identifier, password) {
   // En modo mock: validar credenciales localmente y resolver al DNI canonico
   if (config.mockApi) {
     const dniPac = resolverMockCredenciales(identifier, password);
-    // Simular tokens de Java en cache (el apiClient mock ya los devuelve)
-    const javaTokens = await apiClient.post('/api/auth/login', { dni: identifier, contrasena: password });
+    // Simular tokens de Java en cache (el apiClient mock devuelve tokens ficticios)
+    const javaTokens = await apiClient.post('/api/auth/login-paciente', { identifier, contrasena: password });
     tokenCache.set(dniPac, {
       accessToken: javaTokens.accessToken,
       refreshToken: javaTokens.refreshToken,
@@ -75,10 +75,13 @@ async function login(identifier, password) {
     return generarParBff(dniPac);
   }
 
+  // Modo real: autenticar contra POST /api/auth/login-paciente del API Java.
+  // Este endpoint acepta DNI o email en el campo `identifier` y devuelve
+  // un JWT con rol=PATIENT (implementado en /api Phase 12.5).
   let javaTokens;
   try {
-    javaTokens = await apiClient.post('/api/auth/login', {
-      dni: identifier,
+    javaTokens = await apiClient.post('/api/auth/login-paciente', {
+      identifier,
       contrasena: password,
     });
   } catch (err) {
@@ -170,7 +173,9 @@ async function refresh(refreshToken) {
   // Si tenemos tokens de Java en cache, renovarlos tambien
   if (tokensJava && tokensJava.refreshToken) {
     try {
-      const nuevosJava = await apiClient.post('/api/auth/refresh', {
+      // Renovar usando el endpoint especifico de pacientes — /api/auth/refresh
+      // solo maneja sanitarios (H.3, /api Phase 13).
+      const nuevosJava = await apiClient.post('/api/auth/refresh-paciente', {
         refreshToken: tokensJava.refreshToken,
       });
       if (nuevosJava && nuevosJava.accessToken) {
@@ -247,4 +252,38 @@ function generarParBff(dniPac) {
   };
 }
 
-module.exports = { login, refresh, validarToken, obtenerTokenJava };
+/**
+ * Genera un JWT efimero corto (5 min) para lanzar un videojuego Unity.
+ * Scope GAMES_PLAY — restringe el uso a la sesion de juego.
+ * Firmado con la misma clave del BFF para evitar gestion de claves adicional.
+ *
+ * @param {string} dniPac
+ * @param {string|number} idVideojuego
+ * @returns {{ token: string, expiresAt: number }} expiresAt en epoch seconds
+ */
+function generarTokenEfimeroJuego(dniPac, idVideojuego) {
+  const TTL_SEGUNDOS = 5 * 60; // 5 minutos
+  const ahora = Math.floor(Date.now() / 1000);
+  const expiresAt = ahora + TTL_SEGUNDOS;
+
+  const token = jwt.sign(
+    {
+      sub: dniPac,
+      tipo: 'access',
+      scope: 'GAMES_PLAY',
+      idVideojuego: String(idVideojuego),
+    },
+    config.jwtSecret,
+    { expiresIn: TTL_SEGUNDOS }
+  );
+
+  return { token, expiresAt };
+}
+
+module.exports = {
+  login,
+  refresh,
+  validarToken,
+  obtenerTokenJava,
+  generarTokenEfimeroJuego,
+};

@@ -22,6 +22,12 @@ const appointmentResolvers = {
       const user = requireAuth(context);
       return appointmentService.cancelarCita(appointmentId, context.javaToken);
     },
+
+    // Solicitud libre de cita (no confirmada — Phase G.6)
+    async requestAppointment(_parent, args, context) {
+      const user = requireAuth(context);
+      return appointmentService.solicitarCita(user.sub, args, context.javaToken);
+    },
   },
 };
 

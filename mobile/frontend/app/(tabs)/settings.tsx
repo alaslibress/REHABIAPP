@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View, Platform } from 'react-native';
 import * as Application from 'expo-application';
-import * as Notifications from 'expo-notifications';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { useAppointmentsStore } from '../../src/store/appointmentsStore';
@@ -19,6 +18,7 @@ import {
   getExpoPushToken,
   scheduleAppointmentReminder,
   scheduleTestNotification,
+  isPermissionGranted,
 } from '../../src/utils/notifications';
 import { client } from '../../src/services/graphql/client';
 import {
@@ -51,9 +51,7 @@ export default function SettingsScreen() {
 
   // Comprobar permiso de notificaciones al montar
   useEffect(function () {
-    Notifications.getPermissionsAsync().then(function (status) {
-      setPermissionGranted(status.status === 'granted');
-    });
+    isPermissionGranted().then(setPermissionGranted);
   }, []);
 
   const bgClass = isDark ? 'bg-background-dark' : 'bg-background';

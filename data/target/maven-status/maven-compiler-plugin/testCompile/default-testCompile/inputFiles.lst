@@ -1,2 +1,5 @@
 /home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/DataApplicationTest.java
+/home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/analytics/pipeline/TreatmentProgressPipelineTest.java
+/home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/markdown/MdGeneratorServiceTest.java
 /home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/presentation/HealthControllerTest.java
+/home/alaslibres/DAM/RehabiAPP/data/src/test/java/com/rehabiapp/data/util/TreatmentMetricResolverTest.java

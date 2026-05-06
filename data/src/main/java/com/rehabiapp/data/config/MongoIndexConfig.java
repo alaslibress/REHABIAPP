@@ -25,6 +25,28 @@ public class MongoIndexConfig {
     public void crearIndices() {
         crearIndicesGameSessions();
         crearIndicesPatientProgress();
+        crearIndicesTreatmentProgress();
+        crearIndicesPatientMarkdown();
+    }
+
+    private void crearIndicesTreatmentProgress() {
+        var ops = mongoTemplate.indexOps("treatment_progress");
+        // Indice unico por la clave logica del upsert
+        ops.ensureIndex(new Index()
+                .on("patientDni", Sort.Direction.ASC)
+                .on("codTrat", Sort.Direction.ASC)
+                .on("parteCuerpo", Sort.Direction.ASC)
+                .named("idx_tp_patient_codTrat_parte")
+                .unique());
+    }
+
+    private void crearIndicesPatientMarkdown() {
+        var ops = mongoTemplate.indexOps("patient_markdown");
+        // Lookup principal por DNI; unico para evitar duplicados en cache
+        ops.ensureIndex(new Index()
+                .on("patientDni", Sort.Direction.ASC)
+                .named("idx_pm_patientDni")
+                .unique());
     }
 
     private void crearIndicesGameSessions() {

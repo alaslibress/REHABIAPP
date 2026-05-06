@@ -45,3 +45,14 @@ rehabiapp:
     # Salt para derivar tokens anonimizados de pacientes. Separado de los datos.
     # En produccion se inyecta via K8s Secret (PSEUDONYM_SALT).
     salt: ${PSEUDONYM_SALT:changeme-dev-salt-rehabiapp}
+  # Mapeo entre prefijo del codigo de tratamiento y la metrica relevante.
+  # Permite extender los tratamientos sin cambiar codigo.
+  metric-map:
+    prefix-to-field:
+      "[ROM-]": rangeOfMotionDegrees
+      "[VEL-]": averageSpeed
+      "[FUERZA-]": maxSpeed
+    prefix-to-label:
+      "[ROM-]": "Rango de movimiento (grados)"
+      "[VEL-]": "Velocidad media (m/s)"
+      "[FUERZA-]": "Velocidad maxima (m/s)"

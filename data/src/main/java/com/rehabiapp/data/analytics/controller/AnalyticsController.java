@@ -2,6 +2,8 @@ package com.rehabiapp.data.analytics.controller;
 
 import com.rehabiapp.data.analytics.dto.*;
 import com.rehabiapp.data.analytics.service.AnalyticsService;
+import com.rehabiapp.data.analytics.service.MarkdownService;
+import com.rehabiapp.data.analytics.service.TreatmentProgressService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,9 +21,42 @@ import java.util.List;
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
+    private final TreatmentProgressService treatmentProgressService;
+    private final MarkdownService markdownService;
 
-    public AnalyticsController(AnalyticsService analyticsService) {
+    public AnalyticsController(AnalyticsService analyticsService,
+                               TreatmentProgressService treatmentProgressService,
+                               MarkdownService markdownService) {
         this.analyticsService = analyticsService;
+        this.treatmentProgressService = treatmentProgressService;
+        this.markdownService = markdownService;
+    }
+
+    // Progreso por tratamiento (baseline vs actual con serie diaria)
+    @GetMapping("/patient/{dni}/treatment-progress")
+    public ResponseEntity<List<TreatmentProgressDto>> getTreatmentProgress(@PathVariable String dni) {
+        return ResponseEntity.ok(treatmentProgressService.getOrCompute(dni));
+    }
+
+    // Resumen de la ultima sesion del paciente
+    @GetMapping("/patient/{dni}/last-session")
+    public ResponseEntity<LastSessionDto> getLastSession(@PathVariable String dni) {
+        return ResponseEntity.ok(analyticsService.getLastSession(dni));
+    }
+
+    // Markdown del progreso del paciente (cache si es reciente, recompila si stale)
+    @GetMapping(value = "/patient/{dni}/markdown", produces = "text/markdown;charset=UTF-8")
+    public ResponseEntity<String> getMarkdown(@PathVariable String dni) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/markdown;charset=UTF-8"))
+                .body(markdownService.getOrGenerate(dni));
+    }
+
+    // Forzar regeneracion del markdown (operacion administrativa)
+    @PostMapping("/patient/{dni}/markdown/regenerar")
+    public ResponseEntity<Void> regenerarMarkdown(@PathVariable String dni) {
+        markdownService.regenerar(dni);
+        return ResponseEntity.accepted().build();
     }
 
     // Analitica completa de un paciente (semanal + mensual + ROM + cohorte)

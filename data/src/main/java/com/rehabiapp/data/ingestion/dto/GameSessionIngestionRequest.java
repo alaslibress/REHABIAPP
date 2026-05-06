@@ -43,7 +43,16 @@ public record GameSessionIngestionRequest(
         MovementMetricsRequest movementMetrics,
 
         @NotNull
-        Boolean completed
+        Boolean completed,
+
+        // Enriquecimiento opcional desde la API Core: tratamiento del paciente
+        String codTrat,
+
+        // Parte del cuerpo trabajada en la sesion (opcional)
+        String parteCuerpo,
+
+        // Nombre legible del tratamiento (opcional)
+        String tratamientoNombre
 
 ) {
     public record MovementMetricsRequest(

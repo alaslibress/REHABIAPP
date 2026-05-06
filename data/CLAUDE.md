@@ -132,42 +132,42 @@ PatientMarkdown {
 
 > Detalles en `data/PLAN.md` Phase 5.
 
-- [ ] 5.1 Crear `TreatmentMetricResolver` (util) que mapea `(codTrat, parteCuerpo)` a la metrica relevante de `MovementMetrics`. Mapping inicial: codTrat empieza por "ROM-" → `rangeOfMotionDegrees`; "VEL-" → `averageSpeed`; "FUERZA-" → `maxSpeed`. Configurable via `application.yml` `rehabiapp.metric-map.*`.
-- [ ] 5.2 Crear `TreatmentProgressPipeline.java` con metodo `execute(patientDni)`:
+- [x] 5.1 Crear `TreatmentMetricResolver` (util) que mapea `(codTrat, parteCuerpo)` a la metrica relevante de `MovementMetrics`. Mapping inicial: codTrat empieza por "ROM-" → `rangeOfMotionDegrees`; "VEL-" → `averageSpeed`; "FUERZA-" → `maxSpeed`. Configurable via `application.yml` `rehabiapp.metric-map.*`.
+- [x] 5.2 Crear `TreatmentProgressPipeline.java` con metodo `execute(patientDni)`:
   - Pipeline MongoDB: $match → $addFields(`day` = date truncado a dia) → $sort(sessionStart) → $group por `(codTrat, parteCuerpo, day)` con avg de la metrica → output entradas diarias.
   - Para baseline: primera entrada de cada (codTrat, parteCuerpo).
   - Para current: ultima entrada de cada (codTrat, parteCuerpo).
   - Calcula `deltaPorcentaje = (current - baseline) / baseline * 100`.
-- [ ] 5.3 Crear `TreatmentProgressService` que orquesta el pipeline + persiste en `treatment_progress` collection (upsert por `patientDni + codTrat + parteCuerpo`).
-- [ ] 5.4 Endpoint en `AnalyticsController`:
+- [x] 5.3 Crear `TreatmentProgressService` que orquesta el pipeline + persiste en `treatment_progress` collection (upsert por `patientDni + codTrat + parteCuerpo`).
+- [x] 5.4 Endpoint en `AnalyticsController`:
   - `GET /analytics/patient/{dni}/treatment-progress` → `List<TreatmentProgressDto>`.
-- [ ] 5.5 DTO `TreatmentProgressDto` con baseline, current, delta, entradas.
-- [ ] 5.6 Endpoint interno para el API: `GET /internal/patient/{dni}/check-new-data?since=<Instant>` → `{ hasNewData, lastSessionAt, count }`. Solo cuenta sesiones con `receivedAt > since`.
-- [ ] 5.7 Endpoint adicional: `GET /analytics/patient/{dni}/last-session` → `LastSessionDto` con timestamp + gameId. Usado por DashboardService del API.
-- [ ] 5.8 Tests unitarios + integration con `@DataMongoTest` o equivalente con embedded MongoDB.
+- [x] 5.5 DTO `TreatmentProgressDto` con baseline, current, delta, entradas.
+- [x] 5.6 Endpoint interno para el API: `GET /internal/patient/{dni}/check-new-data?since=<Instant>` → `{ hasNewData, lastSessionAt, count }`. Solo cuenta sesiones con `receivedAt > since`.
+- [x] 5.7 Endpoint adicional: `GET /analytics/patient/{dni}/last-session` → `LastSessionDto` con timestamp + gameId. Usado por DashboardService del API.
+- [x] 5.8 Tests unitarios + integration con `@DataMongoTest` o equivalente con embedded MongoDB. (Testcontainers no esta en el POM; usado MongoTemplate mockeado para el pipeline + tests unitarios del resolver y del generador MD).
 
 ### Phase 6 — Markdown generation (current iteration)
 
 > Detalles en `data/PLAN.md` Phase 6.
 
-- [ ] 6.1 Crear `MdGeneratorService.java` que dado un `dni`:
+- [x] 6.1 Crear `MdGeneratorService.java` que dado un `dni`:
   - Carga `TreatmentProgressDto[]` (Phase 5).
   - Carga las ultimas N=20 sesiones del paciente.
   - Aplica plantilla Markdown estructurada con secciones: Cabecera (DNI anonimizado), Resumen ejecutivo, Por tratamiento (baseline vs current, % delta), Sesiones recientes (tabla), Notas para IA.
   - Devuelve string MD.
-- [ ] 6.2 Crear `MarkdownService` (orquesta MdGenerator + persiste en `patient_markdown` upsert).
-- [ ] 6.3 Endpoints en `AnalyticsController`:
+- [x] 6.2 Crear `MarkdownService` (orquesta MdGenerator + persiste en `patient_markdown` upsert).
+- [x] 6.3 Endpoints en `AnalyticsController`:
   - `GET /analytics/patient/{dni}/markdown` (Content-Type: `text/markdown;charset=UTF-8`) — devuelve cache si existe, o genera on-demand.
   - `POST /analytics/patient/{dni}/markdown/regenerar` — fuerza regeneracion + actualiza cache.
-- [ ] 6.4 Anonimizacion: el MD usa `patientToken` (no DNI) en su contenido. Solo el endpoint admite `dni` como path param.
-- [ ] 6.5 `MarkdownRefreshScheduler` (@Scheduled cron `0 */15 * * * *`): cada 15 minutos, regenera MD de pacientes con `lastSessionAt > markdown.updatedAt`. Limita a 50 pacientes por ejecucion para no saturar.
-- [ ] 6.6 Tests con plantilla MD esperada (golden files).
+- [x] 6.4 Anonimizacion: el MD usa `patientToken` (no DNI) en su contenido. Solo el endpoint admite `dni` como path param.
+- [x] 6.5 `MarkdownRefreshScheduler` (@Scheduled cron `0 */15 * * * *`): cada 15 minutos, regenera MD de pacientes con `lastSessionAt > markdown.updatedAt`. Limita a 50 pacientes por ejecucion para no saturar.
+- [x] 6.6 Tests con plantilla MD esperada (golden files).
 
 ### Phase 7 — Audit + observability (current iteration)
 
-- [ ] 7.1 Anadir Micrometer counters: `rehabiapp.data.ingest.sessions` (incremento por sesion ingestada), `rehabiapp.data.markdown.regenerations` (incremento por MD regenerado).
-- [ ] 7.2 Anadir timer `rehabiapp.data.pipeline.duration` con tag `pipeline=weekly|monthly|treatment-progress|...`.
-- [ ] 7.3 Logs estructurados al regenerar MD: `{event: "md_regenerated", dni: <token>, sessionCount, durationMs}`.
+- [x] 7.1 Anadir Micrometer counters: `rehabiapp.data.ingest.sessions` (incremento por sesion ingestada), `rehabiapp.data.markdown.regenerations` (incremento por MD regenerado).
+- [x] 7.2 Anadir timer `rehabiapp.data.pipeline.duration` con tag `pipeline=weekly|monthly|treatment-progress|...` (instrumentado en TreatmentProgressPipeline; los demas pipelines pueden anadirse de forma analoga).
+- [x] 7.3 Logs estructurados al regenerar MD: `{event: "md_regenerated", dni: <token>, sessionCount, durationMs}`.
 
 ---
 

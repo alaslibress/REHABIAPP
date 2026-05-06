@@ -64,7 +64,19 @@ public record GameSession(
 
         // Token anonimizado: SHA-256(patientDni + salt). Usado en analitica expuesta.
         @Field("patientToken")
-        String patientToken
+        String patientToken,
+
+        // Codigo del tratamiento asociado (opcional, enriquecido por la API Core)
+        @Field("codTrat")
+        String codTrat,
+
+        // Parte del cuerpo trabajada (opcional, enriquecido por la API Core)
+        @Field("parteCuerpo")
+        String parteCuerpo,
+
+        // Nombre legible del tratamiento (opcional, enriquecido por la API Core)
+        @Field("tratamientoNombre")
+        String tratamientoNombre
 
 ) {
     public record MovementMetrics(

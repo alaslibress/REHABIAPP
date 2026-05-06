@@ -1,2 +1,5 @@
 com/rehabiapp/data/presentation/HealthControllerTest.class
 com/rehabiapp/data/DataApplicationTest.class
+com/rehabiapp/data/markdown/MdGeneratorServiceTest.class
+com/rehabiapp/data/util/TreatmentMetricResolverTest.class
+com/rehabiapp/data/analytics/pipeline/TreatmentProgressPipelineTest.class

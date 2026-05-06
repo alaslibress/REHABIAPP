@@ -2,6 +2,8 @@ package com.rehabiapp.api.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rehabiapp.api.application.dto.LoginRequest;
+import com.rehabiapp.api.application.dto.PacienteLoginRequest;
+import com.rehabiapp.api.application.dto.RefreshRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +72,46 @@ class AuthControllerIT {
         // Un body vacío sin los campos obligatorios (@NotBlank) debe devolver 400 Bad Request
         // por validación de Jakarta Bean Validation
         mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void loginPaciente_conCredencialesInvalidas_retorna403() throws Exception {
+        // Paciente inexistente — PacienteAuthApplicationService lanza AccesoNoPermitidoException → 403
+        PacienteLoginRequest request = new PacienteLoginRequest("99999999X", "wrongpassword");
+
+        mockMvc.perform(post("/api/auth/login-paciente")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void loginPaciente_conBodyVacio_retorna400() throws Exception {
+        // Body vacio sin campos obligatorios (@NotBlank) debe devolver 400
+        mockMvc.perform(post("/api/auth/login-paciente")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void refreshPaciente_conRefreshTokenInvalido_retorna401() throws Exception {
+        // Un token malformado dispara JwtException → GlobalExceptionHandler → 401 Unauthorized
+        RefreshRequest request = new RefreshRequest("esto.no.es.un.jwt.valido");
+
+        mockMvc.perform(post("/api/auth/refresh-paciente")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void refreshPaciente_conBodyVacio_retorna400() throws Exception {
+        // Body vacio sin el campo refreshToken (@NotBlank) debe devolver 400
+        mockMvc.perform(post("/api/auth/refresh-paciente")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());

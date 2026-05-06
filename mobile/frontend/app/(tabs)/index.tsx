@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUserStore } from '../../src/store/userStore';
 import { useErrorStore } from '../../src/store/errorStore';
+import { useBootstrapStore } from '../../src/store/bootstrapStore';
 import { FloatingBalloon } from '../../src/components/FloatingBalloon';
 import { getGreeting } from '../../src/utils/greeting';
 
@@ -80,6 +81,8 @@ export default function HomeScreen() {
   const patient = useUserStore(function (s) { return s.patient; });
   const fetchProfile = useUserStore(function (s) { return s.fetchProfile; });
   const showError = useErrorStore(function (s) { return s.showError; });
+  const refrescando = useBootstrapStore(function (s) { return s.refreshing; });
+  const refrescar = useBootstrapStore(function (s) { return s.hydrate; });
   const patientName = patient?.name ?? 'Paciente';
 
   // Cargar el perfil del paciente al montar la pantalla de inicio.
@@ -101,30 +104,46 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* Mensaje de bienvenida con saludo dinamico segun la hora */}
+      {/* Mensaje de bienvenida con saludo dinamico segun la hora — tarjeta centrada */}
       <View className="px-6 pt-6 pb-4">
-        <Text className="text-2xl font-bold text-text-primary leading-8">
-          {getGreeting(patientName)}
-        </Text>
+        <View className="bg-surface dark:bg-surface-dark rounded-2xl px-5 py-4 shadow-md border border-primary-200 dark:border-primary-600">
+          <Text className="text-2xl font-bold text-text-primary dark:text-text-primary-dark leading-8 text-center">
+            {getGreeting(patientName)}
+          </Text>
+        </View>
       </View>
 
+      {/* Spinner mientras el paciente no se ha cargado aun */}
+      {patient == null && refrescando ? (
+        <View className="py-3 items-center">
+          <ActivityIndicator size="small" />
+        </View>
+      ) : null}
+
       {/* Area de globos flotantes con posiciones organicas */}
-      <View className="flex-1 relative mx-4 mb-4">
-        {BALLOON_CONFIG.map(function (balloon) {
-          return (
-            <FloatingBalloon
-              key={balloon.id}
-              iconName={balloon.iconName as any}
-              size={32}
-              positionX={balloon.positionX}
-              positionY={balloon.positionY}
-              animationDelay={balloon.animationDelay}
-              animationDuration={balloon.animationDuration}
-              onPress={function () { handleBalloonPress(balloon.route); }}
-            />
-          );
-        })}
-      </View>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        refreshControl={
+          <RefreshControl refreshing={refrescando} onRefresh={refrescar} />
+        }
+      >
+        <View className="flex-1 relative mx-4 mb-4">
+          {BALLOON_CONFIG.map(function (balloon) {
+            return (
+              <FloatingBalloon
+                key={balloon.id}
+                iconName={balloon.iconName as any}
+                size={32}
+                positionX={balloon.positionX}
+                positionY={balloon.positionY}
+                animationDelay={balloon.animationDelay}
+                animationDuration={balloon.animationDuration}
+                onPress={function () { handleBalloonPress(balloon.route); }}
+              />
+            );
+          })}
+        </View>
+      </ScrollView>
     </View>
   );
 }

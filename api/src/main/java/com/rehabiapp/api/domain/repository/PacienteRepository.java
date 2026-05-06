@@ -28,6 +28,12 @@ public interface PacienteRepository extends JpaRepository<Paciente, String> {
     Optional<Paciente> findByDniPacAndActivoTrue(String dni);
 
     /**
+     * Busca un paciente activo por su email.
+     * Usado en el login movil cuando el identificador es un correo electronico.
+     */
+    Optional<Paciente> findByEmailPacAndActivoTrue(String email);
+
+    /**
      * Devuelve todos los pacientes asignados a un sanitario (activos e inactivos).
      * Útil para el listado histórico del especialista.
      *

@@ -7,10 +7,10 @@ export default function NotFoundScreen() {
     <>
       <Stack.Screen options={{ title: 'Pagina no encontrada' }} />
       <View className="flex-1 bg-background justify-center items-center px-6">
-        <Text className="text-2xl font-bold text-text-primary mb-2">
+        <Text className="text-2xl font-bold text-text-primary dark:text-text-primary-dark mb-2">
           Pagina no encontrada
         </Text>
-        <Text className="text-base text-text-secondary mb-8 text-center">
+        <Text className="text-base text-text-secondary dark:text-text-secondary-dark mb-8 text-center">
           La ruta que buscas no existe.
         </Text>
         <Link href="/" className="text-primary-600 text-base font-medium">

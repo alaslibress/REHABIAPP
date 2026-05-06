@@ -4,3 +4,7 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/infrastructure/security/JwtServiceTest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/infrastructure/security/PasswordServiceTest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/presentation/controller/AuthControllerIT.java
+/home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/presentation/controller/ProgresoControllerIT.java
+/home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/presentation/controller/RateLimitFilterIT.java
+/home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/presentation/controller/TratamientoPdfControllerIT.java
+/home/alaslibres/DAM/RehabiAPP/api/src/test/java/com/rehabiapp/api/presentation/controller/VideojuegoControllerIT.java

@@ -2,6 +2,7 @@ package com.rehabiapp.api.infrastructure.config;
 
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -28,6 +29,7 @@ public class FlywayConfig {
      * - locations: directorio de los scripts SQL versionados en el classpath.
      */
     @Bean(initMethod = "migrate")
+    @ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
     public Flyway flyway(
             DataSource dataSource,
             @Value("${spring.flyway.locations:classpath:db/migration}") String locations,

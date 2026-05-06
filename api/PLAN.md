@@ -598,12 +598,17 @@ public record DashboardResponse(
 
 ### 10.1 springdoc-openapi
 
-Pom.xml:
+Pom.xml (version 2.8.13 — Spring Boot 4 compatible; ver Phase 11 §11.3):
 ```xml
 <dependency>
     <groupId>org.springdoc</groupId>
     <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-    <version>2.6.0</version>
+    <version>2.8.13</version>
+</dependency>
+<dependency>
+    <groupId>io.swagger.core.v3</groupId>
+    <artifactId>swagger-annotations-jakarta</artifactId>
+    <version>2.2.30</version>
 </dependency>
 ```
 
@@ -623,12 +628,12 @@ Cada controller con `@Tag(name = "...", description = "...")`. Cada metodo con `
 
 ### 10.3 Bucket4j
 
-Pom.xml:
+Pom.xml (version 8.14.0 — ver Phase 11 §11.3):
 ```xml
 <dependency>
     <groupId>com.bucket4j</groupId>
     <artifactId>bucket4j_jdk17-core</artifactId>
-    <version>8.10.1</version>
+    <version>8.14.0</version>
 </dependency>
 ```
 
@@ -670,8 +675,227 @@ void login_11Veces_undecimaDevuelve429() {
 
 ---
 
+## PHASE 11 — BUILD DEPENDENCY RESOLUTION FIX (BLOCKING — DO FIRST)
+
+> **Status:** URGENT. Build fails with **79 compile errors** in `api` module on `stats-implementation` branch (build run 2026-05-04 23:38, javac 26, Spring Boot 4.0.5 parent).
+> **Owner:** Agent 1 Doer (Sonnet).
+> **Scope:** Pure dependency / classpath plumbing in `api/pom.xml` + IDE re-import. NO source code rewrite required. NO new features.
+> **Pass condition:** `cd api && ./mvnw clean compile` returns BUILD SUCCESS with 0 errors. Then `./mvnw test` still passes the suite from Phase 4.
+
+### 11.1 Symptom inventory (verbatim from build log)
+
+The 79 errors fall into exactly **two missing-package families**. The Doer MUST NOT touch any source file: the source already imports the right classes — only the dependencies fail to resolve them.
+
+**Family A — springdoc / OpenAPI annotations missing (74 errors)**
+
+Missing packages on classpath:
+- `io.swagger.v3.oas.annotations`
+- `io.swagger.v3.oas.annotations.tags`
+- `io.swagger.v3.oas.annotations.media`
+
+Missing symbols and the files that reference them:
+- `class Tag` and `class Operation` in:
+  - `com.rehabiapp.api.presentation.controller.DashboardController`
+  - `com.rehabiapp.api.presentation.controller.TratamientoPdfController`
+  - `com.rehabiapp.api.presentation.controller.TelemetriaController`
+  - `com.rehabiapp.api.presentation.controller.ProgresoController`
+  - `com.rehabiapp.api.presentation.controller.VideojuegoController`
+- `class Schema` in:
+  - `com.rehabiapp.api.application.dto.DashboardResponse`
+  - `com.rehabiapp.api.application.dto.CheckProgresoResponse`
+  - `com.rehabiapp.api.application.dto.TelemetriaSesionRequest`
+  - `com.rehabiapp.api.application.dto.PdfMetadatosResponse`
+  - `com.rehabiapp.api.application.dto.VideojuegoRequest`
+
+**Family B — Bucket4j missing (5 errors)**
+
+Missing package: `io.github.bucket4j`.
+Missing symbol: `class Bucket` in `com.rehabiapp.api.infrastructure.ratelimit.RateLimitFilter`.
+
+### 11.2 Root cause hypothesis
+
+Both families share the same shape: the artifact is declared in `pom.xml` (lines 118-132 of current `api/pom.xml`) but its classes are not visible to javac. Two real causes are possible and the Doer MUST handle both because either alone explains the failure:
+
+1. **Version incompatibility with Spring Boot 4.0.5 BOM.**
+   - `org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0` (currently in pom) was built for Spring Boot 3.3 / Spring Framework 6.1 / Jakarta EE 10. Spring Boot 4.0.5 ships Spring Framework 7 + Jakarta EE 11 and may BOM-override or exclude transitive Swagger annotation jars, leaving `io.swagger.v3.oas.annotations.*` off the compile classpath.
+   - For Spring Boot 4 the supported springdoc line is **2.8.x or newer**. Use the latest GA in the 2.8 series (see step 11.3).
+   - `com.bucket4j:bucket4j_jdk17-core:8.14.0` is the correct coordinate but its JAR is published as a Multi-Release JAR; under unusual classpath ordering (e.g., when the dep is overridden by a transitive BOM-managed older version) the `io.github.bucket4j` package can be missing. We mitigate by **pinning the version explicitly outside the BOM scope and forcing dependency resolution** (no exclusions needed; just guarantee the jar lands on the compile classpath).
+
+2. **Stale IntelliJ Maven import / Maven local cache.**
+   - The build log shows the IDE-driven incremental compile (“Executing pre-compile tasks…”, “Updating dependency information…”). After any pom edit the IDE caches the previous classpath. Until a forced **Reload All Maven Projects** + `clean install`, the new deps are invisible to javac.
+
+The fix below is idempotent and addresses both causes.
+
+### 11.3 Prescriptive pom.xml edits (exact diffs)
+
+> File: `api/pom.xml`. Doer applies these EXACT edits, no rewording.
+
+**Edit A — replace the springdoc block (currently lines 118-124).**
+
+OLD:
+```xml
+        <!-- ======================== DOCUMENTACION OPENAPI ======================== -->
+        <!-- springdoc-openapi — genera /v3/api-docs y /swagger-ui.html automaticamente -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.6.0</version>
+        </dependency>
+```
+
+NEW:
+```xml
+        <!-- ======================== DOCUMENTACION OPENAPI ======================== -->
+        <!--
+            springdoc-openapi 2.8.x es la primera linea compatible con Spring Boot 4.0.x
+            (Spring Framework 7, Jakarta EE 11). 2.6.0 fue construido contra Spring 6 y
+            su starter no expone io.swagger.v3.oas.annotations.* en el classpath bajo
+            el BOM de Spring Boot 4.
+        -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.8.13</version>
+        </dependency>
+
+        <!--
+            Cinturon de seguridad: declaramos explicitamente swagger-annotations-jakarta
+            para garantizar que io.swagger.v3.oas.annotations.{Operation,tags.Tag,
+            media.Schema} estan SIEMPRE en el compile classpath aunque el BOM de Spring
+            Boot 4 modifique el grafo transitivo del starter en el futuro.
+        -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+            <version>2.2.30</version>
+        </dependency>
+```
+
+**Edit B — replace the Bucket4j block (currently lines 126-132).**
+
+OLD:
+```xml
+        <!-- ======================== RATE LIMIT ======================== -->
+        <!-- Bucket4j — token bucket en memoria para rate limiting por IP/JWT -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>8.14.0</version>
+        </dependency>
+```
+
+NEW:
+```xml
+        <!-- ======================== RATE LIMIT ======================== -->
+        <!--
+            Bucket4j 8.x publica el modulo principal como `bucket4j_jdk17-core` (paquete
+            `io.github.bucket4j`). Pinned a 8.14.0 GA. Si tras Reload Maven el paquete
+            `io.github.bucket4j` siguiera ausente, sustituir por `bucket4j-core:8.7.0`
+            (linea legacy publicada en groupId `com.github.vladimir-bukhtoyarov`) — pero
+            primero agotar 11.4 paso 5 (purgar cache local de Maven).
+        -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>8.14.0</version>
+        </dependency>
+```
+
+> **DO NOT** add Maven `<exclusions>`. Both deps must resolve cleanly with their default transitive graph.
+
+### 11.4 Mandatory post-edit procedure
+
+Execute every step in this exact order. Do NOT skip even if a step looks redundant — they cover the two root causes from §11.2 jointly.
+
+1. **Save `pom.xml`** with the two edits from §11.3.
+
+2. **Purge previous classes from the build dir** (avoids stale `.class` shadowing the new deps):
+   ```bash
+   cd /home/alaslibres/DAM/RehabiAPP/api
+   ./mvnw clean
+   ```
+   Confirm the directory `api/target/classes/` is gone.
+
+3. **Force Maven to refresh the dependency graph** (downloads new artifacts, ignores cached `_remote.repositories` entries):
+   ```bash
+   cd /home/alaslibres/DAM/RehabiAPP/api
+   ./mvnw -U dependency:purge-local-repository -DmanualInclude="org.springdoc:springdoc-openapi-starter-webmvc-ui,io.swagger.core.v3:swagger-annotations-jakarta,com.bucket4j:bucket4j_jdk17-core" -DreResolve=true -DactTransitively=false
+   ```
+   Then:
+   ```bash
+   ./mvnw -U dependency:resolve
+   ```
+
+4. **Verify the dependency tree shows the three artifacts** (and their packages):
+   ```bash
+   ./mvnw dependency:tree -Dincludes=org.springdoc:*,io.swagger.core.v3:*,com.bucket4j:*
+   ```
+   Expected output MUST contain (versions as above):
+   ```
+   [INFO] +- org.springdoc:springdoc-openapi-starter-webmvc-ui:jar:2.8.13:compile
+   [INFO] +- io.swagger.core.v3:swagger-annotations-jakarta:jar:2.2.30:compile
+   [INFO] +- com.bucket4j:bucket4j_jdk17-core:jar:8.14.0:compile
+   ```
+   If `swagger-annotations-jakarta` is missing OR resolves to a different version, STOP and report — likely a corporate proxy issue, not a code issue.
+
+5. **Compile from the command line first** (NOT from IntelliJ):
+   ```bash
+   ./mvnw -DskipTests clean compile
+   ```
+   This must end with `BUILD SUCCESS`. If 79 errors persist:
+   - Re-read §11.3 — confirm both `<dependency>` blocks are EXACTLY as specified (no typos in groupId/artifactId).
+   - Rerun §11.4 step 3.
+   - As last resort, switch the bucket4j coordinate per the comment in Edit B and rerun from step 2.
+
+6. **Reload IntelliJ Maven** (only after step 5 is green):
+   - Right-click `api/pom.xml` → **Maven** → **Reload Project**.
+   - File → **Invalidate Caches… → Invalidate and Restart**.
+   - After restart, build from inside the IDE — must end with 0 errors.
+
+7. **Run the test suite** to ensure no regression:
+   ```bash
+   cd /home/alaslibres/DAM/RehabiAPP/api
+   ./mvnw test
+   ```
+   Phase 4 already left this green. If now red, the regression is caused by Phase 11 — investigate before continuing.
+
+### 11.5 Files the Doer is FORBIDDEN to touch in Phase 11
+
+Phase 11 is dependency-only. The Doer MUST NOT modify any of:
+
+- `src/main/java/**` (especially the controllers and DTOs listed in §11.1).
+- `src/test/**`.
+- `application*.yml`.
+- Flyway migrations.
+- Any other `.xml` except `pom.xml`.
+
+If a source file genuinely needs an edit to compile, that means §11.3 was applied incorrectly — STOP and re-read §11.3.
+
+### 11.6 TestSprite gate (mandatory per root §10)
+
+After §11.4 step 7 is green, delegate verification to TestSprite MCP:
+
+1. TestSprite re-runs `./mvnw test` in its sandbox.
+2. TestSprite re-runs the integration tests previously written for Phases 5-10 (`ProgresoControllerIT`, `VideojuegoControllerIT`, `TratamientoPdfControllerIT`, `TelemetriaControllerIT`, `DashboardControllerIT`, rate-limit `AuthLoginRateLimitIT`).
+3. 100% pass → mark Phase 11 `[x]` in `/api/CLAUDE.md` §5 (add a new line `### Phase 11 — Build dependency resolution fix` with one item `- [x] 11.1 Resolved 79 compile errors caused by stale springdoc 2.6.0 + bucket4j classpath`).
+4. Any failure → enter Self-Healing Protocol (root §10.3). NEVER stop with a red bar.
+
+### 11.7 Sanity check before reporting done
+
+The Doer reports Phase 11 complete ONLY when all of the following are simultaneously true:
+
+- [ ] `./mvnw clean compile` — 0 errors.
+- [ ] `./mvnw test` — 0 failures, 0 errors.
+- [ ] `./mvnw spring-boot:run` boots the app and `curl http://localhost:8080/swagger-ui.html` returns HTTP 200 (proves springdoc 2.8.13 wired up correctly under Spring Boot 4).
+- [ ] `curl -i http://localhost:8080/api/auth/login` (11 times in <60s) — last request returns HTTP 429 (proves bucket4j is on the classpath at runtime, not just compile time).
+- [ ] TestSprite returned 100% on the suites in §11.6.
+- [ ] `/api/CLAUDE.md` §5 updated with the Phase 11 checklist line marked `[x]`.
+
+---
+
 ## ORDER OF EXECUTION
 
+0. **Phase 11 (BUILD FIX)** — BLOCKING. Until compile is green nothing else can be tested or merged.
 1. Phase 4 (H2) — DESBLOQUEA TODO. Sin tests verdes no se puede iterar con confianza.
 2. Phase 6 (V13 schema) — fundacion para PDF (Phase 7), juegos (Phase 6), MD cache (Phase 5).
 3. Phase 7 (PDF) — independiente.

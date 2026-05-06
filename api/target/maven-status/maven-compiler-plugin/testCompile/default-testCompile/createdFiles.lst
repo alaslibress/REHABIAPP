@@ -3,4 +3,8 @@ com/rehabiapp/api/infrastructure/security/JwtServiceTest.class
 com/rehabiapp/api/application/service/SanitarioServiceTest.class
 com/rehabiapp/api/ApiApplicationTests.class
 com/rehabiapp/api/infrastructure/security/PasswordServiceTest.class
+com/rehabiapp/api/presentation/controller/VideojuegoControllerIT.class
+com/rehabiapp/api/presentation/controller/TratamientoPdfControllerIT.class
+com/rehabiapp/api/presentation/controller/ProgresoControllerIT.class
 com/rehabiapp/api/presentation/controller/AuthControllerIT.class
+com/rehabiapp/api/presentation/controller/RateLimitFilterIT.class

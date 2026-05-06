@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -62,6 +63,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> manejarAccesoDenegado(AccesoNoPermitidoException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("error", "Acceso denegado", "detalle", ex.getMessage()));
+    }
+
+    /**
+     * Maneja accesos denegados de Spring Security (@PreAuthorize) — devuelve 403.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> manejarAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "Acceso denegado",
+                        "detalle", "El rol del usuario no permite esta operacion"));
     }
 
     /**

@@ -60,7 +60,7 @@ export default function LoginScreen() {
 
           {/* Campo: DNI o correo electronico */}
           <View className="w-full mb-4">
-            <Text className="text-text-secondary text-sm mb-1 ml-1">
+            <Text className="text-text-secondary dark:text-text-secondary-dark text-sm mb-1 ml-1">
               DNI / Gmail
             </Text>
             <TextInput
@@ -69,13 +69,13 @@ export default function LoginScreen() {
               placeholder="12345678A o correo@gmail.com"
               autoCapitalize="none"
               keyboardType="email-address"
-              className="w-full min-h-12 bg-surface border border-primary-200 rounded-xl px-4 py-3 text-base text-text-primary"
+              className="w-full min-h-12 bg-surface border border-primary-200 rounded-xl px-4 py-3 text-base text-text-primary dark:text-text-primary-dark"
             />
           </View>
 
           {/* Campo: Contrasena */}
           <View className="w-full mb-8">
-            <Text className="text-text-secondary text-sm mb-1 ml-1">
+            <Text className="text-text-secondary dark:text-text-secondary-dark text-sm mb-1 ml-1">
               Contrasena
             </Text>
             <TextInput
@@ -83,7 +83,7 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               placeholder="Introduce tu contrasena"
               secureTextEntry={true}
-              className="w-full min-h-12 bg-surface border border-primary-200 rounded-xl px-4 py-3 text-base text-text-primary"
+              className="w-full min-h-12 bg-surface border border-primary-200 rounded-xl px-4 py-3 text-base text-text-primary dark:text-text-primary-dark"
             />
           </View>
 

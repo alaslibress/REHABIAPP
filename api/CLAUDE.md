@@ -65,97 +65,116 @@ Sin dependencias circulares entre capas. Domain con cero imports de framework.
 
 ### Phase 4 — H2 test compatibility (current iteration)
 
-- [ ] 4.1 Resolver fallo de tests con H2: `V11__fix_protesis_boolean.sql` usa PL/pgSQL `DO $$ ... $$` no soportado por H2. Crear `src/test/resources/db/migration/` con override H2-compatible (PostgreSQL Compatibility Mode + script H2-friendly) O configurar Flyway con `locations` distintos por perfil para excluir V11/V12 en tests y usar versiones H2-friendly.
-- [ ] 4.2 Restablecer suite verde: `./mvnw test` debe pasar sin errores en `ApiApplicationTests` y `AuthControllerIT`.
+- [x] 4.1 Resolver fallo de tests con H2: `V11__fix_protesis_boolean.sql` usa PL/pgSQL `DO $$ ... $$` no soportado por H2. Crear `src/test/resources/db/migration/` con override H2-compatible (PostgreSQL Compatibility Mode + script H2-friendly) O configurar Flyway con `locations` distintos por perfil para excluir V11/V12 en tests y usar versiones H2-friendly.
+- [x] 4.2 Restablecer suite verde: `./mvnw test` debe pasar sin errores en `ApiApplicationTests` y `AuthControllerIT`.
 
 ### Phase 5 — Patient progress integration (current iteration)
 
 > Endpoints consumidos por `/desktop` (visualizacion de progreso). Detalles en `api/PLAN.md` Phase 5.
 
-- [ ] 5.1 Crear `ProgresoController` (presentation) con endpoints:
+- [x] 5.1 Crear `ProgresoController` (presentation) con endpoints:
   - `GET /api/pacientes/{dni}/progreso/check?since=<Instant>` → `{ hasNewData: boolean, lastSessionAt: Instant, count: int }`. Llama a `/data` via `DataPipelineClient`.
   - `GET /api/pacientes/{dni}/progreso` → `List<ProgresoTratamientoResponse>`. Proxy a `/data` `GET /analytics/patient/{dni}/treatment-progress`.
   - `GET /api/pacientes/{dni}/progreso/markdown` (Content-Type: `text/markdown`). Proxy a `/data` + cache en `paciente.archivo_progreso_md`.
   - `POST /api/pacientes/{dni}/progreso/markdown/regenerar` → fuerza regeneracion en `/data`.
-- [ ] 5.2 Crear `DataPipelineClient` (infrastructure) — `RestClient` configurado con URL `${rehabiapp.data.url:http://localhost:8081}` y timeout 5s.
-- [ ] 5.3 RBAC: solo SPECIALIST y NURSE pueden leer progreso del paciente. NURSE no puede regenerar.
-- [ ] 5.4 Audit: cada GET de progreso/markdown registra READ en audit_log (paciente, sanitario, timestamp).
-- [ ] 5.5 Tests: `ProgresoControllerIT` con MockRestServiceServer simulando respuestas de `/data`.
+- [x] 5.2 Crear `DataPipelineClient` (infrastructure) — `RestClient` configurado con URL `${rehabiapp.data.url:http://localhost:8081}` y timeout 5s.
+- [x] 5.3 RBAC: solo SPECIALIST y NURSE pueden leer progreso del paciente. NURSE no puede regenerar.
+- [x] 5.4 Audit: cada GET de progreso/markdown registra READ en audit_log (paciente, sanitario, timestamp).
+- [x] 5.5 Tests: `ProgresoControllerIT` con MockRestServiceServer simulando respuestas de `/data`.
 
 ### Phase 6 — Treatment-Game association (current iteration)
 
 > Detalles en `api/PLAN.md` Phase 6.
 
-- [ ] 6.1 Migracion Flyway `V13__videojuego_y_tratamiento_pdf.sql`:
+- [x] 6.1 Migracion Flyway `V13__videojuego_y_tratamiento_pdf.sql`:
   - Tabla `videojuego` (id_videojuego BIGSERIAL PK, codigo VARCHAR(50) UNIQUE, nombre, descripcion, cod_dis FK discapacidad, parte_cuerpo, url_unity, activo BOOLEAN DEFAULT TRUE, fecha_creacion).
   - Tabla `tratamiento_videojuego` (cod_trat FK, id_videojuego FK — composite PK).
   - Anadir columnas a tratamiento: `archivo_pdf BYTEA`, `nombre_archivo_pdf VARCHAR(255)`, `tamano_pdf_bytes BIGINT`.
   - Anadir columnas a paciente: `archivo_progreso_md TEXT`, `progreso_md_actualizado_en TIMESTAMP`.
-- [ ] 6.2 Entidades JPA: `Videojuego` (`@Audited`), `TratamientoVideojuego` (composite key, `@Audited`).
-- [ ] 6.3 Repositorios: `VideojuegoRepository.findByCodDis(String)`, `findByActivoTrue()`. `TratamientoVideojuegoRepository`.
-- [ ] 6.4 DTOs y mappers (MapStruct): `VideojuegoRequest`, `VideojuegoResponse`.
-- [ ] 6.5 `VideojuegoController`:
+- [x] 6.2 Entidades JPA: `Videojuego` (`@Audited`), `TratamientoVideojuego` (composite key, `@Audited`).
+- [x] 6.3 Repositorios: `VideojuegoRepository.findByCodDis(String)`, `findByActivoTrue()`. `TratamientoVideojuegoRepository`.
+- [x] 6.4 DTOs y mappers (MapStruct): `VideojuegoRequest`, `VideojuegoResponse`.
+- [x] 6.5 `VideojuegoController`:
   - `GET /api/videojuegos` (lista todos los activos, paginado).
   - `GET /api/videojuegos/{id}`.
   - `GET /api/videojuegos/discapacidad/{codDis}`.
   - `POST /api/videojuegos` (crear, solo SPECIALIST).
   - `PUT /api/videojuegos/{id}`.
   - `DELETE /api/videojuegos/{id}` (soft delete: `activo=false`).
-- [ ] 6.6 Endpoints en `CatalogoController` (asociacion):
+- [x] 6.6 Endpoints en `CatalogoController` (asociacion):
   - `GET /api/tratamientos/{cod}/videojuegos`.
   - `POST /api/tratamientos/{cod}/videojuegos/{id}` (vincular).
   - `DELETE /api/tratamientos/{cod}/videojuegos/{id}` (desvincular).
-- [ ] 6.7 Tests integration por endpoint.
+- [x] 6.7 Tests integration por endpoint.
 
 ### Phase 7 — Treatment PDF (current iteration)
 
-- [ ] 7.1 Endpoints en `CatalogoController`:
+- [x] 7.1 Endpoints en `CatalogoController`:
   - `POST /api/tratamientos/{cod}/pdf` (multipart `file`, max 10MB, valida MIME). Verifica magic bytes `%PDF-`.
   - `GET /api/tratamientos/{cod}/pdf` (Content-Type: `application/pdf`, Content-Disposition: attachment).
   - `GET /api/tratamientos/{cod}/pdf/metadatos` → `{ nombre, tamano }`.
   - `DELETE /api/tratamientos/{cod}/pdf` (solo SPECIALIST).
-- [ ] 7.2 Validacion: si `file.size > 10 * 1024 * 1024` → 413 Payload Too Large.
-- [ ] 7.3 Audit: cada upload registra accion `UPDATE` en audit_log con detalle `"PDF: {nombre} ({tamano} bytes)"`.
-- [ ] 7.4 Tests integration con `MockMultipartFile`.
+- [x] 7.2 Validacion: si `file.size > 10 * 1024 * 1024` → 413 Payload Too Large.
+- [x] 7.3 Audit: cada upload registra accion `UPDATE` en audit_log con detalle `"PDF: {nombre} ({tamano} bytes)"`.
+- [x] 7.4 Tests integration con `MockMultipartFile`.
 
 ### Phase 8 — Game telemetry routing (current iteration)
 
 > Endpoint consumido por Unity WebGL (juegos externos en AWS).
 
-- [ ] 8.1 `TelemetriaController`:
+- [x] 8.1 `TelemetriaController`:
   - `POST /api/telemetria/sesion-juego` — recibe payload de Unity, valida JWT, enriquece con `disabilityId` desde la asignacion del paciente, reenvia a `/data` `POST /ingest/game-session`.
-- [ ] 8.2 `TelemetriaService` con logica de enriquecimiento (lookup en `paciente_discapacidad` para inferir `disabilityId` si Unity no lo manda).
-- [ ] 8.3 RBAC: tokens JWT con scope `GAMES_TELEMETRY` (un nuevo rol/scope).
-- [ ] 8.4 Tras ingestion exitosa, disparar `RegenerarMdEvent` (Spring `ApplicationEvent`) que invoca `POST /data/analytics/patient/{dni}/markdown/regenerar` en background.
-- [ ] 8.5 Tests con MockMvc + MockRestServiceServer.
+- [x] 8.2 `TelemetriaService` con logica de enriquecimiento (lookup en `paciente_discapacidad` para inferir `disabilityId` si Unity no lo manda).
+- [x] 8.3 RBAC: tokens JWT con scope `GAMES_TELEMETRY` (un nuevo rol/scope).
+- [x] 8.4 Tras ingestion exitosa, disparar `RegenerarMdEvent` (Spring `ApplicationEvent`) que invoca `POST /data/analytics/patient/{dni}/markdown/regenerar` en background.
+- [x] 8.5 Tests con MockMvc + MockRestServiceServer.
 
 ### Phase 9 — Mobile dashboard endpoint (current iteration)
 
 > Consumido por el BFF mobile (`/mobile/backend`).
 
-- [ ] 9.1 `DashboardController`:
+- [x] 9.1 `DashboardController`:
   - `GET /api/pacientes/{dni}/dashboard` — agregado: paciente + discapacidades con nivel actual + tratamientos visibles + juegos desbloqueados (basado en niveles + asociaciones tratamiento-juego) + ultima sesion de juego + proxima cita.
-- [ ] 9.2 Respuesta unificada con DTO `DashboardResponse` (record con sub-records).
-- [ ] 9.3 Audit: registrar READ del paciente.
-- [ ] 9.4 Tests integration.
+- [x] 9.2 Respuesta unificada con DTO `DashboardResponse` (record con sub-records).
+- [x] 9.3 Audit: registrar READ del paciente.
+- [x] 9.4 Tests integration.
 
 ### Phase 10 — API documentation + rate limit (current iteration)
 
-- [ ] 10.1 Anadir `springdoc-openapi-starter-webmvc-ui` a pom.xml. Verificar que `/swagger-ui.html` y `/v3/api-docs` se exponen correctamente.
-- [ ] 10.2 Anotar todos los controllers con `@Tag` y endpoints con `@Operation`. DTOs con `@Schema`.
-- [ ] 10.3 Excluir endpoints internos (`/internal/*`) de la documentacion publica.
-- [ ] 10.4 Rate limit a nivel aplicacion: anadir Bucket4j (`com.bucket4j:bucket4j-core` + `bucket4j-spring-boot-starter`). Configurar limits:
+- [x] 10.1 Anadir `springdoc-openapi-starter-webmvc-ui` a pom.xml. Verificar que `/swagger-ui.html` y `/v3/api-docs` se exponen correctamente.
+- [x] 10.2 Anotar todos los controllers con `@Tag` y endpoints con `@Operation`. DTOs con `@Schema`.
+- [x] 10.3 Excluir endpoints internos (`/internal/*`) de la documentacion publica.
+- [x] 10.4 Rate limit a nivel aplicacion: anadir Bucket4j (`com.bucket4j:bucket4j-core` + `bucket4j-spring-boot-starter`). Configurar limits:
   - `/api/auth/login`: 10 req/min por IP.
   - `/api/telemetria/*`: 60 req/min por JWT.
   - Resto: 300 req/min por JWT.
-- [ ] 10.5 Filtro de validacion de tamano de payload — rechazar bodies > 1 MB excepto multipart upload de PDF.
-- [ ] 10.6 Tests: 11 logins consecutivos en menos de 60s → respuestas 11 = 429 Too Many Requests.
+- [x] 10.5 Filtro de validacion de tamano de payload — rechazar bodies > 1 MB excepto multipart upload de PDF.
+- [x] 10.6 Tests: 11 logins consecutivos en menos de 60s → respuestas 11 = 429 Too Many Requests.
+
+### Phase 11 — Build dependency resolution fix
+
+- [x] 11.1 Resueltos 79 errores de compilacion causados por springdoc-openapi 2.6.0 incompatible con Spring Boot 4.0.5 + bucket4j classpath stale. Fix: springdoc → 2.8.13, añadido `io.swagger.core.v3:swagger-annotations-jakarta:2.2.30` explicito. `./mvnw test` — 33/33 verde.
+
+### Phase 13 — Patient token refresh (2026-05-06)
+
+- [x] 13.1 `PacienteAuthApplicationService.refresh(RefreshRequest)` — extrae DNI del refresh token Java via `JwtService.extraerDni`, verifica que el paciente sigue activo, emite nuevo par con `Rol.PATIENT`, registra en audit_log.
+- [x] 13.2 Nuevo endpoint `POST /api/auth/refresh-paciente` en `AuthController` — publico (permitido en `/api/auth/**`). Token invalido → JwtException → GlobalExceptionHandler → 401. Paciente inactivo → AccesoNoPermitidoException → 403.
+- [x] 13.3 Tests IT en `AuthControllerIT`: `refreshPaciente_conRefreshTokenInvalido_retorna401` + `refreshPaciente_conBodyVacio_retorna400`. `./mvnw test` — 37/37 verde.
+- [x] 13.4 BFF `authService.js` llama a `/api/auth/refresh-paciente` (en lugar de `/api/auth/refresh` que solo sirve sanitarios). `apiClient.js` mock handler unificado para ambos paths de refresh.
+
+### Phase 12 — Mobile integration readiness (2026-05-05)
+
+- [x] 12.1 Añadido `PATIENT` al enum `Rol`. El `JwtAuthenticationFilter` ya mapea `rol=PATIENT` a `ROLE_PATIENT` automaticamente (sin cambio en el filtro).
+- [x] 12.2 `ProgresoController` GET `/check`, GET `/` y GET `/markdown` amplian `@PreAuthorize` a `hasAnyRole('SPECIALIST','NURSE','PATIENT')` para que los pacientes puedan leer su propio progreso via BFF movil.
+- [x] 12.3 `PacienteTratamientoResponse` enriquecido con `codDis`, `idNivel` y `tienePdf`. Nueva query JPQL `findEnriquecidoByDniPac` en `PacienteTratamientoRepository` que resuelve la discapacidad del paciente via subquery sobre `discapacidad_tratamiento`. `AsignacionService.listarTratamientos` usa la query enriquecida. Mapper actualizado con `@Mapping(ignore=true)` para los nuevos campos.
+- [x] 12.4 Migracion `V14__datos_prueba_desarrollo.sql` con datos seed idempotentes: sanitario 87654321B (SPECIALIST), paciente 12345678Z (Admin RehabiAPP), discapacidades M16+M54, tratamientos TRT001-TRT004, videojuego GAME-HIP-01, 3 citas.
+- [x] 12.5 Autenticacion de pacientes via app movil: columna `contrasena_pac TEXT` en `paciente` (V15). `PacienteAuthApplicationService` busca por DNI o email, verifica BCrypt, emite JWT `rol=PATIENT`. Nuevo endpoint `POST /api/auth/login-paciente`. Cubierto por 2 tests IT en `AuthControllerIT`. `./mvnw test` — 35/35 verde.
 
 ---
 
 ## 6. DATABASE REFERENCE
 
-> El schema lo define este modulo via Flyway. Las migraciones V1-V12 estan aplicadas. V13 es la nueva.
+> El schema lo define este modulo via Flyway. Las migraciones V1-V14 aplicadas.
 
 ```
 sanitario, sanitario_agrega_sanitario, telefono_sanitario,

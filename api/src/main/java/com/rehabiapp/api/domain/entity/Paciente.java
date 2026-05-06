@@ -178,6 +178,33 @@ public class Paciente {
     @OneToMany(mappedBy = "paciente", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TelefonoPaciente> telefonos = new ArrayList<>();
 
+    /**
+     * Hash BCrypt (cost 12) de la contrasena del paciente para la app movil.
+     * Anadido en V15. Nullable para pacientes creados antes de la migracion.
+     * NO se cifra con AES-256-GCM — BCrypt ya es un hash unidireccional.
+     * Se usa exclusivamente en el endpoint POST /api/auth/login-paciente.
+     */
+    @NotAudited
+    @Column(name = "contrasena_pac", columnDefinition = "TEXT")
+    private String contrasenaPac;
+
+    /**
+     * Cache del fichero markdown de progreso del paciente.
+     * Anadido en V13. Se actualiza cada vez que la API consulta /data
+     * para servir el progreso al desktop. Nullable hasta la primera consulta.
+     * NotAudited porque es solo cache derivado, no dato clinico primario.
+     */
+    @NotAudited
+    @Column(name = "archivo_progreso_md", columnDefinition = "TEXT")
+    private String archivoProgresoMd;
+
+    /**
+     * Marca temporal de la ultima actualizacion del cache markdown.
+     */
+    @NotAudited
+    @Column(name = "progreso_md_actualizado_en")
+    private LocalDateTime progresoMdActualizadoEn;
+
     // --- Getters y setters ---
 
     public String getDniPac() {
@@ -346,5 +373,29 @@ public class Paciente {
 
     public void setTelefonos(List<TelefonoPaciente> telefonos) {
         this.telefonos = telefonos;
+    }
+
+    public String getArchivoProgresoMd() {
+        return archivoProgresoMd;
+    }
+
+    public void setArchivoProgresoMd(String archivoProgresoMd) {
+        this.archivoProgresoMd = archivoProgresoMd;
+    }
+
+    public LocalDateTime getProgresoMdActualizadoEn() {
+        return progresoMdActualizadoEn;
+    }
+
+    public void setProgresoMdActualizadoEn(LocalDateTime progresoMdActualizadoEn) {
+        this.progresoMdActualizadoEn = progresoMdActualizadoEn;
+    }
+
+    public String getContrasenaPac() {
+        return contrasenaPac;
+    }
+
+    public void setContrasenaPac(String contrasenaPac) {
+        this.contrasenaPac = contrasenaPac;
     }
 }

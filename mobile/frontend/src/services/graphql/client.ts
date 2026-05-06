@@ -5,6 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import type { AuthToken } from '../../types/auth';
+import { useAuthStore } from '../../store/authStore';
 
 const TOKEN_KEY = 'auth_token';
 
@@ -57,18 +58,25 @@ const httpLink = createHttpLink({
   uri: GRAPHQL_URI,
 });
 
-// Link de autenticacion: adjunta el JWT a cada peticion
+// Link de autenticacion: adjunta el JWT y la zona horaria a cada peticion
 const authLink = setContext(async function (_request, previousContext) {
   const tokenJson = await SecureStore.getItemAsync(TOKEN_KEY);
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   if (!tokenJson) {
-    return previousContext;
+    return {
+      ...previousContext,
+      headers: { ...previousContext.headers, 'X-Timezone': timezone },
+    };
   }
+
   const token: AuthToken = JSON.parse(tokenJson);
   return {
     ...previousContext,
     headers: {
       ...previousContext.headers,
       Authorization: `Bearer ${token.accessToken}`,
+      'X-Timezone': timezone,
     },
   };
 });
@@ -83,15 +91,37 @@ function sanitizarVariables(variables: Record<string, any> | undefined): Record<
   return copia;
 }
 
-// Link de errores globales — logging estructurado para depuracion en Metro
+// Codigos del BFF que implican que la sesion ya no es valida
+const SESSION_EXPIRED_CODES = new Set(['UNAUTHENTICATED', 'TOKEN_EXPIRED', 'TOKEN_INVALID']);
+
+// Evita ejecutar el cierre de sesion mas de una vez en una rafaga de errores
+let cierreEnCurso = false;
+
+async function cerrarSesionPorExpiracion(): Promise<void> {
+  if (cierreEnCurso) return;
+  cierreEnCurso = true;
+  try {
+    await useAuthStore.getState().logout();
+  } catch {
+    // Si logout falla (p.ej. SecureStore no disponible), forzamos el reset minimo
+  } finally {
+    // Permitir nuevos cierres tras el siguiente tick — la navegacion ya se ha disparado
+    setTimeout(function () { cierreEnCurso = false; }, 1000);
+  }
+}
+
+// Link de errores globales — logging estructurado + auto-logout por sesion expirada
 const errorLink = onError(function ({ graphQLErrors, networkError, operation }) {
   const operacion = operation.operationName || 'operacion_anonima';
   const variables = sanitizarVariables(operation.variables);
 
   if (graphQLErrors) {
+    let sesionExpirada = false;
     for (const err of graphQLErrors) {
       const code = err.extensions?.code ?? 'SIN_CODIGO';
-      // Errores de negocio (credenciales, validacion) son warn, no error
+      if (SESSION_EXPIRED_CODES.has(code as string)) {
+        sesionExpirada = true;
+      }
       console.warn(
         `[GraphQL] ${code} | operacion="${operacion}" | mensaje="${err.message}" | ` +
         `subtitulo="${err.extensions?.subtitulo ?? '-'}" | ` +
@@ -99,11 +129,17 @@ const errorLink = onError(function ({ graphQLErrors, networkError, operation }) 
         `variables=${JSON.stringify(variables)}`
       );
     }
+    if (sesionExpirada) {
+      // Disparar cierre de sesion fuera del flujo de la peticion
+      void cerrarSesionPorExpiracion();
+    }
   }
 
   if (networkError) {
-    // Extraer statusCode si existe (errores HTTP devuelven statusCode)
     const statusCode = 'statusCode' in networkError ? (networkError as any).statusCode : 'N/A';
+    if (statusCode === 401) {
+      void cerrarSesionPorExpiracion();
+    }
     console.error(
       `[Red] Error de conexion | operacion="${operacion}" | ` +
       `status=${statusCode} | mensaje="${networkError.message}" | ` +

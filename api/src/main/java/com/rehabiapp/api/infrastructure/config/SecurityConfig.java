@@ -1,5 +1,7 @@
 package com.rehabiapp.api.infrastructure.config;
 
+import com.rehabiapp.api.infrastructure.filter.PayloadSizeFilter;
+import com.rehabiapp.api.infrastructure.ratelimit.RateLimitFilter;
 import com.rehabiapp.api.infrastructure.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,9 +31,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+    private final RateLimitFilter rateLimitFilter;
+    private final PayloadSizeFilter payloadSizeFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtFilter,
+                          RateLimitFilter rateLimitFilter,
+                          PayloadSizeFilter payloadSizeFilter) {
         this.jwtFilter = jwtFilter;
+        this.rateLimitFilter = rateLimitFilter;
+        this.payloadSizeFilter = payloadSizeFilter;
     }
 
     /**
@@ -57,10 +65,14 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health/**").permitAll()
                         // Endpoint de métricas Prometheus — accesible desde el stack de observabilidad
                         .requestMatchers("/actuator/prometheus").permitAll()
+                        // Documentacion OpenAPI / Swagger UI — publica para desarrolladores
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // Todo lo demás requiere JWT válido
                         .anyRequest().authenticated()
                 )
-                // Añadir filtro JWT antes del filtro de autenticación por usuario/contraseña
+                // Cadena de filtros: rate limit → payload size → JWT → autenticacion
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(payloadSizeFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

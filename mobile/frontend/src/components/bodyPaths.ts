@@ -1,0 +1,63 @@
+import type { BodyPartId } from '../types/progress';
+
+// Paths SVG para viewBox "0 0 300 600".
+// Formas redondeadas y ligeramente curvas para evocar una silueta humana
+// frontal, en lugar de rectangulos. Cada path sigue siendo un area clicable.
+export const BODY_PART_PATHS: Record<BodyPartId, string> = {
+  // Cabeza — ovalo
+  HEAD: 'M 150,40 C 125,40 108,62 108,88 C 108,114 125,132 150,132 C 175,132 192,114 192,88 C 192,62 175,40 150,40 Z',
+
+  // Cuello — trapecio estrecho
+  NECK: 'M 136,128 L 164,128 L 170,152 L 130,152 Z',
+
+  // Torso — forma acampanada, hombros anchos a cintura estrecha
+  TORSO: 'M 110,150 C 102,170 100,195 104,230 C 106,255 112,280 120,305 L 180,305 C 188,280 194,255 196,230 C 200,195 198,170 190,150 Z',
+
+  // Hombros — esferas curvas a cada lado
+  LEFT_SHOULDER:
+    'M 108,150 C 88,148 70,160 62,180 C 56,195 58,208 68,215 L 100,215 C 102,200 103,180 108,150 Z',
+  RIGHT_SHOULDER:
+    'M 192,150 C 212,148 230,160 238,180 C 244,195 242,208 232,215 L 200,215 C 198,200 197,180 192,150 Z',
+
+  // Brazos — formas curvas descendentes
+  LEFT_ARM:
+    'M 62,215 C 55,240 52,265 56,295 C 60,320 68,340 76,350 L 96,345 C 94,320 96,290 100,260 C 102,240 102,225 100,215 Z',
+  RIGHT_ARM:
+    'M 238,215 C 245,240 248,265 244,295 C 240,320 232,340 224,350 L 204,345 C 206,320 204,290 200,260 C 198,240 198,225 200,215 Z',
+
+  // Manos — ovalos
+  LEFT_HAND:
+    'M 60,350 C 50,355 46,370 52,385 C 58,398 72,400 82,395 C 90,390 94,378 90,365 C 86,352 72,348 60,350 Z',
+  RIGHT_HAND:
+    'M 240,350 C 250,355 254,370 248,385 C 242,398 228,400 218,395 C 210,390 206,378 210,365 C 214,352 228,348 240,350 Z',
+
+  // Caderas — areas trapezoidales suaves
+  LEFT_HIP:
+    'M 120,305 L 150,305 L 152,360 C 150,365 142,368 134,368 C 124,368 118,360 116,350 Z',
+  RIGHT_HIP:
+    'M 150,305 L 180,305 L 184,350 C 182,360 176,368 166,368 C 158,368 150,365 148,360 Z',
+
+  // Piernas — formas alargadas curvas
+  LEFT_LEG:
+    'M 116,365 C 112,400 110,440 114,485 C 116,510 122,525 130,530 L 150,528 C 152,490 152,445 150,400 C 150,385 150,375 152,365 Z',
+  RIGHT_LEG:
+    'M 184,365 C 188,400 190,440 186,485 C 184,510 178,525 170,530 L 150,528 C 148,490 148,445 150,400 C 150,385 150,375 148,365 Z',
+
+  // Pies — elipses achatadas
+  LEFT_FOOT:
+    'M 112,528 C 100,532 92,545 96,558 C 100,568 114,572 130,568 C 144,565 150,555 150,548 C 148,535 130,526 112,528 Z',
+  RIGHT_FOOT:
+    'M 188,528 C 200,532 208,545 204,558 C 200,568 186,572 170,568 C 156,565 150,555 150,548 C 152,535 170,526 188,528 Z',
+};
+
+// Orden de renderizado — torso primero, extremidades encima
+export const RENDER_ORDER: BodyPartId[] = [
+  'TORSO',
+  'LEFT_HIP', 'RIGHT_HIP',
+  'HEAD', 'NECK',
+  'LEFT_SHOULDER', 'RIGHT_SHOULDER',
+  'LEFT_ARM', 'RIGHT_ARM',
+  'LEFT_HAND', 'RIGHT_HAND',
+  'LEFT_LEG', 'RIGHT_LEG',
+  'LEFT_FOOT', 'RIGHT_FOOT',
+];

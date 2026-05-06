@@ -2,12 +2,15 @@ type Patient = {
   id: string;
   name: string;
   surname: string;
-  email: string;
+  email: string | null;
   dni: string;
   phone: string | null;
   birthDate: string | null;
   address: string | null;
   active: boolean;
+  numSs: string | null;
+  sexo: 'MASCULINO' | 'FEMENINO' | 'OTRO' | null;
+  avatarDataUri: string | null;
 };
 
 type UserState = {

@@ -5,7 +5,9 @@ import com.rehabiapp.api.application.dto.DiscapacidadResponse;
 import com.rehabiapp.api.application.dto.NivelProgresionResponse;
 import com.rehabiapp.api.application.dto.TratamientoRequest;
 import com.rehabiapp.api.application.dto.TratamientoResponse;
+import com.rehabiapp.api.application.dto.VideojuegoResponse;
 import com.rehabiapp.api.application.service.CatalogoService;
+import com.rehabiapp.api.application.service.VideojuegoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,9 +34,12 @@ import java.util.List;
 public class CatalogoController {
 
     private final CatalogoService catalogoService;
+    private final VideojuegoService videojuegoService;
 
-    public CatalogoController(CatalogoService catalogoService) {
+    public CatalogoController(CatalogoService catalogoService,
+                              VideojuegoService videojuegoService) {
         this.catalogoService = catalogoService;
+        this.videojuegoService = videojuegoService;
     }
 
     // ==================== DISCAPACIDADES GET ====================
@@ -222,5 +227,44 @@ public class CatalogoController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<NivelProgresionResponse>> listarNiveles() {
         return ResponseEntity.ok(catalogoService.listarNiveles());
+    }
+
+    // ==================== ASOCIACION TRATAMIENTO-VIDEOJUEGO ====================
+
+    /**
+     * Lista los videojuegos vinculados a un tratamiento.
+     * GET /api/catalogo/tratamientos/{cod}/videojuegos
+     */
+    @GetMapping("/tratamientos/{cod}/videojuegos")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<VideojuegoResponse>> listarVideojuegosDeTratamiento(
+            @PathVariable String cod) {
+        return ResponseEntity.ok(videojuegoService.listarVideojuegosDeTratamiento(cod));
+    }
+
+    /**
+     * Vincula un videojuego a un tratamiento.
+     * POST /api/catalogo/tratamientos/{cod}/videojuegos/{id}
+     * Solo SPECIALIST.
+     */
+    @PostMapping("/tratamientos/{cod}/videojuegos/{id}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<Void> vincularVideojuego(
+            @PathVariable String cod, @PathVariable Long id) {
+        videojuegoService.vincular(cod, id);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    /**
+     * Desvincula un videojuego de un tratamiento.
+     * DELETE /api/catalogo/tratamientos/{cod}/videojuegos/{id}
+     * Solo SPECIALIST.
+     */
+    @DeleteMapping("/tratamientos/{cod}/videojuegos/{id}")
+    @PreAuthorize("hasRole('SPECIALIST')")
+    public ResponseEntity<Void> desvincularVideojuego(
+            @PathVariable String cod, @PathVariable Long id) {
+        videojuegoService.desvincular(cod, id);
+        return ResponseEntity.noContent().build();
     }
 }

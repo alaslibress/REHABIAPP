@@ -1,4 +1,6 @@
-import { Modal, View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
+import { BackdropModal } from './BackdropModal';
+import { AppText } from './AppText';
 import type { ErrorPopupProps } from '../types/errors';
 
 // Ventana emergente de error con titulo, subtitulo, descripcion y botones
@@ -8,51 +10,44 @@ export function ErrorPopup(props: ErrorPopupProps) {
   if (!error) return null;
 
   return (
-    <Modal
-      transparent={true}
-      visible={visible}
-      animationType="fade"
-      onRequestClose={onCancel}
-    >
-      <View className="flex-1 justify-center items-center bg-black/50 px-6">
-        <View className="bg-surface rounded-2xl p-6 w-full max-w-sm shadow-lg">
-          {/* Titulo */}
-          <Text className="text-xl font-bold text-text-primary mb-1">
-            {error.title}
-          </Text>
+    <BackdropModal visible={visible} onClose={onCancel}>
+      <View className="bg-surface dark:bg-surface-dark rounded-2xl p-6 w-full shadow-lg">
+        {/* Titulo */}
+        <AppText variant="subtitle" weight="bold" className="text-text-primary dark:text-text-primary-dark mb-1">
+          {error.title}
+        </AppText>
 
-          {/* Subtitulo */}
-          <Text className="text-base font-medium text-error mb-3">
-            {error.subtitle}
-          </Text>
+        {/* Subtitulo */}
+        <AppText variant="body" weight="medium" className="text-error mb-3">
+          {error.subtitle}
+        </AppText>
 
-          {/* Descripcion */}
-          <Text className="text-base text-text-secondary mb-6 leading-6">
-            {error.message}
-          </Text>
+        {/* Descripcion */}
+        <AppText variant="body" className="text-text-secondary dark:text-text-secondary-dark mb-6 leading-6">
+          {error.message}
+        </AppText>
 
-          {/* Botones alineados a la derecha */}
-          <View className="flex-row justify-end gap-3">
-            <Pressable
-              onPress={onCancel}
-              className="min-h-12 min-w-12 px-5 py-3 rounded-lg border border-primary-600 justify-center items-center"
-            >
-              <Text className="text-primary-600 font-medium text-base">
-                Cancelar
-              </Text>
-            </Pressable>
+        {/* Botones alineados a la derecha */}
+        <View className="flex-row justify-end gap-3">
+          <Pressable
+            onPress={onCancel}
+            className="min-h-12 min-w-12 px-5 py-3 rounded-lg border border-primary-600 justify-center items-center"
+          >
+            <AppText variant="body" weight="medium" className="text-primary-600">
+              Cancelar
+            </AppText>
+          </Pressable>
 
-            <Pressable
-              onPress={onAccept}
-              className="min-h-12 min-w-12 px-5 py-3 rounded-lg bg-primary-600 justify-center items-center"
-            >
-              <Text className="text-white font-medium text-base">
-                Aceptar
-              </Text>
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={onAccept}
+            className="min-h-12 min-w-12 px-5 py-3 rounded-lg bg-primary-600 justify-center items-center"
+          >
+            <AppText variant="body" weight="medium" className="text-white">
+              Aceptar
+            </AppText>
+          </Pressable>
         </View>
       </View>
-    </Modal>
+    </BackdropModal>
   );
 }

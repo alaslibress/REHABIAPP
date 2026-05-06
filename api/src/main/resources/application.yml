@@ -10,11 +10,11 @@ spring:
   application:
     name: rehabiapp-api
 
-  # Multipart — limite de tamaño para subida de fotos de pacientes (max 5 MB por archivo)
+  # Multipart — limites para subida de fotos de paciente y PDFs de tratamiento (10 MB max).
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 6MB
+      max-file-size: 10MB
+      max-request-size: 12MB
 
   # JPA — configuración base; perfiles específicos añaden propiedades adicionales
   jpa:
@@ -111,3 +111,17 @@ rehabiapp:
     # Clave AES-256-GCM para cifrado de campos clínicos — exactamente 32 bytes.
     # PRODUCCIÓN: inyectada como secreto K8s vía ENCRYPTION_KEY.
     encryption-key: ${ENCRYPTION_KEY:dev-encryption-key-placeholder-change-in-production-32c}
+
+  # Compatibilidad con DataPipelineClient — alias corto para la URL del pipeline /data.
+  data:
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8081}
+
+# ======================== DOCUMENTACION OPENAPI ========================
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+  packages-to-scan: com.rehabiapp.api.presentation
+  paths-to-exclude: /internal/**

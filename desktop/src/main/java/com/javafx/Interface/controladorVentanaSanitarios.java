@@ -207,11 +207,24 @@ public class controladorVentanaSanitarios {
      * Carga todos los sanitarios de la base de datos en la tabla
      */
     private void cargarSanitarios() {
-        //Obtener lista de sanitarios desde la base de datos
-        todosSanitarios = sanitarioDAO.listarTodos();
-
-        //Actualizar paginacion con los datos
-        paginacion.setDatos(todosSanitarios);
+        try {
+            todosSanitarios = sanitarioDAO.listarTodos();
+            if (todosSanitarios == null) todosSanitarios = new java.util.ArrayList<>();
+            paginacion.setDatos(todosSanitarios);
+        } catch (RehabiAppException e) {
+            todosSanitarios = new java.util.ArrayList<>();
+            paginacion.setDatos(todosSanitarios);
+            System.err.println("Error al cargar sanitarios ("
+                    + e.getClass().getSimpleName() + "): " + e.getMessage());
+            com.javafx.Clases.VentanaUtil.mostrarVentanaInformativa(
+                    "No se pudo cargar la lista de sanitarios: " + e.getMessage(),
+                    com.javafx.Clases.VentanaUtil.TipoMensaje.ERROR);
+        } catch (Exception e) {
+            todosSanitarios = new java.util.ArrayList<>();
+            paginacion.setDatos(todosSanitarios);
+            System.err.println("Error inesperado al cargar sanitarios: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**

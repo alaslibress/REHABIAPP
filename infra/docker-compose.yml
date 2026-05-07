@@ -26,6 +26,26 @@ services:
       retries: 5
       start_period: 30s
 
+  # Base de datos documental para telemetria de juegos y analytics (data pipeline)
+  mongodb:
+    image: mongo:7
+    container_name: rehabiapp-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: rehabiapp_telemetry
+    volumes:
+      - rehabiapp-mongo-data:/data/db
+    networks:
+      - rehabiapp-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   # Interfaz web de administracion de PostgreSQL
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -48,6 +68,7 @@ services:
 volumes:
   rehabiapp-pg-data:
   rehabiapp-pgadmin-data:
+  rehabiapp-mongo-data:
 
 # Red interna del proyecto
 networks:

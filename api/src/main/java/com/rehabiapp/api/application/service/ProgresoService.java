@@ -8,12 +8,16 @@ import com.rehabiapp.api.domain.exception.RecursoNoEncontradoException;
 import com.rehabiapp.api.domain.repository.PacienteRepository;
 import com.rehabiapp.api.infrastructure.audit.AuditService;
 import com.rehabiapp.api.infrastructure.client.DataPipelineClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -26,6 +30,8 @@ import java.util.List;
 @Service
 @Transactional
 public class ProgresoService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ProgresoService.class);
 
     private final DataPipelineClient dataClient;
     private final PacienteRepository pacienteRepository;
@@ -44,7 +50,15 @@ public class ProgresoService {
         verificarPacienteExiste(dni);
         auditService.registrar(AccionAuditoria.READ, "Paciente", dni,
                 "Consulta check progreso since=" + since);
-        return dataClient.checkNuevosDatos(dni, since);
+        try {
+            return dataClient.checkNuevosDatos(dni, since);
+        } catch (RestClientException e) {
+            LOG.warn("Pipeline de datos no disponible para check de progreso (dni={}): {}", dni, e.getMessage());
+            return new CheckProgresoResponse(false, null, 0);
+        } catch (Exception e) {
+            LOG.error("Error inesperado al consultar check progreso (dni={}): {}", dni, e.getMessage(), e);
+            return new CheckProgresoResponse(false, null, 0);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -52,30 +66,53 @@ public class ProgresoService {
         verificarPacienteExiste(dni);
         auditService.registrar(AccionAuditoria.READ, "Paciente", dni,
                 "Consulta progreso por tratamiento");
-        return dataClient.obtenerProgreso(dni);
+        try {
+            return dataClient.obtenerProgreso(dni);
+        } catch (RestClientException e) {
+            LOG.warn("Pipeline de datos no disponible para progreso (dni={}): {}", dni, e.getMessage());
+            return Collections.emptyList();
+        } catch (Exception e) {
+            LOG.error("Error inesperado al consultar progreso (dni={}): {}", dni, e.getMessage(), e);
+            return Collections.emptyList();
+        }
     }
 
     /**
      * Devuelve el Markdown y lo cachea en `paciente.archivo_progreso_md`.
+     * Si el pipeline no esta disponible devuelve el cache existente o cadena vacia.
      */
     public String obtenerMarkdown(String dni) {
         Paciente paciente = pacienteRepository.findById(dni)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Paciente no encontrado: " + dni));
-        String md = dataClient.obtenerMarkdown(dni);
-        paciente.setArchivoProgresoMd(md);
-        paciente.setProgresoMdActualizadoEn(LocalDateTime.now(ZoneId.systemDefault()));
-        pacienteRepository.save(paciente);
-
-        auditService.registrar(AccionAuditoria.READ, "Paciente", dni,
-                "Descarga Markdown de progreso");
-        return md;
+        try {
+            String md = dataClient.obtenerMarkdown(dni);
+            paciente.setArchivoProgresoMd(md);
+            paciente.setProgresoMdActualizadoEn(LocalDateTime.now(ZoneId.systemDefault()));
+            pacienteRepository.save(paciente);
+            auditService.registrar(AccionAuditoria.READ, "Paciente", dni,
+                    "Descarga Markdown de progreso");
+            return md;
+        } catch (RestClientException e) {
+            LOG.warn("Pipeline de datos no disponible para markdown (dni={}): {}", dni, e.getMessage());
+            // Devolver cache si existe
+            String cache = paciente.getArchivoProgresoMd();
+            return cache != null ? cache : "";
+        } catch (Exception e) {
+            LOG.error("Error inesperado al obtener markdown (dni={}): {}", dni, e.getMessage(), e);
+            String cache = paciente.getArchivoProgresoMd();
+            return cache != null ? cache : "";
+        }
     }
 
     public void regenerarMarkdown(String dni) {
         verificarPacienteExiste(dni);
-        dataClient.regenerarMarkdown(dni);
-        auditService.registrar(AccionAuditoria.UPDATE, "Paciente", dni,
-                "Regeneracion forzada del Markdown");
+        try {
+            dataClient.regenerarMarkdown(dni);
+            auditService.registrar(AccionAuditoria.UPDATE, "Paciente", dni,
+                    "Regeneracion forzada del Markdown");
+        } catch (RestClientException e) {
+            LOG.warn("Pipeline de datos no disponible para regenerar markdown (dni={}): {}", dni, e.getMessage());
+        }
     }
 
     private void verificarPacienteExiste(String dni) {

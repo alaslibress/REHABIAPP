@@ -4,12 +4,15 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.javafx.Clases.ApiClient;
 import com.javafx.Clases.Discapacidad;
 import com.javafx.Clases.NivelProgresion;
+import com.javafx.Clases.PdfMetadato;
 import com.javafx.Clases.Tratamiento;
+import com.javafx.Clases.Videojuego;
 import com.javafx.dto.DiscapacidadRequest;
 import com.javafx.dto.DiscapacidadResponse;
 import com.javafx.dto.NivelProgresionResponse;
 import com.javafx.dto.TratamientoRequest;
 import com.javafx.dto.TratamientoResponse;
+import com.javafx.excepcion.ValidacionException;
 
 import java.util.List;
 
@@ -173,5 +176,67 @@ public class CatalogoDAO {
         return respuestas.stream()
             .map(Discapacidad::desdeDiscapacidadResponse)
             .toList();
+    }
+
+    // ==================== PDF DE TRATAMIENTO ====================
+
+    /**
+     * Sube el PDF de un tratamiento (multipart, parte "file").
+     */
+    public void subirPdfTratamiento(String codTrat, byte[] bytes, String filename) {
+        api.uploadFile("/api/tratamientos/" + codTrat + "/pdf",
+                "file", bytes, filename, "application/pdf", Void.class);
+    }
+
+    /**
+     * Obtiene los metadatos del PDF del tratamiento. Devuelve null si no hay PDF (404).
+     */
+    public PdfMetadato consultarMetadatosPdf(String codTrat) {
+        try {
+            return api.get("/api/tratamientos/" + codTrat + "/pdf/metadatos", PdfMetadato.class);
+        } catch (ValidacionException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Descarga los bytes del PDF del tratamiento.
+     */
+    public byte[] descargarPdfTratamiento(String codTrat) {
+        return api.getBytes("/api/tratamientos/" + codTrat + "/pdf");
+    }
+
+    /**
+     * Elimina el PDF del tratamiento.
+     */
+    public void eliminarPdfTratamiento(String codTrat) {
+        api.delete("/api/tratamientos/" + codTrat + "/pdf");
+    }
+
+    // ==================== ASOCIACION TRATAMIENTO-VIDEOJUEGO ====================
+
+    /**
+     * Lista los videojuegos vinculados a un tratamiento.
+     */
+    public List<Videojuego> listarJuegosDeTratamiento(String codTrat) {
+        return api.get(
+            "/api/catalogo/tratamientos/" + codTrat + "/videojuegos",
+            new TypeReference<List<Videojuego>>() {}
+        );
+    }
+
+    /**
+     * Vincula un videojuego a un tratamiento.
+     */
+    public void vincularJuego(String codTrat, long idVideojuego) {
+        api.post("/api/catalogo/tratamientos/" + codTrat + "/videojuegos/" + idVideojuego,
+                null, Void.class);
+    }
+
+    /**
+     * Desvincula un videojuego de un tratamiento.
+     */
+    public void desvincularJuego(String codTrat, long idVideojuego) {
+        api.delete("/api/catalogo/tratamientos/" + codTrat + "/videojuegos/" + idVideojuego);
     }
 }

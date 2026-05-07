@@ -110,7 +110,8 @@
         <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
             <children>
                 <Button fx:id="btnEliminarTratamiento" mnemonicParsing="false" onAction="#eliminarTratamientoSeleccionado" prefHeight="26.0" prefWidth="126.0" styleClass="button-peligro" text="Eliminar" textAlignment="CENTER" />
-                <Button fx:id="btnEditarTratamiento" mnemonicParsing="false" onAction="#editarTratamientoSeleccionado" prefHeight="26.0" prefWidth="126.0" styleClass="button-primario" text="Editar" />
+                <Button fx:id="btnEditarTratamiento" mnemonicParsing="false" onAction="#editarTratamientoSeleccionado" prefHeight="26.0" prefWidth="126.0" styleClass="button-secundario" text="Editar" />
+                <Button fx:id="btnVerTratamiento" mnemonicParsing="false" onAction="#verTratamientoSeleccionado" prefHeight="26.0" prefWidth="126.0" styleClass="button-primario" text="Ver" />
             </children>
         </HBox>
     </children>

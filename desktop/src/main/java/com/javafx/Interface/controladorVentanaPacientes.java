@@ -236,9 +236,17 @@ public class controladorVentanaPacientes {
             return;
         }
 
-        listaPacientes.clear();
-        List<Paciente> pacientesEncontrados = pacienteDAO.buscarPorTexto(texto);
-        listaPacientes.addAll(pacientesEncontrados);
+        try {
+            listaPacientes.clear();
+            List<Paciente> pacientesEncontrados = pacienteDAO.buscarPorTexto(texto);
+            listaPacientes.addAll(pacientesEncontrados);
+        } catch (ConexionException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "No se pudo buscar pacientes (sin conexion con la API).", TipoMensaje.ERROR);
+        } catch (Exception e) {
+            System.err.println("Error al buscar pacientes: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -269,12 +277,26 @@ public class controladorVentanaPacientes {
      * Carga todos los pacientes desde la base de datos
      */
     private void cargarPacientes() {
-        // OPTIMIZACION: Cargar todos los pacientes y usar paginacion
-        todosPacientes = pacienteDAO.listarTodos();
-        paginacion.setDatos(todosPacientes);
-
-        System.out.println("Pacientes cargados: " + todosPacientes.size() +
-                           " (mostrando " + listaPacientes.size() + " por pagina)");
+        try {
+            todosPacientes = pacienteDAO.listarTodos();
+            if (todosPacientes == null) todosPacientes = new java.util.ArrayList<>();
+            paginacion.setDatos(todosPacientes);
+            System.out.println("Pacientes cargados: " + todosPacientes.size()
+                    + " (mostrando " + listaPacientes.size() + " por pagina)");
+        } catch (ConexionException e) {
+            todosPacientes = new java.util.ArrayList<>();
+            paginacion.setDatos(todosPacientes);
+            VentanaUtil.mostrarVentanaInformativa(
+                    "No se pudo cargar la lista de pacientes (sin conexion con la API).",
+                    TipoMensaje.ERROR);
+        } catch (Exception e) {
+            todosPacientes = new java.util.ArrayList<>();
+            paginacion.setDatos(todosPacientes);
+            System.err.println("Error al cargar pacientes: " + e.getMessage());
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error al cargar pacientes: " + e.getMessage(), TipoMensaje.ERROR);
+        }
     }
 
     /**
@@ -430,7 +452,18 @@ public class controladorVentanaPacientes {
      */
     private void aplicarFiltros(controladorFiltroPacientes.FiltrosPaciente filtros) {
         //Obtener todos los pacientes
-        List<Paciente> todosLosPacientes = pacienteDAO.listarTodos();
+        List<Paciente> todosLosPacientes;
+        try {
+            todosLosPacientes = pacienteDAO.listarTodos();
+        } catch (ConexionException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "No se pudo aplicar el filtro (sin conexion con la API).", TipoMensaje.ERROR);
+            return;
+        } catch (Exception e) {
+            System.err.println("Error al filtrar pacientes: " + e.getMessage());
+            e.printStackTrace();
+            return;
+        }
 
         //Filtrar segun los criterios
         List<Paciente> pacientesFiltrados = todosLosPacientes.stream()
@@ -491,14 +524,20 @@ public class controladorVentanaPacientes {
 
         listaPacientes.clear();
 
-        if (textoBusqueda.isEmpty()) {
-            //Si no hay texto, mostrar todos
-            List<Paciente> pacientes = pacienteDAO.listarTodos();
-            listaPacientes.addAll(pacientes);
-        } else {
-            //Buscar por texto
-            List<Paciente> pacientes = pacienteDAO.buscarPorTexto(textoBusqueda);
-            listaPacientes.addAll(pacientes);
+        try {
+            if (textoBusqueda.isEmpty()) {
+                List<Paciente> pacientes = pacienteDAO.listarTodos();
+                listaPacientes.addAll(pacientes);
+            } else {
+                List<Paciente> pacientes = pacienteDAO.buscarPorTexto(textoBusqueda);
+                listaPacientes.addAll(pacientes);
+            }
+        } catch (ConexionException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "No se pudo realizar la busqueda (sin conexion con la API).", TipoMensaje.ERROR);
+        } catch (Exception e) {
+            System.err.println("Error al buscar pacientes: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -600,6 +639,40 @@ public class controladorVentanaPacientes {
                     "Detalles: " + e.getMessage(),
                     TipoMensaje.ERROR
             );
+        }
+    }
+
+    /** Abre la ventana de progreso del paciente seleccionado en la tabla. */
+    @FXML
+    void abrirProgresoSeleccionado(ActionEvent event) {
+        Paciente sel = tblPacientes.getSelectionModel().getSelectedItem();
+        if (sel == null) {
+            VentanaUtil.mostrarVentanaInformativa(
+                "Selecciona un paciente para ver su progreso.", TipoMensaje.ADVERTENCIA);
+            return;
+        }
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaProgresoPaciente.fxml"));
+            Parent root = loader.load();
+            controladorVentanaProgresoPaciente ctrl = loader.getController();
+
+            Scene scene = new Scene(root);
+            com.javafx.Interface.controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
+            Stage stage = new Stage();
+            stage.setTitle("Progreso — " + sel.getDni());
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setResizable(true);
+            VentanaUtil.establecerIconoVentana(stage);
+
+            ctrl.inicializarConDni(sel.getDni());
+            stage.showAndWait();
+        } catch (Exception e) {
+            System.err.println("Error al abrir ventana de progreso: " + e.getMessage());
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                "Error al abrir la ventana de progreso.", TipoMensaje.ERROR);
         }
     }
 }

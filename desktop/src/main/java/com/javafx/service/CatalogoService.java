@@ -2,7 +2,9 @@ package com.javafx.service;
 
 import com.javafx.Clases.Discapacidad;
 import com.javafx.Clases.NivelProgresion;
+import com.javafx.Clases.PdfMetadato;
 import com.javafx.Clases.Tratamiento;
+import com.javafx.Clases.Videojuego;
 import com.javafx.DAO.CatalogoDAO;
 import com.javafx.dto.DiscapacidadRequest;
 import com.javafx.dto.TratamientoRequest;
@@ -88,5 +90,37 @@ public class CatalogoService {
 
     public List<Discapacidad> listarDiscapacidadesDeTratamiento(String codTrat) {
         return catalogoDAO.listarDiscapacidadesDeTratamiento(codTrat);
+    }
+
+    // ==================== PDF DE TRATAMIENTO ====================
+
+    public void subirPdfTratamiento(String codTrat, byte[] bytes, String filename) {
+        catalogoDAO.subirPdfTratamiento(codTrat, bytes, filename);
+    }
+
+    public PdfMetadato consultarMetadatosPdf(String codTrat) {
+        return catalogoDAO.consultarMetadatosPdf(codTrat);
+    }
+
+    public byte[] descargarPdfTratamiento(String codTrat) {
+        return catalogoDAO.descargarPdfTratamiento(codTrat);
+    }
+
+    public void eliminarPdfTratamiento(String codTrat) {
+        catalogoDAO.eliminarPdfTratamiento(codTrat);
+    }
+
+    // ==================== ASOCIACION TRATAMIENTO-VIDEOJUEGO ====================
+
+    public List<Videojuego> listarJuegosDeTratamiento(String codTrat) {
+        return catalogoDAO.listarJuegosDeTratamiento(codTrat);
+    }
+
+    public void vincularJuego(String codTrat, long idVideojuego) {
+        catalogoDAO.vincularJuego(codTrat, idVideojuego);
+    }
+
+    public void desvincularJuego(String codTrat, long idVideojuego) {
+        catalogoDAO.desvincularJuego(codTrat, idVideojuego);
     }
 }

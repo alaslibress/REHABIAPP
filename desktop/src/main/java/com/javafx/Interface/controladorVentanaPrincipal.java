@@ -279,6 +279,22 @@ public class controladorVentanaPrincipal {
         } catch (Exception e) {
             System.err.println("Error al cargar pestaña " + nombrePestania + ": " + e.getMessage());
             e.printStackTrace();
+            // Limpiar cache corrupto para que el proximo intento recargue desde FXML
+            cachePestanias.remove(nombrePestania);
+            cacheControladores.remove(nombrePestania);
+            // Mostrar placeholder en el centro para que la app no quede en blanco
+            Label errorLabel = new Label(
+                "No se pudo abrir la pestana \"" + nombrePestania + "\".\n"
+                + "Revise la conexion con el servidor o reinicie la aplicacion.");
+            errorLabel.getStyleClass().add("label-error-pestania");
+            VBox placeholder = new VBox(errorLabel);
+            placeholder.setAlignment(javafx.geometry.Pos.CENTER);
+            placeholder.getStyleClass().add("panel-card");
+            bdpPrincipal.setCenter(placeholder);
+            pestaniaActual = nombrePestania;
+            VentanaUtil.mostrarVentanaInformativa(
+                "Error al abrir la pestana de " + nombrePestania + ": " + e.getMessage(),
+                TipoMensaje.ERROR);
         }
     }
 

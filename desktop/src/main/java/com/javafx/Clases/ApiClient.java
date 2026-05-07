@@ -285,6 +285,23 @@ public class ApiClient {
     }
 
     /**
+     * GET binario (PDF, imagenes, etc.). Devuelve los bytes crudos.
+     * Lanza ConexionException si el status != 200.
+     */
+    public byte[] getBytes(String path) {
+        return ejecutarConReintento(() -> ejecutarGetBytes(path));
+    }
+
+    /**
+     * Sube un unico fichero como multipart/form-data (sin parte JSON).
+     * Usado por endpoints que solo esperan @RequestParam("file") MultipartFile.
+     */
+    public <T> T uploadFile(String path, String partName, byte[] bytes,
+                            String fileName, String mime, Class<T> responseType) {
+        return ejecutarConReintento(() -> ejecutarUploadFile(path, partName, bytes, fileName, mime, responseType));
+    }
+
+    /**
      * DELETE con query params adicionales.
      */
     public void delete(String path, Map<String, String> queryParams) {
@@ -538,6 +555,72 @@ public class ApiClient {
             return error.message() != null ? error.message() : responseBody;
         } catch (Exception e) {
             return responseBody;
+        }
+    }
+
+    private byte[] ejecutarGetBytes(String path) {
+        LOG.debug("GET (bytes) {}{}", baseUrl, path);
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + path))
+                .timeout(timeout)
+                .header("Authorization", "Bearer " + accessToken)
+                .GET()
+                .build();
+            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            LOG.debug("GET (bytes) {}{} -> {} ({} bytes)", baseUrl, path, response.statusCode(),
+                    response.body() != null ? response.body().length : 0);
+            if (response.statusCode() == 200) {
+                return response.body();
+            }
+            String bodyStr = response.body() != null ? new String(response.body(), StandardCharsets.UTF_8) : "";
+            manejarErrorHttp(response.statusCode(), bodyStr);
+            return null;
+        } catch (ConexionException | AutenticacionException | PermisoException
+                 | ValidacionException | DuplicadoException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ConexionException("Error al descargar binario: " + e.getMessage(), e);
+        }
+    }
+
+    private <T> T ejecutarUploadFile(String path, String partName, byte[] bytes,
+                                     String fileName, String mime, Class<T> responseType) {
+        try {
+            String boundary = "----RehabiAppFile" + System.currentTimeMillis();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+            String fileHeader = "--" + boundary + "\r\n"
+                    + "Content-Disposition: form-data; name=\"" + partName
+                    + "\"; filename=\"" + fileName + "\"\r\n"
+                    + "Content-Type: " + mime + "\r\n\r\n";
+            out.write(fileHeader.getBytes(StandardCharsets.UTF_8));
+            out.write(bytes);
+            out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+            out.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+            byte[] cuerpo = out.toByteArray();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + path))
+                    .timeout(timeout)
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(cuerpo))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            LOG.debug("POST file {}{} -> {}", baseUrl, path, response.statusCode());
+            if (response.statusCode() == 200 || response.statusCode() == 201 || response.statusCode() == 204) {
+                if (responseType == Void.class || response.body() == null || response.body().isEmpty()) return null;
+                return objectMapper.readValue(response.body(), responseType);
+            }
+            manejarErrorHttp(response.statusCode(), response.body());
+            return null;
+        } catch (ConexionException | AutenticacionException | PermisoException
+                 | ValidacionException | DuplicadoException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ConexionException("Error al subir fichero: " + e.getMessage(), e);
         }
     }
 

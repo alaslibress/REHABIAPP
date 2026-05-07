@@ -111,6 +111,11 @@
                         <Tooltip text="Generar informe PDF del paciente seleccionado" />
                     </tooltip>
                 </Button>
+                <Button fx:id="btnProgresoPaciente" mnemonicParsing="false" onAction="#abrirProgresoSeleccionado" prefHeight="26.0" prefWidth="100.0" styleClass="button-secundario" text="Progreso">
+                    <tooltip>
+                        <Tooltip text="Ver progreso clinico del paciente seleccionado" />
+                    </tooltip>
+                </Button>
                 <Button fx:id="btnEliminarPaciente" mnemonicParsing="false" onAction="#eliminarPacienteSeleccionado" prefHeight="26.0" prefWidth="126.0" styleClass="button-peligro" text="Eliminar" textAlignment="CENTER" />
                 <Button fx:id="btnAbrirPaciente" mnemonicParsing="false" onAction="#abrirFichaPaciente" prefHeight="26.0" prefWidth="126.0" styleClass="button-primario" text="Abrir" />
             </children>

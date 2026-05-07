@@ -933,7 +933,41 @@
     -fx-padding: 14px 18px 12px 18px;
 }
 
+/* ====== A.3 TEXTOS MODALES CENTRADOS ====== */
+.modal-texto-centrado,
+.modal-texto-centrado .label {
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+
+/* ====== A.4 FONDO CORRECTO EN SCROLL-PANE RAIZ DE MODALES ====== */
+.root.modal-root,
+.root.modal-root > * {
+    -fx-background-color: -color-fondo-panel;
+}
+.scroll-pane.root,
+.scroll-pane.root > .viewport,
+.scroll-pane.root > .viewport > * {
+    -fx-background-color: -color-fondo-panel;
+}
+
+/* ====== D GRAFICOS DE PROGRESO ====== */
+.grafico-progreso .chart-line-symbol.punto-baseline { -fx-background-color: #5DADE2, white; }
+.grafico-progreso .chart-line-symbol.punto-actual   { -fx-background-color: #2e9d58, white; }
+
 /* Correccion B.11: circuloConexion es Circle (usa -fx-fill, no -fx-background-color) */
 .indicador-conexion-ok   { -fx-fill: #2e9d58;  -fx-background-color: #2e9d58; }
 .indicador-conexion-ko   { -fx-fill: #d14b4b;  -fx-background-color: #d14b4b; }
+
+/* === A.2 Footer de modales === */
+.modal-footer { -fx-padding: 12 16 12 16; -fx-spacing: 10; }
 .indicador-conexion-wait { -fx-fill: #e0b02c;  -fx-background-color: #e0b02c; }
+
+/* === G: Placeholder de pestana con error === */
+.label-error-pestania {
+    -fx-text-fill: #E74C3C;
+    -fx-font-size: 14px;
+    -fx-text-alignment: center;
+    -fx-wrap-text: true;
+    -fx-padding: 30 30 30 30;
+}

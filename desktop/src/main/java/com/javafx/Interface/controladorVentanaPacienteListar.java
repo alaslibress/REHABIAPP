@@ -865,6 +865,37 @@ public class controladorVentanaPacienteListar {
         stage.close();
     }
 
+    /** Abre la ventana de progreso del paciente actualmente cargado. */
+    @FXML
+    void abrirProgreso(ActionEvent event) {
+        if (pacienteActual == null) return;
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
+                getClass().getResource("/VentanaProgresoPaciente.fxml"));
+            javafx.scene.Parent root = loader.load();
+            controladorVentanaProgresoPaciente ctrl = loader.getController();
+
+            javafx.scene.Scene scene = new javafx.scene.Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
+            Stage stage = new Stage();
+            stage.setTitle("Progreso — " + pacienteActual.getDni());
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setResizable(true);
+            com.javafx.Clases.VentanaUtil.establecerIconoVentana(stage);
+
+            ctrl.inicializarConDni(pacienteActual.getDni());
+            stage.showAndWait();
+        } catch (Exception e) {
+            System.err.println("Error al abrir ventana de progreso: " + e.getMessage());
+            e.printStackTrace();
+            com.javafx.Clases.VentanaUtil.mostrarVentanaInformativa(
+                "Error al abrir la ventana de progreso.",
+                com.javafx.Clases.VentanaUtil.TipoMensaje.ERROR);
+        }
+    }
+
     public boolean hayCambiosRealizados() {
         return cambiosRealizados;
     }

@@ -55,6 +55,9 @@ public class controladorVentanaTratamientos {
     private Button btnFiltrarTratamientos;
 
     @FXML
+    private Button btnVerTratamiento;
+
+    @FXML
     private TableColumn<Tratamiento, String> colCodigo;
 
     @FXML
@@ -312,6 +315,11 @@ public class controladorVentanaTratamientos {
         } else {
             System.out.println("Permisos completos aplicados para tratamientos: " + sesion.getCargo());
         }
+        // El boton "Ver" esta siempre disponible para todos los roles que accedan a esta pestana
+        if (btnVerTratamiento != null) {
+            btnVerTratamiento.setDisable(false);
+            btnVerTratamiento.setOpacity(1.0);
+        }
     }
 
     /**
@@ -463,14 +471,51 @@ public class controladorVentanaTratamientos {
 
     /**
      * Maneja el evento de doble clic en la tabla.
-     * Si es doble clic, abre el formulario de edicion.
+     * El doble clic abre la vista de solo lectura del tratamiento.
      */
     private void manejarDobleClicTabla(MouseEvent event) {
         if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
             Tratamiento seleccionado = tblTratamientos.getSelectionModel().getSelectedItem();
             if (seleccionado != null) {
-                editarTratamientoSeleccionado(null);
+                verTratamientoSeleccionado(null);
             }
+        }
+    }
+
+    /**
+     * Abre el formulario en modo solo lectura para el tratamiento seleccionado.
+     * Reutiliza VentanaAgregarTratamiento.fxml con el nuevo modo VER.
+     */
+    @FXML
+    void verTratamientoSeleccionado(ActionEvent event) {
+        Tratamiento seleccionado = tblTratamientos.getSelectionModel().getSelectedItem();
+        if (seleccionado == null) {
+            VentanaUtil.mostrarVentanaInformativa(
+                "Debe seleccionar un tratamiento de la lista.",
+                TipoMensaje.ADVERTENCIA);
+            return;
+        }
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaAgregarTratamiento.fxml"));
+            Parent root = loader.load();
+            controladorAgregarTratamiento controlador = loader.getController();
+            controlador.cargarDatosParaVer(seleccionado);
+
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
+            Stage stage = new Stage();
+            stage.setTitle("Ver Tratamiento");
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setResizable(false);
+            VentanaUtil.establecerIconoVentana(stage);
+            stage.showAndWait();
+        } catch (Exception e) {
+            System.err.println("Error al abrir vista de tratamiento: " + e.getMessage());
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                "Error al abrir la vista del tratamiento.", TipoMensaje.ERROR);
         }
     }
 }

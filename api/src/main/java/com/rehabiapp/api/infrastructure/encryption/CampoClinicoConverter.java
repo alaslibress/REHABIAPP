@@ -96,7 +96,8 @@ public class CampoClinicoConverter implements AttributeConverter<String, String>
      */
     @Override
     public String convertToEntityAttribute(String datos) {
-        if (datos == null) {
+        // Cadena vacía o solo espacios: tratar como ausencia de valor (mismo que null)
+        if (datos == null || datos.isBlank()) {
             return null;
         }
         try {

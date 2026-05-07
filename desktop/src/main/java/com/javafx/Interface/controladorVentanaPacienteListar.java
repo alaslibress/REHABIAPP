@@ -11,6 +11,8 @@ import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.PacienteDAO;
 import com.javafx.excepcion.ConexionException;
+import com.javafx.excepcion.PermisoException;
+import com.javafx.excepcion.RehabiAppException;
 import com.javafx.excepcion.ValidacionException;
 import com.javafx.service.CatalogoService;
 import com.javafx.service.PacienteClinicoService;
@@ -150,9 +152,13 @@ public class controladorVentanaPacienteListar {
             for (NivelProgresion nivel : niveles) {
                 mapaNiveles.put(nivel.getNombreCorto(), nivel);
             }
-        } catch (ConexionException e) {
-            //Si falla la carga, los tooltips simplemente no se mostraran
-            System.err.println("No se pudieron cargar los niveles para tooltips: " + e.getMessage());
+        } catch (RehabiAppException e) {
+            // Los tooltips son opcionales — cualquier fallo del API no puede romper initialize()
+            System.err.println("No se pudieron cargar los niveles para tooltips ("
+                    + e.getClass().getSimpleName() + "): " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error inesperado cargando niveles: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -315,30 +321,57 @@ public class controladorVentanaPacienteListar {
     public void cargarDatosPaciente(String dni) {
         this.dniPacienteActual = dni;
 
-        //Cargar catalogo de tratamientos una sola vez para usarlo en el filtrado
+        // Catalogo de tratamientos: opcional (solo para filtrado por nivel)
         try {
             List<Tratamiento> catalogo = catalogoService.listarTratamientos();
             mapaTratamientos.clear();
             for (Tratamiento t : catalogo) {
                 mapaTratamientos.put(t.getCodTrat(), t);
             }
-        } catch (ConexionException e) {
-            System.err.println("No se pudo cargar el catalogo de tratamientos: " + e.getMessage());
+        } catch (RehabiAppException e) {
+            System.err.println("No se pudo cargar el catalogo de tratamientos ("
+                    + e.getClass().getSimpleName() + "): " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error inesperado al cargar catalogo: " + e.getMessage());
         }
 
-        pacienteActual = pacienteDAO.obtenerPorDNI(dni);
+        // Obtener paciente — bloqueante, sin paciente no hay ficha
+        boolean errorYaMostrado = false;
+        try {
+            pacienteActual = pacienteDAO.obtenerPorDNI(dni);
+        } catch (PermisoException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "No tienes permisos para ver este paciente.\nDetalle: " + e.getMessage(),
+                    TipoMensaje.ERROR);
+            pacienteActual = null;
+            errorYaMostrado = true;
+        } catch (ConexionException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Sin conexion con la API: " + e.getMessage(), TipoMensaje.ERROR);
+            pacienteActual = null;
+            errorYaMostrado = true;
+        } catch (RehabiAppException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error al cargar el paciente: " + e.getMessage(), TipoMensaje.ERROR);
+            pacienteActual = null;
+            errorYaMostrado = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error inesperado al cargar el paciente.", TipoMensaje.ERROR);
+            pacienteActual = null;
+            errorYaMostrado = true;
+        }
 
         if (pacienteActual != null) {
             mostrarDatosEnLabels();
             cargarFotoPaciente();
             cargarDiscapacidadesPaciente();
-
             // La API registra automaticamente el acceso a datos clinicos (AuditReadInterceptor)
-        } else {
+        } else if (!errorYaMostrado) {
             VentanaUtil.mostrarVentanaInformativa(
                     "No se encontro el paciente con DNI: " + dni,
-                    TipoMensaje.ERROR
-            );
+                    TipoMensaje.ERROR);
         }
     }
 

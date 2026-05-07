@@ -174,7 +174,7 @@ public class ApiClient {
             String bodyRecortado = response.body() != null && response.body().length() > 500
                     ? response.body().substring(0, 500) : response.body();
             LOG.warn("Login fallido para {}: status={} body={}", dni, response.statusCode(), bodyRecortado);
-            manejarErrorHttp(response.statusCode(), response.body());
+            manejarErrorHttp(response.statusCode(), response.body(), "/api/auth/login");
             return null; // No alcanzable, manejarErrorHttp siempre lanza excepcion
         } catch (ConexionException | AutenticacionException | PermisoException |
                  ValidacionException | DuplicadoException e) {
@@ -325,7 +325,7 @@ public class ApiClient {
             if (response.statusCode() == 200) {
                 return objectMapper.readValue(response.body(), responseType);
             }
-            manejarErrorHttp(response.statusCode(), response.body());
+            manejarErrorHttp(response.statusCode(), response.body(), path);
             return null;
         } catch (ConexionException | AutenticacionException | PermisoException |
                  ValidacionException | DuplicadoException e) {
@@ -344,7 +344,7 @@ public class ApiClient {
             if (response.statusCode() == 200) {
                 return objectMapper.readValue(response.body(), responseType);
             }
-            manejarErrorHttp(response.statusCode(), response.body());
+            manejarErrorHttp(response.statusCode(), response.body(), path);
             return null;
         } catch (ConexionException | AutenticacionException | PermisoException |
                  ValidacionException | DuplicadoException e) {
@@ -373,7 +373,7 @@ public class ApiClient {
                 }
                 return objectMapper.readValue(response.body(), responseType);
             }
-            manejarErrorHttp(response.statusCode(), response.body());
+            manejarErrorHttp(response.statusCode(), response.body(), path);
             return null;
         } catch (ConexionException | AutenticacionException | PermisoException |
                  ValidacionException | DuplicadoException e) {
@@ -402,7 +402,7 @@ public class ApiClient {
                 }
                 return objectMapper.readValue(response.body(), responseType);
             }
-            manejarErrorHttp(response.statusCode(), response.body());
+            manejarErrorHttp(response.statusCode(), response.body(), path);
             return null;
         } catch (ConexionException | AutenticacionException | PermisoException |
                  ValidacionException | DuplicadoException e) {
@@ -431,7 +431,7 @@ public class ApiClient {
                 }
                 return objectMapper.readValue(response.body(), responseType);
             }
-            manejarErrorHttp(response.statusCode(), response.body());
+            manejarErrorHttp(response.statusCode(), response.body(), path);
             return null;
         } catch (ConexionException | AutenticacionException | PermisoException |
                  ValidacionException | DuplicadoException e) {
@@ -455,7 +455,7 @@ public class ApiClient {
             if (response.statusCode() == 200 || response.statusCode() == 204) {
                 return;
             }
-            manejarErrorHttp(response.statusCode(), response.body());
+            manejarErrorHttp(response.statusCode(), response.body(), path);
         } catch (ConexionException | AutenticacionException | PermisoException |
                  ValidacionException | DuplicadoException e) {
             throw e;
@@ -527,32 +527,40 @@ public class ApiClient {
 
     /**
      * Traduce codigos de error HTTP a excepciones del dominio.
+     * El parametro path se incluye en el mensaje para facilitar el diagnostico.
      */
-    private void manejarErrorHttp(int statusCode, String responseBody) {
+    private void manejarErrorHttp(int statusCode, String responseBody, String path) {
         String mensaje = extraerMensajeError(responseBody);
         String bodyRecortado = responseBody != null && responseBody.length() > 500
                 ? responseBody.substring(0, 500) : responseBody;
-        LOG.warn("Error HTTP {}: body={}", statusCode, bodyRecortado);
+        LOG.warn("Error HTTP {} en {}: body={}", statusCode, path, bodyRecortado);
         switch (statusCode) {
             case 400 -> throw new ValidacionException(mensaje, "peticion");
             case 401 -> throw new AutenticacionException(mensaje);
-            case 403 -> throw new PermisoException(mensaje);
+            case 403 -> throw new PermisoException("Acceso denegado a " + path
+                    + ("Acceso denegado por el servidor (sin detalle)".equals(mensaje) ? "" : ": " + mensaje));
             case 404 -> throw new ValidacionException(mensaje, "entidad");
             case 409 -> throw new DuplicadoException(mensaje, "registro");
-            default -> throw new ConexionException("Error de servidor (" + statusCode + "): " + mensaje);
+            default -> throw new ConexionException(
+                    "Error de servidor (" + statusCode + ") en " + path + ": " + mensaje);
         }
     }
 
     /**
-     * Extrae el campo message del JSON de error de la API, o devuelve el body completo.
+     * Extrae el campo error/detalle/message del JSON de error de la API.
+     * Si el body es null o vacio (Spring Security devuelve 403 sin body),
+     * retorna un mensaje generico legible en lugar de "Error desconocido".
      */
     private String extraerMensajeError(String responseBody) {
-        if (responseBody == null || responseBody.isEmpty()) {
-            return "Error desconocido";
+        if (responseBody == null || responseBody.isBlank()) {
+            return "Acceso denegado por el servidor (sin detalle)";
         }
         try {
             ErrorResponse error = objectMapper.readValue(responseBody, ErrorResponse.class);
-            return error.message() != null ? error.message() : responseBody;
+            // La API retorna {"error":"...","detalle":"..."} — probar ambos campos
+            if (error.message() != null && !error.message().isBlank()) return error.message();
+            if (error.error() != null && !error.error().isBlank()) return error.error();
+            return responseBody;
         } catch (Exception e) {
             return responseBody;
         }
@@ -574,7 +582,7 @@ public class ApiClient {
                 return response.body();
             }
             String bodyStr = response.body() != null ? new String(response.body(), StandardCharsets.UTF_8) : "";
-            manejarErrorHttp(response.statusCode(), bodyStr);
+            manejarErrorHttp(response.statusCode(), bodyStr, path);
             return null;
         } catch (ConexionException | AutenticacionException | PermisoException
                  | ValidacionException | DuplicadoException e) {
@@ -614,7 +622,7 @@ public class ApiClient {
                 if (responseType == Void.class || response.body() == null || response.body().isEmpty()) return null;
                 return objectMapper.readValue(response.body(), responseType);
             }
-            manejarErrorHttp(response.statusCode(), response.body());
+            manejarErrorHttp(response.statusCode(), response.body(), path);
             return null;
         } catch (ConexionException | AutenticacionException | PermisoException
                  | ValidacionException | DuplicadoException e) {
@@ -680,7 +688,7 @@ public class ApiClient {
                 }
                 return objectMapper.readValue(response.body(), responseType);
             }
-            manejarErrorHttp(response.statusCode(), response.body());
+            manejarErrorHttp(response.statusCode(), response.body(), path);
             return null;
         } catch (ConexionException | AutenticacionException | PermisoException
                  | ValidacionException | DuplicadoException e) {

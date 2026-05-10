@@ -15,34 +15,41 @@ import javax.sql.DataSource;
  * spring-boot-autoconfigure. Es necesario instanciar y configurar Flyway
  * explicitamente como bean de Spring para que las migraciones se ejecuten
  * al arrancar la aplicacion.
+ *
+ * Property `rehabiapp.flyway.repair-on-startup` (default false): cuando
+ * true, ejecuta Flyway.repair() ANTES de migrate. Util tras renombrar o
+ * editar migraciones ya aplicadas en la BD (corrige checksums en
+ * flyway_schema_history sin perder datos). Levantar UNA vez con la flag
+ * en true y volver a apagarla despues.
  */
 @Configuration
 public class FlywayConfig {
 
-    /**
-     * Configura e inicia Flyway con el DataSource de la aplicacion.
-     *
-     * - baseline-on-migrate: permite aplicar migraciones sobre una BD ya existente
-     *   (compatibilidad con el esquema creado por el ERP de escritorio via JDBC directo).
-     * - baseline-version: 0 indica que el baseline representa el estado previo a V1.
-     * - validate-on-migrate: verifica el checksum de cada migracion antes de aplicarla.
-     * - locations: directorio de los scripts SQL versionados en el classpath.
-     */
-    @Bean(initMethod = "migrate")
+    @Bean
     @ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
     public Flyway flyway(
             DataSource dataSource,
             @Value("${spring.flyway.locations:classpath:db/migration}") String locations,
             @Value("${spring.flyway.baseline-on-migrate:true}") boolean baselineOnMigrate,
             @Value("${spring.flyway.baseline-version:0}") String baselineVersion,
-            @Value("${spring.flyway.validate-on-migrate:true}") boolean validateOnMigrate
+            @Value("${spring.flyway.validate-on-migrate:true}") boolean validateOnMigrate,
+            @Value("${rehabiapp.flyway.repair-on-startup:false}") boolean repairOnStartup
     ) {
-        return Flyway.configure()
+        Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations(locations)
                 .baselineOnMigrate(baselineOnMigrate)
                 .baselineVersion(baselineVersion)
                 .validateOnMigrate(validateOnMigrate)
                 .load();
+
+        // Repair condicional: corrige checksums en flyway_schema_history cuando
+        // una migracion fue editada/renombrada despues de aplicarse. NO altera
+        // datos de la BD; solo la tabla de historial de Flyway.
+        if (repairOnStartup) {
+            flyway.repair();
+        }
+        flyway.migrate();
+        return flyway;
     }
 }

@@ -1,9 +1,9 @@
-# PLAN.md — API iteration 2026-04-29
+# PLAN.md — API iteration 2026-04-29 (Phase 14 hotfix appended 2026-05-07)
 
 > **Branch:** stats-implementation
 > **Author:** Agent 0/1 Thinker (Opus) — PRESCRIPTIVE. Doer (Sonnet) MUST follow step by step.
 > **Language:** All code/comments in Spanish (root `CLAUDE.md` §4.5). This plan in English.
-> **Scope:** Phases 4-10 del checklist `/api/CLAUDE.md` §5.
+> **Scope:** Phases 4-14 del checklist `/api/CLAUDE.md` §5. Phase 14 (Flyway checksum recovery) es BLOCKING y se ejecuta primero en esta sesion.
 
 ---
 
@@ -12,11 +12,202 @@
 Antes de tocar codigo, leer:
 
 1. `/CLAUDE.md` raiz — §4.5 estilo, §4.6 seguridad, §10 TestSprite.
-2. `/api/CLAUDE.md` — §5 checklist Phase 4-10.
+2. `/api/CLAUDE.md` — §5 checklist Phase 4-14.
 3. `/api/.claude/skills/springboot4-postgresql/SKILL.md` — TODAS las reglas (CSFLE no aplica aqui, AES-256-GCM si).
 4. `/data/PLAN.md` Phase 5-6 — endpoints que el API consumira.
 5. `/desktop/PLAN.md` Phase B-E — consumidores de los endpoints nuevos.
 6. `/mobile/backend/PLAN.md` — consumidores del dashboard endpoint.
+
+---
+
+## PHASE 14 — FLYWAY CHECKSUM MISMATCH RECOVERY (BLOCKING — DO FIRST AHORA, 2026-05-07)
+
+### 14.1 Sintoma exacto (verbatim del log)
+
+```
+org.flywaydb.core.api.exception.FlywayValidateException: Validate failed: Migrations have failed validation
+Migration checksum mismatch for migration version 13
+-> Applied to database : 859615312
+-> Resolved locally    : 1886437982
+Either revert the changes to the migration, or run repair to update the schema history.
+```
+
+`Application run failed` durante `flyway` bean init. La app NO arranca.
+
+### 14.2 Causa raiz (NO investigar — ya diagnosticada por Thinker)
+
+V13 fue **renombrado y reescrito** dentro de la branch `stats-implementation`:
+
+- Nombre antiguo (Phase 6.1 original): `V13__videojuego_y_tratamiento_pdf.sql` — checksum aplicado en BD = `859615312`.
+- Nombre actual (commit `b6c63e0`, fichero presente): `V13__videojuego_pdf_md.sql` — checksum local = `1886437982`.
+
+La BD ya tiene aplicada la version vieja de V13 (cuando se hizo Phase 6 inicial). Las tablas resultantes (`videojuego`, `tratamiento_videojuego`, columnas `tratamiento.archivo_pdf*`, columnas `paciente.archivo_progreso_md*`, audits) **coinciden estructuralmente** con el V13 actual. Solo difiere el cuerpo del script (comentarios, orden, nombre de constraint).
+
+Por tanto: **REPAIR es seguro**. NO regenerar BD desde cero (mantener `paciente.contrasena_pac` ya seedeado por V15, datos de V14, y cualquier dato manual del desarrollador).
+
+### 14.3 Path A — REPAIR programatico via FlywayConfig (DO THIS NOW)
+
+El Doer ejecuta los siguientes pasos en orden, **sin desviacion**.
+
+#### 14.3.1 Snapshot pre-repair (read-only, opcional pero recomendado)
+
+```bash
+docker compose -f infra/docker-compose.yml exec postgres \
+  psql -U rehabiapp -d rehabiapp \
+  -c "SELECT version, description, checksum, success FROM flyway_schema_history WHERE version IN ('13','14','15') ORDER BY installed_rank;"
+```
+
+> Si `POSTGRES_USER` / `POSTGRES_DB` reales difieren, leer `infra/docker-compose.yml` o `.env` para los valores exactos. NO inventar credenciales.
+
+V13 debe aparecer con checksum `859615312`. Confirma el diagnostico.
+
+#### 14.3.2 Editar `FlywayConfig.java` — anadir flag `repair-on-startup`
+
+Path: `api/src/main/java/com/rehabiapp/api/infrastructure/config/FlywayConfig.java`. Reemplazar el contenido completo del fichero por:
+
+```java
+package com.rehabiapp.api.infrastructure.config;
+
+import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import javax.sql.DataSource;
+
+/**
+ * Configuracion manual de Flyway.
+ *
+ * Spring Boot 4.0.5 elimino la autoconfiguracion de Flyway del modulo
+ * spring-boot-autoconfigure. Es necesario instanciar y configurar Flyway
+ * explicitamente como bean de Spring para que las migraciones se ejecuten
+ * al arrancar la aplicacion.
+ *
+ * Property `rehabiapp.flyway.repair-on-startup` (default false): cuando
+ * true, ejecuta Flyway.repair() ANTES de migrate. Util tras renombrar o
+ * editar migraciones ya aplicadas en la BD (corrige checksums en
+ * flyway_schema_history sin perder datos). Levantar UNA vez con la flag
+ * en true y volver a apagarla despues.
+ */
+@Configuration
+public class FlywayConfig {
+
+    @Bean
+    @ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
+    public Flyway flyway(
+            DataSource dataSource,
+            @Value("${spring.flyway.locations:classpath:db/migration}") String locations,
+            @Value("${spring.flyway.baseline-on-migrate:true}") boolean baselineOnMigrate,
+            @Value("${spring.flyway.baseline-version:0}") String baselineVersion,
+            @Value("${spring.flyway.validate-on-migrate:true}") boolean validateOnMigrate,
+            @Value("${rehabiapp.flyway.repair-on-startup:false}") boolean repairOnStartup
+    ) {
+        Flyway flyway = Flyway.configure()
+                .dataSource(dataSource)
+                .locations(locations)
+                .baselineOnMigrate(baselineOnMigrate)
+                .baselineVersion(baselineVersion)
+                .validateOnMigrate(validateOnMigrate)
+                .load();
+
+        // Repair condicional: corrige checksums en flyway_schema_history cuando
+        // una migracion fue editada/renombrada despues de aplicarse. NO altera
+        // datos de la BD; solo la tabla de historial de Flyway.
+        if (repairOnStartup) {
+            flyway.repair();
+        }
+        flyway.migrate();
+        return flyway;
+    }
+}
+```
+
+> **Cambio clave vs version actual:** el bean YA NO usa `initMethod = "migrate"`; ahora `migrate()` se llama manualmente despues del `repair()` condicional. Esto garantiza que `repair` corre antes de `validate`+`migrate`.
+
+#### 14.3.3 Build + arranque one-shot con la flag a true
+
+```bash
+cd api
+./mvnw clean compile
+./mvnw spring-boot:run -Dspring-boot.run.arguments=--rehabiapp.flyway.repair-on-startup=true
+```
+
+Salida esperada en log:
+
+```
+Successfully repaired schema history table "public"."flyway_schema_history" (execution time XX.XXs).
+Migrating schema "public" to version "14 - datos prueba desarrollo"     # si no estaban aplicadas
+Migrating schema "public" to version "15 - paciente contrasena"         # si no estaban aplicadas
+Started ApiApplication in X.XXX seconds
+```
+
+Si V14/V15 ya estaban aplicadas, Flyway las salta — no es error.
+
+#### 14.3.4 Apagar la app y volver a arrancar SIN la flag
+
+```bash
+# Ctrl+C en el shell que corre spring-boot:run
+./mvnw spring-boot:run
+```
+
+Validate vuelve a estar activo y los checksums ya casan. Arranque limpio.
+
+#### 14.3.5 Verificacion
+
+```bash
+docker compose -f infra/docker-compose.yml exec postgres \
+  psql -U rehabiapp -d rehabiapp \
+  -c "SELECT version, description, checksum, success FROM flyway_schema_history WHERE version IN ('13','14','15') ORDER BY installed_rank;"
+```
+
+V13 ahora con checksum `1886437982`, success=`t`. V14, V15 presentes y success=`t`.
+
+```bash
+curl -i http://localhost:8080/actuator/health
+# HTTP/1.1 200 OK
+# {"status":"UP",...}
+```
+
+### 14.4 Path B — FALLBACK manual SQL (solo si Path A falla)
+
+**No usar primero.** Solo si `flyway.repair()` no resuelve el mismatch (raro).
+
+```sql
+-- psql -U rehabiapp -d rehabiapp
+
+-- Patch directo del checksum de V13. NO modificar otras filas.
+UPDATE flyway_schema_history
+SET checksum = 1886437982
+WHERE version = '13'
+  AND description IN ('videojuego y tratamiento pdf', 'videojuego pdf md');
+
+-- Verificar:
+SELECT version, description, checksum FROM flyway_schema_history WHERE version='13';
+```
+
+Reiniciar la app sin flags. Debe arrancar.
+
+### 14.5 PROHIBICIONES (no negociable)
+
+El Doer NO tiene permiso para:
+
+- **Borrar el volumen Postgres** (`docker volume rm`) ni `docker compose down -v`. Hay datos seedeados en V14, password de paciente en V15, y posibles datos manuales.
+- **Cambiar `validate-on-migrate` a `false` en `application.yml`** de forma permanente. Solo el override programatico de §14.3.2 esta autorizado.
+- **Renombrar V13 otra vez ni editar su contenido**. El fichero queda como esta (`V13__videojuego_pdf_md.sql`).
+- **Crear V16, V17, etc. para "compensar"** el mismatch. La unica accion permitida es `flyway.repair()` o el UPDATE de §14.4.
+- **Modificar `baseline-version`** ni `baseline-on-migrate`. Quedan en `8` y `true`.
+- **Tocar otros ficheros** que no sean `FlywayConfig.java` durante Phase 14.
+
+### 14.6 Sanity check antes de marcar Phase 14 done
+
+- [ ] `./mvnw clean compile` → 0 errors.
+- [ ] `./mvnw spring-boot:run` arranca sin `FlywayValidateException`.
+- [ ] `flyway_schema_history` muestra V13 con checksum `1886437982` y success=`t`.
+- [ ] `curl http://localhost:8080/actuator/health` → 200 UP.
+- [ ] `./mvnw test` → 37/37 verde (mismo numero que Phase 13.3 reporto).
+- [ ] `/api/CLAUDE.md` §5 con line item Phase 14 marcado `[x]`.
+- [ ] TestSprite returned 100% sobre `AuthControllerIT` + `ApiApplicationTests` (basta para confirmar boot OK).
 
 ---
 
@@ -895,7 +1086,8 @@ The Doer reports Phase 11 complete ONLY when all of the following are simultaneo
 
 ## ORDER OF EXECUTION
 
-0. **Phase 11 (BUILD FIX)** — BLOCKING. Until compile is green nothing else can be tested or merged.
+0. **Phase 14 (FLYWAY CHECKSUM RECOVERY)** — BLOCKING, do this NOW (2026-05-07). La app no arranca hasta que esto se resuelva.
+0bis. **Phase 11 (BUILD FIX)** — ya done en 11.7, validar que sigue verde tras el cambio en `FlywayConfig.java`.
 1. Phase 4 (H2) — DESBLOQUEA TODO. Sin tests verdes no se puede iterar con confianza.
 2. Phase 6 (V13 schema) — fundacion para PDF (Phase 7), juegos (Phase 6), MD cache (Phase 5).
 3. Phase 7 (PDF) — independiente.

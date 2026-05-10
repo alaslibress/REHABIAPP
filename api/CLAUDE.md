@@ -170,11 +170,21 @@ Sin dependencias circulares entre capas. Domain con cero imports de framework.
 - [x] 12.4 Migracion `V14__datos_prueba_desarrollo.sql` con datos seed idempotentes: sanitario 87654321B (SPECIALIST), paciente 12345678Z (Admin RehabiAPP), discapacidades M16+M54, tratamientos TRT001-TRT004, videojuego GAME-HIP-01, 3 citas.
 - [x] 12.5 Autenticacion de pacientes via app movil: columna `contrasena_pac TEXT` en `paciente` (V15). `PacienteAuthApplicationService` busca por DNI o email, verifica BCrypt, emite JWT `rol=PATIENT`. Nuevo endpoint `POST /api/auth/login-paciente`. Cubierto por 2 tests IT en `AuthControllerIT`. `./mvnw test` — 35/35 verde.
 
+### Phase 14 — Flyway checksum mismatch recovery (BLOCKING, 2026-05-07)
+
+> Detalles prescriptivos en `api/PLAN.md` Phase 14. La app revento al arrancar con `FlywayValidateException` por mismatch de checksum en V13 (renombrado de `V13__videojuego_y_tratamiento_pdf.sql` → `V13__videojuego_pdf_md.sql` despues de aplicarse a la BD).
+
+- [x] 14.1 Editar `infrastructure/config/FlywayConfig.java`: reemplazar bean (eliminar `initMethod="migrate"`), inyectar property `rehabiapp.flyway.repair-on-startup` (default false), invocar `flyway.repair()` cuando true ANTES de `flyway.migrate()`.
+- [x] 14.2 Build + run one-shot con la flag activa: `./mvnw spring-boot:run -Dspring-boot.run.arguments=--rehabiapp.flyway.repair-on-startup=true`. Confirmar log `Successfully repaired schema history table`.
+- [x] 14.3 Apagar la app, volver a arrancar SIN la flag. Verificar arranque limpio + `actuator/health` 200.
+- [x] 14.4 `./mvnw test` → 37/37 verde.
+- [x] 14.5 PROHIBIDO: borrar volumen Postgres, desactivar `validate-on-migrate`, renombrar/editar V13, crear V16+ para compensar, modificar `baseline-version`. Cumplido.
+
 ---
 
 ## 6. DATABASE REFERENCE
 
-> El schema lo define este modulo via Flyway. Las migraciones V1-V14 aplicadas.
+> El schema lo define este modulo via Flyway. Las migraciones V8-V15 aplicadas.
 
 ```
 sanitario, sanitario_agrega_sanitario, telefono_sanitario,

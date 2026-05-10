@@ -16,6 +16,13 @@ spring:
         # Formatea el SQL para mayor legibilidad en los logs
         format_sql: true
 
+# URL del data pipeline — 8081 ocupado por phpMyAdmin en dev local
+rehabiapp:
+  data-service:
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8083}
+  data:
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8083}
+
 # Nivel de log detallado para desarrollo
 logging:
   level:

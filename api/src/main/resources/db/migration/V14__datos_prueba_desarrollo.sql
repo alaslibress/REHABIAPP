@@ -86,6 +86,18 @@ VALUES
 ON CONFLICT (cod_dis, cod_trat) DO NOTHING;
 
 -- ============================================================
+-- DIRECCION DE PRUEBA
+-- Requerida por la FK NOT NULL id_direccion de la tabla paciente.
+-- ============================================================
+
+INSERT INTO direccion (calle, numero, cp)
+SELECT 'Calle Rehabilitacion', '1', '28001'
+WHERE NOT EXISTS (
+    SELECT 1 FROM direccion
+    WHERE calle = 'Calle Rehabilitacion' AND numero = '1' AND cp = '28001'
+);
+
+-- ============================================================
 -- PACIENTE DE PRUEBA
 -- DNI 12345678Z — valido: 12345678 mod 23 = 14 -> letra Z
 -- Referenciado por las credenciales mock del BFF (MOCK_API=true).
@@ -95,15 +107,21 @@ INSERT INTO paciente (
     dni_pac, dni_san,
     nombre_pac, apellido1_pac, apellido2_pac,
     edad_pac, email_pac, num_ss,
+    id_direccion,
     fecha_nacimiento, sexo,
     protesis, consentimiento_rgpd, activo
-) VALUES (
+)
+SELECT
     '12345678Z', '87654321B',
     'Admin', 'RehabiAPP', NULL,
     36, 'admin@rehabiapp.com', '280000000001',
+    d.id_direccion,
     '1990-01-01', 'MASCULINO',
     FALSE, TRUE, TRUE
-) ON CONFLICT (dni_pac) DO NOTHING;
+FROM direccion d
+WHERE d.calle = 'Calle Rehabilitacion' AND d.numero = '1' AND d.cp = '28001'
+LIMIT 1
+ON CONFLICT (dni_pac) DO NOTHING;
 
 INSERT INTO telefono_paciente (dni_pac, telefono)
 SELECT '12345678Z', '600000000'
@@ -164,9 +182,9 @@ ON CONFLICT (cod_trat, id_videojuego) DO NOTHING;
 -- Tres proximas citas con el especialista de prueba
 -- ============================================================
 
-INSERT INTO cita (dni_pac, dni_san, fecha_cita, hora_cita)
+INSERT INTO cita (dni_pac, dni_san, fecha_cita, hora)
 VALUES
     ('12345678Z', '87654321B', '2026-04-10', '10:00:00'),
     ('12345678Z', '87654321B', '2026-04-17', '11:30:00'),
     ('12345678Z', '87654321B', '2026-04-24', '09:00:00')
-ON CONFLICT (dni_pac, dni_san, fecha_cita, hora_cita) DO NOTHING;
+ON CONFLICT (dni_pac, dni_san, fecha_cita, hora) DO NOTHING;

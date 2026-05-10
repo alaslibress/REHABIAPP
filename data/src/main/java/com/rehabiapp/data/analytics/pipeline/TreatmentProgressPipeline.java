@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -137,10 +138,10 @@ public class TreatmentProgressPipeline {
                         .append("fecha", "$currentFecha")
                         .append("valor", "$currentValor"))
                 .append("entradas", 1)
-                .append("deltaPorcentaje", new Document("$cond", List.of(
+                .append("deltaPorcentaje", new Document("$cond", Arrays.asList(
                         new Document("$or", List.of(
                                 new Document("$eq", List.of("$baselineValor", 0)),
-                                new Document("$eq", List.of("$baselineValor", null)))),
+                                new Document("$eq", Arrays.asList("$baselineValor", null)))),
                         null,
                         new Document("$multiply", List.of(
                                 new Document("$divide", List.of(

@@ -3,10 +3,299 @@
 > **Branch:** stats-implementation
 > **Autor:** Agente 3 Thinker (Opus) — PRESCRIPTIVO. Doer (Sonnet) implementa paso a paso sin reinterpretar.
 > **Idioma:** Codigo y comentarios en castellano (root `/CLAUDE.md` §4.5).
-> **Scope:** Iteracion final. Tres tareas nuevas (G, H, I) + test (J).
+> **Scope:** Iteracion final. Tres tareas nuevas (G, H, I) + test (J) + hotfix (K).
 > **Estado API:** TODOS los endpoints ya estan operativos en `/api`. Doer NO toca `/api`.
 >
-> Las fases 0/A/B/C/D/E del plan anterior estan IMPLEMENTADAS y se conservan como referencia en la seccion final (§REFERENCIA — fases ya completadas). NO retocar nada de esas fases salvo que la fase G/H/I lo exija explicitamente.
+> Las fases 0/A/B/C/D/E del plan anterior estan IMPLEMENTADAS y se conservan como referencia en la seccion final (§REFERENCIA — fases ya completadas). NO retocar nada de esas fases salvo que la fase G/H/I/K lo exija explicitamente.
+
+---
+
+## PHASE K — HOTFIX: PermisoException "Error desconocido" al abrir ficha paciente
+
+> **Sintoma reportado por el usuario:**
+> ```
+> Caused by: java.lang.reflect.InvocationTargetException
+> Caused by: com.javafx.excepcion.PermisoException: Error desconocido
+> ```
+> Ocurre al hacer doble-click sobre un paciente para abrir su ficha (VentanaListarPaciente).
+>
+> **Diagnostico del Thinker:**
+>
+> 1. `controladorVentanaPacienteListar.initialize()` (linea 132) llama a `cargarMapaNiveles()` (linea 146), que llama a `catalogoService.listarNiveles()`. El catch SOLO captura `ConexionException`. Si la API devuelve 403 (Spring Security, body vacio), `PermisoException` propaga fuera de `initialize()`. JavaFX FXMLLoader envuelve la excepcion en `InvocationTargetException`, y la captura externa (`abrirFichaPaciente` linea 295) la traduce a un modal generico.
+>
+> 2. El mensaje "Error desconocido" viene de `ApiClient.extraerMensajeError()` (linea 549), que devuelve esa cadena cuando el body del response es null/vacio. Spring Security cuando rechaza por `@PreAuthorize` o por token caducado/invalido NO pasa por `GlobalExceptionHandler` y retorna 403 con body vacio.
+>
+> 3. El reintento de `ejecutarConReintento()` solo cubre 401 (renovar token). 403 NO se reintenta. Si el accessToken caduca y por algun fallo la API responde 403 en lugar de 401 (caso raro pero observado en algunas configs de Spring Security 7), el flujo termina en `PermisoException`.
+>
+> **Tres causas raiz posibles (NO asumir cual es real hasta tener URL del 403):**
+> - **K-A**: Token caducado/invalido y la API devuelve 403 con body vacio.
+> - **K-B**: Algun endpoint del flujo de apertura de ficha tiene `@PreAuthorize` que rechaza al usuario actual (NURSE intentando acceso clinico, p.ej.).
+> - **K-C**: `controladorVentanaPacienteListar.initialize()` deja escapar `PermisoException` por catch demasiado estrecho (solo ConexionException).
+>
+> Independientemente de A o B, el caso C es un bug seguro: cualquier `PermisoException` lanzada desde `initialize()` rompe el FXML loader.
+
+### K.0 — Reproducir y capturar la URL exacta del 403
+
+Doer ejecuta antes de tocar nada:
+
+1. Asegurar que el stack este levantado (postgres + api + data + desktop). Ver `/desktop/CLAUDE.md` §9.
+
+2. En `desktop/src/main/java/com/javafx/Clases/ApiClient.java`, localizar `manejarErrorHttp` (linea 531) y, **temporalmente para diagnostico**, cambiar el `LOG.warn` para incluir la URL:
+
+   ```java
+   private void manejarErrorHttp(int statusCode, String responseBody) {
+       String mensaje = extraerMensajeError(responseBody);
+       String bodyRecortado = responseBody != null && responseBody.length() > 500
+               ? responseBody.substring(0, 500) : responseBody;
+       LOG.warn("Error HTTP {}: body={}", statusCode, bodyRecortado);
+       ...
+   }
+   ```
+
+   Este metodo no recibe la URL. Hay que extender el contrato. Cambiar la firma a:
+
+   ```java
+   private void manejarErrorHttp(int statusCode, String responseBody, String url) {
+       String mensaje = extraerMensajeError(responseBody);
+       String bodyRecortado = responseBody != null && responseBody.length() > 500
+               ? responseBody.substring(0, 500) : responseBody;
+       LOG.warn("Error HTTP {} en {}: body={}", statusCode, url, bodyRecortado);
+       switch (statusCode) {
+           case 400 -> throw new ValidacionException(mensaje, "peticion");
+           case 401 -> throw new AutenticacionException(mensaje);
+           case 403 -> throw new PermisoException(
+               "Acceso denegado a " + url + (mensaje.equals("Error desconocido") ? "" : ": " + mensaje));
+           case 404 -> throw new ValidacionException(mensaje, "entidad");
+           case 409 -> throw new DuplicadoException(mensaje, "registro");
+           default -> throw new ConexionException("Error de servidor (" + statusCode + ") en " + url + ": " + mensaje);
+       }
+   }
+   ```
+
+   Y en TODAS las llamadas a `manejarErrorHttp(...)` en este mismo fichero (busca con `grep -n "manejarErrorHttp" desktop/src/main/java/com/javafx/Clases/ApiClient.java`), pasa el `path` o `baseUrl + path` como tercer argumento. Para cada llamada, la URL real esta en el `HttpRequest` del scope local; se pasa directamente.
+
+3. Reproducir el bug: login con `ADMIN0000/admin`, doble-click sobre un paciente. Anotar en consola la URL exacta del primer 403.
+
+4. Anotar el resultado en el PR description bajo `## URL del 403 capturada`.
+
+### K.1 — Fix obligatorio: capturar PermisoException donde corresponda
+
+Independientemente de la URL detectada en K.0, el caso K-C SIEMPRE debe corregirse. `initialize()` no puede dejar escapar excepciones del dominio.
+
+#### K.1.1 — Endurecer `cargarMapaNiveles()` en `controladorVentanaPacienteListar.java`
+
+Localizar el metodo `cargarMapaNiveles()` (linea 146 aprox.). Sustituir el catch:
+
+```java
+private void cargarMapaNiveles() {
+    mapaNiveles = new HashMap<>();
+    try {
+        List<NivelProgresion> niveles = catalogoService.listarNiveles();
+        for (NivelProgresion nivel : niveles) {
+            mapaNiveles.put(nivel.getNombreCorto(), nivel);
+        }
+    } catch (com.javafx.excepcion.RehabiAppException e) {
+        // Cualquier ConexionException, PermisoException, AutenticacionException u otra
+        // excepcion del dominio NO debe romper initialize() — los tooltips son opcionales
+        System.err.println("No se pudieron cargar los niveles para tooltips ("
+                + e.getClass().getSimpleName() + "): " + e.getMessage());
+    } catch (Exception e) {
+        System.err.println("Error inesperado cargando niveles: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+```
+
+> Nota: el import `com.javafx.excepcion.RehabiAppException` ya existe en el archivo via `import com.javafx.excepcion.ConexionException;`. Anadirlo si falta.
+
+#### K.1.2 — Endurecer `cargarDatosPaciente(String dni)` en `controladorVentanaPacienteListar.java`
+
+Localizar el metodo `cargarDatosPaciente` (linea 315 aprox.). El catalogo de tratamientos solo cachea `ConexionException`; igual que en K.1.1, ampliar a `RehabiAppException`. Y envolver TODAS las llamadas API restantes en try/catch defensivo:
+
+```java
+public void cargarDatosPaciente(String dni) {
+    this.dniPacienteActual = dni;
+
+    // Cargar catalogo de tratamientos (opcional — solo se usa para filtrado por nivel)
+    try {
+        List<Tratamiento> catalogo = catalogoService.listarTratamientos();
+        mapaTratamientos.clear();
+        for (Tratamiento t : catalogo) {
+            mapaTratamientos.put(t.getCodTrat(), t);
+        }
+    } catch (RehabiAppException e) {
+        System.err.println("No se pudo cargar el catalogo de tratamientos ("
+                + e.getClass().getSimpleName() + "): " + e.getMessage());
+    } catch (Exception e) {
+        System.err.println("Error inesperado al cargar catalogo: " + e.getMessage());
+    }
+
+    // Obtener paciente — bloqueante, sin paciente no hay ficha
+    try {
+        pacienteActual = pacienteDAO.obtenerPorDNI(dni);
+    } catch (com.javafx.excepcion.PermisoException e) {
+        VentanaUtil.mostrarVentanaInformativa(
+            "No tienes permisos para ver este paciente.\n"
+                + "Detalle: " + e.getMessage(),
+            TipoMensaje.ERROR);
+        pacienteActual = null;
+    } catch (com.javafx.excepcion.ConexionException e) {
+        VentanaUtil.mostrarVentanaInformativa(
+            "Sin conexion con la API: " + e.getMessage(), TipoMensaje.ERROR);
+        pacienteActual = null;
+    } catch (RehabiAppException e) {
+        VentanaUtil.mostrarVentanaInformativa(
+            "Error al cargar el paciente: " + e.getMessage(), TipoMensaje.ERROR);
+        pacienteActual = null;
+    } catch (Exception e) {
+        e.printStackTrace();
+        VentanaUtil.mostrarVentanaInformativa(
+            "Error inesperado al cargar el paciente.", TipoMensaje.ERROR);
+        pacienteActual = null;
+    }
+
+    if (pacienteActual != null) {
+        mostrarDatosEnLabels();
+        cargarFotoPaciente();
+        cargarDiscapacidadesPaciente();
+    }
+    // Si pacienteActual es null, ya se mostro un modal arriba — no anadir otro
+}
+```
+
+> Importar `com.javafx.excepcion.RehabiAppException` si todavia no esta importado.
+
+#### K.1.3 — Auditoria preventiva: revisar OTROS controladores con el mismo patron
+
+Buscar en TODOS los controladores con `initialize()` que llamen a un servicio del API:
+
+```bash
+grep -rn "public void initialize" desktop/src/main/java/com/javafx/Interface/ | head -20
+```
+
+Para cada controlador identificado, verificar que su `initialize()` NO deje escapar ninguna excepcion del dominio. Aplicar el mismo patron de K.1.1: catch `RehabiAppException` ANCHO ademas del catch que ya tenga.
+
+Lista esperada (no exhaustiva — Doer verifica caso por caso):
+
+| Controlador | Llamada al API en initialize() | Catch suficiente? |
+|---|---|---|
+| `controladorVentanaPacienteListar` | `cargarMapaNiveles()` → `listarNiveles()` | NO (solo ConexionException) → fix en K.1.1 |
+| `controladorAgregarTratamiento` | `cargarComboBoxes()` → `listarDiscapacidades()`, `listarNivelesProgresion()` | Verificar que tenga catch ancho |
+| `controladorAgregarPaciente` | si tiene cargas API en initialize | Verificar |
+| `controladorVentanaTratamientos` | `cargarTratamientos()` (NO esta en initialize, esta tras configurarTabla — verificar) | Verificar |
+| `controladorVentanaPacientes` | `cargarPacientes()` ya cubierto por Phase G | OK |
+
+Para cualquier controlador donde el initialize() ejecute IO de API SIN catch ancho de `RehabiAppException`, anadir el catch defensivo. Si el dato es opcional (tooltips, listas de filtro), loguear y seguir; si el dato es bloqueante (no se puede usar el formulario sin el), mostrar modal y dejar el formulario en estado inactivo (botones disabled), pero NUNCA propagar al FXMLLoader.
+
+### K.2 — Mejorar el mensaje de error 403 con body vacio
+
+Localizar `extraerMensajeError` en `ApiClient.java` (linea 549). Cambiarlo para que devuelva un mensaje mas util que "Error desconocido":
+
+```java
+private String extraerMensajeError(String responseBody) {
+    if (responseBody == null || responseBody.isBlank()) {
+        // Spring Security devuelve 403 con body vacio cuando @PreAuthorize falla
+        // o cuando el token JWT esta caducado/invalido — el mensaje generico no
+        // ayuda al diagnostico, pero al menos no dice "Error desconocido"
+        return "Acceso denegado por el servidor (sin detalle)";
+    }
+    try {
+        ErrorResponse error = objectMapper.readValue(responseBody, ErrorResponse.class);
+        if (error.message() != null && !error.message().isBlank()) {
+            return error.message();
+        }
+        if (error.detalle() != null && !error.detalle().isBlank()) {
+            return error.detalle();
+        }
+        return responseBody;
+    } catch (Exception e) {
+        return responseBody;
+    }
+}
+```
+
+> Nota: verificar el record `ErrorResponse` interno del `ApiClient`. Si solo tiene campo `message`, anadir tambien `detalle` (la API devuelve `{"error":"...","detalle":"..."}` desde `GlobalExceptionHandler`).
+
+### K.3 — Endurecer reintento contra 403 por token expirado (defensivo)
+
+Si la URL capturada en K.0 indica que el 403 ocurre tras un periodo de inactividad, lo mas probable es que el accessToken caduco. La logica actual en `ejecutarConReintento` SOLO reintenta tras 401:
+
+```java
+private <T> T ejecutarConReintento(OperacionHttp<T> operacion) {
+    try {
+        return operacion.ejecutar();
+    } catch (AutenticacionException e) {  // ← solo 401
+        if (renovarToken()) {
+            return operacion.ejecutar();
+        }
+        logout();
+        throw e;
+    }
+}
+```
+
+**NO ampliar el catch a `PermisoException`** — eso ocultaria errores reales de RBAC. En su lugar, asegurar que la API SIEMPRE responde 401 (no 403) cuando el token esta caducado/invalido. Esto es responsabilidad del API (Agente 1), pero como Agente 3 documentamos el supuesto.
+
+Si tras K.0 se confirma que el 403 viene de un token caducado, escalar al Thinker del Agente 1 (API) un ticket: "Spring Security debe devolver 401 en lugar de 403 cuando el JWT esta caducado/invalido". Mientras tanto, el fix de K.1 evita que la app se rompa.
+
+### K.4 — Validacion manual
+
+| # | Caso | Esperado |
+|---|------|----------|
+| K.4.1 | Login ADMIN0000 + doble-click sobre paciente | Ficha abre OK con todos los datos (nombre, foto, discapacidades, tratamientos) |
+| K.4.2 | Login NURSE (00000002W) + doble-click sobre paciente | Ficha abre en modo solo lectura — sin excepcion |
+| K.4.3 | Login ADMIN, esperar 16 minutos (token caducado), doble-click sobre paciente | Ficha abre OK (refresh transparente del token via 401 → renovarToken) |
+| K.4.4 | Login ADMIN, apagar la API a proposito, doble-click sobre paciente | Modal `"Sin conexion con la API: ..."` — NO crash, NO InvocationTargetException |
+| K.4.5 | Provocar 403 artificial (revocar permisos en BD a un paciente concreto si fuera posible, o simular con codigo temporal) | Modal `"No tienes permisos para ver este paciente. Detalle: Acceso denegado a ..."` — NO crash |
+| K.4.6 | Repetir K.4.1..K.4.5 tras varios doble-clicks consecutivos en pacientes distintos | Sin regresiones, sin estados parciales en la ficha |
+
+### K.5 — Tests
+
+`desktop/src/test/java/com/javafx/Interface/ControladorVentanaPacienteListarTest.java`:
+- `cargarMapaNiveles_conPermisoException_noPropaga`. Mockear `CatalogoService#listarNiveles` para que lance `PermisoException`. Invocar `cargarMapaNiveles()` por reflection y verificar que NO lanza, y que `mapaNiveles` queda vacio (HashMap inicializado pero vacio).
+- `cargarDatosPaciente_conPermisoExceptionEnObtenerPorDNI_dejaPacienteActualNull_yMuestraModal`. Mockear `PacienteDAO#obtenerPorDNI` para que lance `PermisoException`. Verificar que `pacienteActual` queda null y el modal se muestra (mockear `VentanaUtil.mostrarVentanaInformativa` o capturar via `MockedStatic`).
+
+Si la suite no soporta TestFx ni JavaFX toolkit en tests, mover la logica IO a un metodo package-private y testear ese metodo aislado.
+
+### K.6 — Archivos modificados
+
+Crear:
+```
+desktop/src/test/java/com/javafx/Interface/ControladorVentanaPacienteListarTest.java
+```
+
+Modificar:
+```
+desktop/src/main/java/com/javafx/Interface/controladorVentanaPacienteListar.java  (K.1.1, K.1.2)
+desktop/src/main/java/com/javafx/Clases/ApiClient.java                            (K.0 logging URL + K.2 mensaje)
++ cualquier otro controlador identificado en K.1.3 con catch demasiado estrecho en initialize()
+```
+
+NO crear nuevos endpoints API. NO modificar `/api/**`.
+
+### K.7 — Orden de ejecucion
+
+```
+K.0 (reproducir y capturar URL)
+   ↓
+K.1.1 (cargarMapaNiveles defensivo)        [obligatorio independiente de K.0]
+   ↓
+K.1.2 (cargarDatosPaciente defensivo)      [obligatorio independiente de K.0]
+   ↓
+K.1.3 (auditoria de otros initialize)      [obligatorio independiente de K.0]
+   ↓
+K.2  (mejorar mensaje de error)            [obligatorio]
+   ↓
+K.3  (NO ampliar catch a PermisoException — solo documentar) [no requiere codigo]
+   ↓
+K.4  (validacion manual)
+   ↓
+K.5  (tests)
+```
+
+K.0 puede dejar marcas de logging permanentes (mejor diagnostico) o quitarlas tras la captura — Doer decide segun ruido del log. Si la URL revela un caso K-A o K-B real, escalar al Thinker el descubrimiento ANTES de proseguir, NO inventar un fix de RBAC en el desktop.
+
+---
 
 ---
 

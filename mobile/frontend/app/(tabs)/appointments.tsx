@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { ScrollView, View, RefreshControl } from 'react-native';
 import { useAppointmentsStore } from '../../src/store/appointmentsStore';
 import { AppointmentCard } from '../../src/components/AppointmentCard';
-import { AppointmentRequestForm } from '../../src/components/AppointmentRequestForm';
+import { HospitalContactCard } from '../../src/components/HospitalContactCard';
 import { ConfirmModal } from '../../src/components/ConfirmModal';
 import { EmptyState } from '../../src/components/EmptyState';
 import { AppText } from '../../src/components/AppText';
@@ -112,8 +112,9 @@ export default function AppointmentsScreen() {
         </View>
       )}
 
-      {/* Seccion: Pedir cita nueva */}
-      <AppointmentRequestForm />
+      {/* Seccion: Pedir cita nueva — el paciente contacta por telefono / email / WhatsApp.
+          Sin formulario interno: la solicitud queda fuera de la app por requisito clinico. */}
+      <HospitalContactCard />
 
       {/* Modal de confirmacion de cancelacion */}
       <ConfirmModal

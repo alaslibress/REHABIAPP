@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+// Expo SDK 54 reorganizo expo-file-system en una nueva API basada en File/Directory.
+// La API antigua (cacheDirectory, EncodingType, writeAsStringAsync, downloadAsync)
+// vive en el subpath '/legacy' por compatibilidad. Nuestro flujo de descarga de PDF
+// sigue siendo procedural (escribir base64 + abrir en Sharing), por lo que /legacy
+// es el camino mas directo y no requiere refactor.
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { client } from '../services/graphql/client';
 import { GET_MY_TREATMENTS, GET_TREATMENT_DOCUMENT } from '../services/graphql/queries/treatments';

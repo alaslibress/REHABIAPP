@@ -151,6 +151,24 @@ npm test
 - [x] F.1 `progressStore.fetch` envuelto en try/catch con fallback a `bodyParts: []` y `hydrated: true` para evitar que una query fallida bloquee el bootstrap.
 - [x] F.2 `errorStore` expone `silent: boolean` + `setSilent(boolean)`. `bootstrapStore.hydrate` activa modo silencioso al entrar y lo restaura en finally — los popups de error quedan desactivados durante el bootstrap inicial.
 
+### Phase I — Stabilization Sprint (2026-05-07)
+
+- [x] J.1 `appointmentsStore.fetchPast` — spread antes de sort para evitar mutacion de array congelado por Apollo v4.
+- [x] J.2 `treatmentsStore` — import `expo-file-system/legacy` (SDK 54 reorganizo la API; EncodingType y cacheDirectory viven en /legacy).
+- [x] J.3 `GET_BODY_PART_METRICS` — variable tipada como `BodyPartId!` en lugar de `ID!` para pasar validacion de Apollo Server.
+- [x] J.4 `appointments.tsx` — sustituido `AppointmentRequestForm` por `HospitalContactCard` (sin formulario de solicitud).
+- [x] J.5 `WhatsAppButton.tsx` — wired `Linking.openURL` con deep link `whatsapp://` + fallback `wa.me`.
+- [x] J.6 Home screen (`index.tsx`) y `FloatingBalloon.tsx` — variantes dark mode añadidas.
+- [x] J.7 Audit dark mode en `appointments.tsx` — sin regresiones.
+- [x] J.8 `notifications.ts` — nuevo helper `ensureNotificationsEnabled`. `bootstrapStore.hydrate` lo llama con push token + reminders locales condicionados a permiso concedido.
+- [x] J.9 BFF test `bodyPartMetrics acepta variable tipada como BodyPartId!` — 26/26 tests verdes.
+
+### Phase L — WhatsApp Chatbot (2026-05-07)
+
+- [x] L.1-L.12 `/chatbot/` directorio creado con estructura completa: config, logger, db, llm, promptTemplates, sessions, booking, whatsapp, index, tests.
+- [ ] L.13 Tests manuales end-to-end sobre Pixel 8 + PostgreSQL real (requiere docker compose up + npm run dev).
+- [ ] L.14 npm run dev → QR scan primer arranque.
+
 ---
 
 ## Memory

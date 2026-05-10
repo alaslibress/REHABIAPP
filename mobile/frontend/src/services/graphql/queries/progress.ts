@@ -14,7 +14,7 @@ export const GET_MY_BODY_PART_PROGRESS = gql`
 `;
 
 export const GET_BODY_PART_METRICS = gql`
-  query GetBodyPartMetrics($bodyPartId: ID!) {
+  query GetBodyPartMetrics($bodyPartId: BodyPartId!) {
     bodyPartMetrics(bodyPartId: $bodyPartId) {
       date
       score

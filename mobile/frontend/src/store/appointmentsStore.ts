@@ -71,11 +71,14 @@ export const useAppointmentsStore = create<AppointmentsState>()(
             }) as { data: { myAppointments: Appointment[] } };
 
             const citas: Appointment[] = data.myAppointments ?? [];
-            // Orden descendente: cita mas reciente primero
-            citas.sort(function (a, b) {
+            // Orden descendente: cita mas reciente primero.
+            // Apollo v4 congela los resultados (Object.freeze), por lo que
+            // sort() in-place lanzaria "Cannot assign to read-only property '0'".
+            // Copiamos a un array mutable antes de ordenar.
+            const citasOrdenadas = [...citas].sort(function (a, b) {
               return (b.date + b.time).localeCompare(a.date + a.time);
             });
-            set({ pastItems: citas, loadingPast: false, hydratedPast: true });
+            set({ pastItems: citasOrdenadas, loadingPast: false, hydratedPast: true });
           } catch (err) {
             set({ loadingPast: false, hydratedPast: true });
             const appError = parseGraphQLError(err);

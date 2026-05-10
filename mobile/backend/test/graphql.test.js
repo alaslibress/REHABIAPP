@@ -484,6 +484,31 @@ test('requestAppointment devuelve estado PENDING y preserva los argumentos (Phas
   assert.ok(r.createdAt, 'createdAt debe estar presente');
 });
 
+// ---- Phase I J.9: bodyPartMetrics acepta variable tipada como BodyPartId! ----
+test('bodyPartMetrics acepta variable tipada como BodyPartId! (regresion progress.ts:17)', async () => {
+  const token = await obtenerTokenAdmin();
+  const { body } = await httpPost(
+    GQL,
+    {
+      query: `
+        query GetBodyPartMetrics($bodyPartId: BodyPartId!) {
+          bodyPartMetrics(bodyPartId: $bodyPartId) {
+            date
+            score
+            metricType
+          }
+        }
+      `,
+      variables: { bodyPartId: 'RIGHT_HIP' },
+    },
+    { Authorization: `Bearer ${token}` }
+  );
+  assert.ok(body.data, `Esperaba data; recibido: ${JSON.stringify(body)}`);
+  assert.equal(body.errors, undefined,
+    `Esperaba sin errores; recibido: ${JSON.stringify(body.errors)}`);
+  assert.ok(Array.isArray(body.data.bodyPartMetrics), 'bodyPartMetrics debe ser un array');
+});
+
 // ---- Phase G.7: registerDeviceToken devuelve true (stub) ----
 test('registerDeviceToken devuelve true (stub Phase G.7)', async () => {
   const token = await obtenerTokenAdmin();

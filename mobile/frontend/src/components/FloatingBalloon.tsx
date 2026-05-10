@@ -70,9 +70,9 @@ export function FloatingBalloon(props: FloatingBalloonProps) {
         },
         animatedStyle,
       ]}
-      className="min-h-12 min-w-12 w-20 h-20 rounded-full bg-surface items-center justify-center shadow-lg"
+      className="min-h-12 min-w-12 w-20 h-20 rounded-full bg-surface dark:bg-surface-dark items-center justify-center shadow-lg border border-transparent dark:border-primary-700"
     >
-      <Ionicons name={iconName} size={size} color="#2563EB" />
+      <Ionicons name={iconName} size={size} color="#60A5FA" />
     </AnimatedPressable>
   );
 }

@@ -103,7 +103,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-background dark:bg-background-dark">
       {/* Mensaje de bienvenida con saludo dinamico segun la hora — tarjeta centrada */}
       <View className="px-6 pt-6 pb-4">
         <View className="bg-surface dark:bg-surface-dark rounded-2xl px-5 py-4 shadow-md border border-primary-200 dark:border-primary-600">

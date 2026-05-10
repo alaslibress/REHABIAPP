@@ -155,3 +155,38 @@ export async function scheduleTestNotification(): Promise<void> {
     // Ignorar: entorno sin soporte
   }
 }
+
+// Permiso + token push: solicita permiso del SO si todavia no esta concedido,
+// recupera el Expo Push Token y lo registra en el BFF si el usuario tiene
+// activadas las "Actualizaciones del medico". Idempotente: llamar mas de una
+// vez no produce efectos colaterales (el SO solo prompteo una vez en su vida).
+//
+// Devuelve un objeto con el estado para que el caller pueda decidir si
+// programar reminders locales o no.
+export async function ensureNotificationsEnabled(opts?: {
+  alsoRegisterPushToken?: boolean;
+  registerToken?: (token: string, platform: 'IOS' | 'ANDROID' | 'WEB') => Promise<void>;
+}): Promise<{ permissionGranted: boolean; pushToken: string | null }> {
+  if (!Notifications) return { permissionGranted: false, pushToken: null };
+
+  // 1) Permiso. requestPermission ya es idempotente: si ya esta concedido
+  //    devuelve true sin abrir dialogo.
+  const granted = await requestPermission();
+  if (!granted) return { permissionGranted: false, pushToken: null };
+
+  // 2) Push token (solo si el caller lo pidio). En Expo Go Android el token
+  //    sera null por limitacion del SDK 53+; el flujo NO debe romperse.
+  let pushToken: string | null = null;
+  if (opts?.alsoRegisterPushToken) {
+    pushToken = await getExpoPushToken();
+    if (pushToken && opts.registerToken) {
+      const platform: 'IOS' | 'ANDROID' | 'WEB' =
+        Platform.OS === 'ios' ? 'IOS' : Platform.OS === 'android' ? 'ANDROID' : 'WEB';
+      await opts.registerToken(pushToken, platform).catch(function () {
+        // Fallo silencioso — el log queda en el BFF; el frontend continua.
+      });
+    }
+  }
+
+  return { permissionGranted: true, pushToken };
+}

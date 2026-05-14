@@ -28,15 +28,20 @@ public class DataPipelineClient {
 
     private final RestClient restClient;
 
-    public DataPipelineClient(@Value("${rehabiapp.data.url:${rehabiapp.data-service.url:http://localhost:8081}}") String baseUrl) {
+    public DataPipelineClient(
+            @Value("${rehabiapp.data.url:${rehabiapp.data-service.url:http://localhost:8081}}") String baseUrl,
+            @Value("${rehabiapp.internal-key:changeme}") String internalKey) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));
         factory.setReadTimeout(Duration.ofSeconds(5));
 
+        // X-Internal-Key autentica /api → /data en todas las llamadas; sin este header
+        // el filtro InternalKeyFilter de /data rechaza la peticion con 401.
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .requestFactory(factory)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader("X-Internal-Key", internalKey)
                 .build();
     }
 

@@ -1,0 +1,122 @@
+# RehabiAPP — stack EC2 para AWS Academy Learner Lab.
+#
+# Servicios en una sola EC2 (t3.small recomendado):
+#   - caddy            Reverse proxy TLS via DuckDNS + Let's Encrypt (puertos 443/80 expuestos al host).
+#   - rehabiapp-api    Spring Boot, profile aws-academy. Conecta a RDS Postgres (externo) y rehabiapp-data por red interna.
+#   - rehabiapp-data   Spring Boot, profile aws-academy. Conecta a rehabiapp-mongodb por red interna.
+#   - rehabiapp-mongodb Mongo 7 con volumen persistente.
+#
+# PostgreSQL NO esta aqui — corre en RDS gestionado. Las credenciales se inyectan via .env.aws-academy.
+#
+# Activacion:
+#   cd /home/alaslibres/DAM/RehabiAPP
+#   docker compose --env-file infra/aws-academy/.env.aws-academy \
+#                  -f infra/aws-academy/docker-compose.aws.yml up -d
+#
+# Solo Caddy publica puertos al host. /api, /data y Mongo viven en la red interna `rehabiapp-aws`.
+
+services:
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: rehabiapp-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      rehabiapp-api:
+        condition: service_healthy
+    networks:
+      - rehabiapp-aws
+    environment:
+      ACME_AGREE: "true"
+
+  rehabiapp-api:
+    build:
+      context: ../../api
+      dockerfile: Dockerfile
+    image: rehabiapp-api:aws-academy
+    container_name: rehabiapp-api
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: aws-academy
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      RH_INTERNAL_KEY: ${RH_INTERNAL_KEY}
+      REHABIAPP_DATA_SERVICE_URL: http://rehabiapp-data:8081
+      APP_CORS_ALLOWED_ORIGIN_0: ${APP_CORS_ALLOWED_ORIGIN_0:-http://s3-bucket-rehabiapp-piano-640681720314.s3-website-us-east-1.amazonaws.com}
+      APP_CORS_EXTRA_ORIGIN: ${APP_CORS_EXTRA_ORIGIN:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 60s
+    networks:
+      - rehabiapp-aws
+    depends_on:
+      rehabiapp-data:
+        condition: service_healthy
+
+  rehabiapp-data:
+    build:
+      context: ../../data
+      dockerfile: Dockerfile
+    image: rehabiapp-data:aws-academy
+    container_name: rehabiapp-data
+    restart: unless-stopped
+    expose:
+      - "8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: aws-academy
+      SPRING_DATA_MONGODB_URI: mongodb://rehabiapp-mongodb:27017/rehabiapp_telemetry
+      SPRING_DATA_MONGODB_DATABASE: rehabiapp_telemetry
+      RH_INTERNAL_KEY: ${RH_INTERNAL_KEY}
+      RH_API_BASE_URL: http://rehabiapp-api:8080
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 60s
+    networks:
+      - rehabiapp-aws
+    depends_on:
+      rehabiapp-mongodb:
+        condition: service_healthy
+
+  rehabiapp-mongodb:
+    image: mongo:7
+    container_name: rehabiapp-mongodb
+    restart: unless-stopped
+    expose:
+      - "27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    networks:
+      - rehabiapp-aws
+
+volumes:
+  caddy-data:
+  caddy-config:
+  mongo-data:
+
+networks:
+  rehabiapp-aws:
+    driver: bridge

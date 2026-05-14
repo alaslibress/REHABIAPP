@@ -61,4 +61,5 @@ com/rehabiapp/data/internal/dto/CheckNewDataResponse.class
 com/rehabiapp/data/internal/controller/InternalController.class
 com/rehabiapp/data/ingestion/service/DuplicateSessionException.class
 com/rehabiapp/data/ingestion/schema/UnknownGameException.class
+com/rehabiapp/data/security/InternalKeyFilter.class
 com/rehabiapp/data/analytics/service/TreatmentProgressService.class

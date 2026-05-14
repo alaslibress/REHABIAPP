@@ -1,0 +1,28 @@
+# Perfil AWS ACADEMY: despliegue en EC2 con MongoDB en contenedor Docker compartido.
+# Activa con: SPRING_PROFILES_ACTIVE=aws-academy
+#
+# Diferencias respecto al perfil 'aws' (EKS + DocumentDB):
+#   - NO usa configtree:file:/mnt/secrets/ (sin CSI Driver fuera de EKS).
+#   - MongoDB es un contenedor en la misma red Docker (rehabiapp-mongodb:27017), NO DocumentDB con TLS.
+#   - auto-index-creation se mantiene en false (skill obligatorio springboot4-mongodb).
+
+spring:
+  data:
+    mongodb:
+      # URI hacia el contenedor MongoDB en la red Docker del EC2.
+      # Sin replicaset name ni TLS — DocumentDB no esta disponible en AWS Academy.
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://rehabiapp-mongodb:27017/rehabiapp_telemetry}
+      auto-index-creation: false
+
+# Configuracion del cliente HTTP hacia el /api Core en la misma red Docker del EC2.
+rehabiapp:
+  api:
+    base-url: ${RH_API_BASE_URL:http://rehabiapp-api:8080}
+    internal-key: ${RH_INTERNAL_KEY}
+    timeout-ms: ${RH_API_TIMEOUT_MS:5000}
+    max-retries: ${RH_API_MAX_RETRIES:3}
+
+logging:
+  level:
+    root: INFO
+    com.rehabiapp: INFO

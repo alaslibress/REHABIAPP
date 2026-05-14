@@ -23,6 +23,19 @@ rehabiapp:
   data:
     url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8082}
 
+# Origenes CORS permitidos en desarrollo local:
+# - localhost:9000 (juego Unity WebGL servido localmente via python -m http.server)
+# - bucket S3 del juego PIANO para pruebas contra API local
+# - puertos varios para mobile frontend / BFF dev
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:9000
+      - http://localhost:5173
+      - http://localhost:8081
+      - http://localhost:3000
+      - http://s3-bucket-rehabiapp-piano-640681720314.s3-website-us-east-1.amazonaws.com
+
 # Nivel de log detallado para desarrollo
 logging:
   level:

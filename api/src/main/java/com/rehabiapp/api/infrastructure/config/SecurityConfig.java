@@ -12,6 +12,11 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * Configuración de seguridad de la API REST — stateless con JWT para K8s.
@@ -21,6 +26,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  *
  * <p>CSRF desactivado: las APIs REST stateless con JWT son inmunes a CSRF
  * por diseño (el token no se envía automáticamente por el navegador).</p>
+ *
+ * <p>CORS habilitado mediante {@link CorsProperties}: los origenes permitidos
+ * se inyectan por configuracion externa para permitir que las builds Unity WebGL
+ * alojadas en AWS S3/CloudFront hagan POST a esta API desde otro origen.</p>
  *
  * <p>@EnableMethodSecurity permite usar @PreAuthorize y @PostAuthorize
  * en controladores y servicios para control de acceso granular por rol.</p>
@@ -33,13 +42,16 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtFilter;
     private final RateLimitFilter rateLimitFilter;
     private final PayloadSizeFilter payloadSizeFilter;
+    private final CorsProperties corsProperties;
 
     public SecurityConfig(JwtAuthenticationFilter jwtFilter,
                           RateLimitFilter rateLimitFilter,
-                          PayloadSizeFilter payloadSizeFilter) {
+                          PayloadSizeFilter payloadSizeFilter,
+                          CorsProperties corsProperties) {
         this.jwtFilter = jwtFilter;
         this.rateLimitFilter = rateLimitFilter;
         this.payloadSizeFilter = payloadSizeFilter;
+        this.corsProperties = corsProperties;
     }
 
     /**
@@ -54,6 +66,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // CORS aplicado antes de cualquier otro filtro — necesario para preflights OPTIONS
+                .cors(c -> c.configurationSource(corsConfigurationSource()))
                 // API stateless — CSRF no aplica con JWT
                 .csrf(AbstractHttpConfigurer::disable)
                 // Sin sesiones de servidor — escalado horizontal K8s sin afinidad
@@ -78,5 +92,31 @@ public class SecurityConfig {
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * Configuracion CORS — origenes inyectados desde {@link CorsProperties}.
+     *
+     * <p>Se usa {@code setAllowedOriginPatterns} en lugar de {@code setAllowedOrigins}
+     * porque {@code allowCredentials=true} prohibe el wildcard "*" en origenes literales.
+     * Los patrones soportan comodines y son la forma correcta cuando se necesita
+     * compatibilidad con tokens en cabeceras Authorization.</p>
+     *
+     * @return Fuente de configuracion CORS basada en URL para los endpoints {@code /api/**} y {@code /actuator/**}.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(corsProperties.allowedOrigins());
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", config);
+        source.registerCorsConfiguration("/actuator/**", config);
+        return source;
     }
 }

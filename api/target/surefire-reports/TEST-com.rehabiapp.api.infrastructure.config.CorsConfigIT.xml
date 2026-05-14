@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.rehabiapp.api.infrastructure.security.JwtServiceTest" time="0.24" tests="6" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.rehabiapp.api.infrastructure.config.CorsConfigIT" time="5.238" tests="2" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="24"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -8,8 +8,10 @@
     <property name="sun.arch.data.model" value="64"/>
     <property name="java.vendor.url" value="https://java.oracle.com/"/>
     <property name="user.timezone" value="Europe/Madrid"/>
+    <property name="org.jboss.logging.provider" value="slf4j"/>
     <property name="os.name" value="Linux"/>
     <property name="java.vm.specification.version" value="24"/>
+    <property name="APPLICATION_NAME" value="rehabiapp-api"/>
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="ES"/>
     <property name="sun.boot.library.path" value="/usr/lib/jvm/jdk-24.0.2/lib"/>
@@ -28,6 +30,8 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="FILE_LOG_CHARSET" value="UTF-8"/>
+    <property name="java.awt.headless" value="true"/>
     <property name="surefire.real.class.path" value="/home/alaslibres/DAM/RehabiAPP/api/target/surefire/surefirebooter-20260515005057653_3.jar"/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="24.0.2+12-54"/>
@@ -41,10 +45,13 @@
     <property name="localRepository" value="/home/alaslibres/.m2/repository"/>
     <property name="java.vendor.url.bug" value="https://bugreport.java.com/bugreport/"/>
     <property name="java.io.tmpdir" value="/tmp"/>
+    <property name="com.zaxxer.hikari.pool_number" value="1"/>
     <property name="java.version" value="24.0.2"/>
     <property name="user.dir" value="/home/alaslibres/DAM/RehabiAPP/api"/>
     <property name="os.arch" value="amd64"/>
     <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="PID" value="235154"/>
+    <property name="CONSOLE_LOG_CHARSET" value="UTF-8"/>
     <property name="native.encoding" value="UTF-8"/>
     <property name="java.library.path" value="/usr/java/packages/lib:/usr/lib64:/lib64:/lib:/usr/lib"/>
     <property name="java.vm.info" value="mixed mode, sharing"/>
@@ -53,11 +60,79 @@
     <property name="java.vm.version" value="24.0.2+12-54"/>
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="68.0"/>
+    <property name="LOGGED_APPLICATION_NAME" value="[rehabiapp-api] "/>
   </properties>
-  <testcase name="generarRefreshToken_noContieneRol" classname="com.rehabiapp.api.infrastructure.security.JwtServiceTest" time="0.205"/>
-  <testcase name="generarAccessToken_retornaTokenValido" classname="com.rehabiapp.api.infrastructure.security.JwtServiceTest" time="0.002"/>
-  <testcase name="extraerRol_devuelveElRolCorrecto" classname="com.rehabiapp.api.infrastructure.security.JwtServiceTest" time="0.003"/>
-  <testcase name="extraerDni_devuelveElDniCorrecto" classname="com.rehabiapp.api.infrastructure.security.JwtServiceTest" time="0.003"/>
-  <testcase name="validarToken_conTokenFirmadoConOtraClave_lanzaExcepcion" classname="com.rehabiapp.api.infrastructure.security.JwtServiceTest" time="0.003"/>
-  <testcase name="validarToken_conTokenExpirado_lanzaExcepcion" classname="com.rehabiapp.api.infrastructure.security.JwtServiceTest" time="0.019"/>
+  <testcase name="preflight_desdeBucketS3_aceptaPostSesionJuego" classname="com.rehabiapp.api.infrastructure.config.CorsConfigIT" time="0.047">
+    <system-out><![CDATA[00:51:01.120 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.rehabiapp.api.infrastructure.config.CorsConfigIT]: CorsConfigIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+00:51:01.202 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.rehabiapp.api.ApiApplication for test class com.rehabiapp.api.infrastructure.config.CorsConfigIT
+00:51:01.254 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.rehabiapp.api.infrastructure.config.CorsConfigIT]: CorsConfigIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+00:51:01.256 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.rehabiapp.api.ApiApplication for test class com.rehabiapp.api.infrastructure.config.CorsConfigIT
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.0.5)
+
+00:51:01 INFO  [main] c.r.a.i.c.CorsConfigIT - Starting CorsConfigIT using Java 24.0.2 with PID 235154 (started by alaslibres in /home/alaslibres/DAM/RehabiAPP/api)
+00:51:01 INFO  [main] c.r.a.i.c.CorsConfigIT - The following 1 profile is active: "test"
+00:51:01 INFO  [background-preinit] o.h.v.i.util.Version - HV000001: Hibernate Validator 9.0.1.Final
+00:51:02 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+00:51:02 INFO  [main] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 51 ms. Found 16 JPA repository interfaces.
+00:51:02 INFO  [main] o.hibernate.orm.jpa - HHH008540: Processing PersistenceUnitInfo [name: default]
+00:51:02 INFO  [main] o.hibernate.orm.core - HHH000001: Hibernate ORM core version 7.2.7.Final
+00:51:02 INFO  [main] o.h.e.b.i.EnversServiceImpl - Envers integration enabled? : true
+00:51:02 INFO  [main] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+00:51:02 INFO  [main] c.z.h.HikariDataSource - HikariPool-1 - Starting...
+00:51:03 INFO  [main] c.z.h.p.HikariPool - HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:rehabiapp_test user=SA
+00:51:03 INFO  [main] c.z.h.HikariDataSource - HikariPool-1 - Start completed.
+00:51:03 WARN  [main] o.h.orm.deprecation - HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+00:51:03 INFO  [main] o.h.o.c.pooling - HHH10001005: Database info:
+	Database JDBC URL [jdbc:h2:mem:rehabiapp_test]
+	Database driver: H2 JDBC Driver
+	Database dialect: H2Dialect
+	Database version: 2.4.240
+	Default catalog/schema: REHABIAPP_TEST/PUBLIC
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: 100
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+00:51:03 INFO  [main] o.h.e.c.i.m.AuditMetadataGenerator - Adding properties for entity: com.rehabiapp.api.domain.entity.TratamientoVideojuego
+00:51:03 INFO  [main] o.h.e.c.i.m.AuditMetadataGenerator - Adding properties for entity: com.rehabiapp.api.domain.entity.PacienteTratamiento
+00:51:03 INFO  [main] o.h.e.c.i.m.AuditMetadataGenerator - Adding properties for entity: com.rehabiapp.api.domain.entity.Cita
+00:51:03 INFO  [main] o.h.e.c.i.m.AuditMetadataGenerator - Adding properties for entity: com.rehabiapp.api.domain.entity.Videojuego
+00:51:03 INFO  [main] o.h.e.c.i.m.AuditMetadataGenerator - Adding properties for entity: com.rehabiapp.api.domain.entity.Sanitario
+00:51:03 INFO  [main] o.h.e.c.i.m.AuditMetadataGenerator - Adding properties for entity: com.rehabiapp.api.domain.entity.PacienteDiscapacidad
+00:51:03 INFO  [main] o.h.e.c.i.m.AuditMetadataGenerator - Adding properties for entity: com.rehabiapp.api.domain.entity.Paciente
+00:51:03 INFO  [main] o.hibernate.orm.core - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+00:51:03 INFO  [main] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+00:51:03 INFO  [main] o.s.d.j.r.q.QueryEnhancerFactories - Hibernate is in classpath; If applicable, HQL parser will be used.
+00:51:05 WARN  [main] o.s.b.s.a.UserDetailsServiceAutoConfiguration - 
+
+Using generated security password: 5120fdb3-f7d6-4af4-8b78-47729ba283e5
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+00:51:05 INFO  [main] o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+00:51:06 INFO  [main] o.s.b.a.e.w.EndpointLinksResolver - Exposing 3 endpoints beneath base path '/actuator'
+00:51:06 INFO  [main] c.r.a.i.c.CorsConfigIT - Started CorsConfigIT in 4.928 seconds (process running for 8.498)
+00:51:06 INFO  [main] c.r.a.ApiApplication - RehabiAPP API lista — puerto=8080 perfiles=test
+00:51:06 INFO  [main] o.s.b.t.m.w.SpringBootMockServletContext - Initializing Spring TestDispatcherServlet ''
+00:51:06 INFO  [main] o.s.t.w.s.TestDispatcherServlet - Initializing Servlet ''
+00:51:06 INFO  [main] o.s.t.w.s.TestDispatcherServlet - Completed initialization in 1 ms
+]]></system-out>
+    <system-err><![CDATA[00:51:01,478 |-WARN in ch.qos.logback.core.model.processor.AppenderModelHandler - Appender named [JSON] not referenced. Skipping further processing.
+]]></system-err>
+  </testcase>
+  <testcase name="preflight_desdeOrigenNoPermitido_retorna403" classname="com.rehabiapp.api.infrastructure.config.CorsConfigIT" time="0.006">
+    <system-out><![CDATA[00:51:06 INFO  [main] o.s.b.t.m.w.SpringBootMockServletContext - Initializing Spring TestDispatcherServlet ''
+00:51:06 INFO  [main] o.s.t.w.s.TestDispatcherServlet - Initializing Servlet ''
+00:51:06 INFO  [main] o.s.t.w.s.TestDispatcherServlet - Completed initialization in 1 ms
+]]></system-out>
+  </testcase>
 </testsuite>

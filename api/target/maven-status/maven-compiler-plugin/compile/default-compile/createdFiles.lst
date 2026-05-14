@@ -80,6 +80,7 @@ com/rehabiapp/api/domain/entity/Direccion.class
 com/rehabiapp/api/presentation/controller/DashboardController.class
 com/rehabiapp/api/infrastructure/security/JwtAuthenticationFilter.class
 com/rehabiapp/api/infrastructure/filter/PayloadSizeFilter.class
+com/rehabiapp/api/infrastructure/config/CorsProperties.class
 com/rehabiapp/api/domain/entity/Discapacidad.class
 com/rehabiapp/api/presentation/handler/GlobalExceptionHandler.class
 com/rehabiapp/api/application/dto/DireccionDto.class

@@ -120,6 +120,16 @@ rehabiapp:
   internal-key: ${RH_INTERNAL_KEY:changeme}
 
 # ======================== DOCUMENTACION OPENAPI ========================
+# ======================== CORS ========================
+# Origenes permitidos para peticiones cross-origin (Unity WebGL en S3, dev local, etc.).
+# Los perfiles especificos sobreescriben esta lista con los origenes reales.
+app:
+  cors:
+    allowed-origins:
+      - ${APP_CORS_ALLOWED_ORIGIN_0:http://localhost:9000}
+      - ${APP_CORS_ALLOWED_ORIGIN_1:http://localhost:5173}
+      - ${APP_CORS_ALLOWED_ORIGIN_2:http://localhost:8081}
+
 springdoc:
   api-docs:
     path: /v3/api-docs

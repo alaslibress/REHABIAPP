@@ -9,8 +9,11 @@ spring:
     #   /mnt/secrets/spring.datasource.password -> spring.datasource.password
     import: optional:configtree:file:/mnt/secrets/
   datasource:
-    # La URL se obtiene de la variable de entorno o del configtree montado
+    # La URL, usuario y password se obtienen de variables de entorno o del configtree montado.
+    # NUNCA hardcodear credenciales en este fichero.
     url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     hikari:
       # Pool de conexiones dimensionado para carga de producción en AWS RDS
       maximum-pool-size: 10
@@ -21,6 +24,25 @@ spring:
   jpa:
     # No mostrar SQL en producción — evita fugas de datos en logs
     show-sql: false
+
+# Bind al wildcard 0.0.0.0 para que el contenedor sea alcanzable desde el Service K8s.
+server:
+  address: 0.0.0.0
+
+# Origen CORS — el bucket S3 del juego WebGL es el unico cliente cross-origin en prod.
+# Origenes adicionales (p.ej. dominio CloudFront) se inyectan via APP_CORS_EXTRA_ORIGIN.
+app:
+  cors:
+    allowed-origins:
+      - ${APP_CORS_ALLOWED_ORIGIN_0:http://s3-bucket-rehabiapp-piano-640681720314.s3-website-us-east-1.amazonaws.com}
+      - ${APP_CORS_EXTRA_ORIGIN:http://localhost:9000}
+
+# URL del data pipeline en la red interna del cluster.
+rehabiapp:
+  data-service:
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://rehabiapp-data.rehabiapp-data.svc.cluster.local:8081}
+  data:
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://rehabiapp-data.rehabiapp-data.svc.cluster.local:8081}
 
 # Log en nivel INFO — reducir ruido en producción
 logging:

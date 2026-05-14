@@ -1,5 +1,6 @@
 package com.rehabiapp.api;
 
+import com.rehabiapp.api.infrastructure.config.CorsProperties;
 import com.rehabiapp.api.infrastructure.config.SecurityProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,7 @@ import org.springframework.core.env.Environment;
  * <p>Cumplimiento legal: RGPD, LOPDGDD, Ley 41/2002, ENS Alto.</p>
  */
 @SpringBootApplication
-@EnableConfigurationProperties(SecurityProperties.class)
+@EnableConfigurationProperties({SecurityProperties.class, CorsProperties.class})
 public class ApiApplication {
 
     private static final Logger log = LoggerFactory.getLogger(ApiApplication.class);

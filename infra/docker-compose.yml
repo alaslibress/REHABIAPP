@@ -58,7 +58,8 @@ services:
       # 8081 ocupado por lvp_phpmyadmin en esta maquina — mapeamos al 8082 del host
       - "8082:8081"
     environment:
-      SPRING_DATA_MONGODB_URI: mongodb://rehabiapp-mongodb:27017/rehabiapp
+      SPRING_DATA_MONGODB_URI: mongodb://rehabiapp-mongodb:27017/rehabiapp_telemetry
+      SPRING_DATA_MONGODB_DATABASE: rehabiapp_telemetry
       SPRING_DATASOURCE_URL: jdbc:postgresql://rehabiapp-db:5432/rehabiapp
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: admin

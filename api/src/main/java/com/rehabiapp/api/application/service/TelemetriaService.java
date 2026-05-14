@@ -90,18 +90,23 @@ public class TelemetriaService {
             }
         }
 
+        // Los nombres de campo deben coincidir con GameSessionIngestionRequest del pipeline /data
         Map<String, Object> payload = new HashMap<>();
-        payload.put("dniPaciente", req.dniPaciente());
-        payload.put("videojuegoCodigo", req.videojuegoCodigo());
+        payload.put("patientDni", req.dniPaciente());
+        payload.put("gameId", req.videojuegoCodigo());
         payload.put("disabilityId", disabilityId);
-        payload.put("codTratamiento", codTrat);
+        payload.put("progressionLevel", 1);
+        payload.put("codTrat", codTrat);
         payload.put("tratamientoNombre", tratamientoNombre);
         payload.put("parteCuerpo", parteCuerpo);
-        payload.put("inicio", req.inicio());
-        payload.put("fin", req.fin());
-        payload.put("duracionMs", req.duracionMs());
-        payload.put("puntuacion", req.puntuacion());
-        payload.put("metricas", req.metricas());
+        payload.put("sessionStart", req.inicio());
+        payload.put("sessionEnd", req.fin());
+        payload.put("durationSeconds", req.duracionMs() / 1000L);
+        payload.put("score", req.puntuacion() != null ? req.puntuacion().doubleValue() : null);
+        payload.put("completed", true);
+        payload.put("schemaVersion", "v1");
+        // metricas del cliente Unity se exponen como rawMetrics polimorficas
+        payload.put("rawMetrics", req.metricas() != null ? req.metricas() : Map.of("score", req.puntuacion() != null ? req.puntuacion() : 0));
 
         Map<String, Object> respuesta = dataClient.ingestar(payload);
 

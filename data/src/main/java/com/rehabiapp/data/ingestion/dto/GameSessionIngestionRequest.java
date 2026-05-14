@@ -1,12 +1,17 @@
 package com.rehabiapp.data.ingestion.dto;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.time.Instant;
+import java.util.Map;
 
 /**
  * DTO de ingesta de sesion de juego. Solo aceptado desde el API Core interno.
+ *
+ * rawMetrics reemplaza el antiguo MovementMetricsRequest fijo.
+ * movementMetrics se mantiene como campo deprecated para compatibilidad
+ * con clientes Unity que aun no envian rawMetrics — se eliminara en la
+ * proxima iteracion tras migrar todos los builds.
  */
 public record GameSessionIngestionRequest(
 
@@ -39,8 +44,13 @@ public record GameSessionIngestionRequest(
         @Positive
         Integer repetitionsTarget,
 
-        @Valid @NotNull
-        MovementMetricsRequest movementMetrics,
+        // Metricas libres por juego — reemplaza MovementMetricsRequest
+        @NotNull @NotEmpty
+        Map<String, Object> rawMetrics,
+
+        // Version del schema enviada por el cliente Unity (ej. "v1")
+        @NotBlank
+        String schemaVersion,
 
         @NotNull
         Boolean completed,
@@ -52,9 +62,15 @@ public record GameSessionIngestionRequest(
         String parteCuerpo,
 
         // Nombre legible del tratamiento (opcional)
-        String tratamientoNombre
+        String tratamientoNombre,
+
+        // Shim de compatibilidad con clientes Unity previos a rawMetrics
+        @Deprecated
+        MovementMetricsRequest movementMetrics
 
 ) {
+    /** Compatibilidad con el payload antiguo de Unity. */
+    @Deprecated
     public record MovementMetricsRequest(
             @DecimalMin("0.0") Double rangeOfMotionDegrees,
             @DecimalMin("0.0") Double averageSpeed,

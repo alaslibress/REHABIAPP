@@ -63,6 +63,9 @@ public class controladorVentanaPrincipal {
     private Button btnPestaniaTratamientos;
 
     @FXML
+    private Button btnPestaniaVideojuegos;
+
+    @FXML
     private Button btnSalir;
 
     @FXML
@@ -219,6 +222,8 @@ public class controladorVentanaPrincipal {
                 btnPestaniaDiscapacidades.setManaged(false);
                 btnPestaniaTratamientos.setVisible(false);
                 btnPestaniaTratamientos.setManaged(false);
+                btnPestaniaVideojuegos.setVisible(false);
+                btnPestaniaVideojuegos.setManaged(false);
             }
         }
     }
@@ -265,6 +270,8 @@ public class controladorVentanaPrincipal {
                 ((controladorVentanaDiscapacidades) controlador).configurarPermisos();
             } else if (controlador instanceof controladorVentanaTratamientos) {
                 ((controladorVentanaTratamientos) controlador).configurarPermisos();
+            } else if (controlador instanceof controladorVentanaVideojuegos) {
+                ((controladorVentanaVideojuegos) controlador).configurarPermisos();
             }
 
             // Cargar contenido en el centro del BorderPane
@@ -473,6 +480,16 @@ public class controladorVentanaPrincipal {
     void abrirPestaniaTratamientos(ActionEvent event) {
         cargarPestania("Tratamientos");
         marcarPestaniaSeleccionada(btnPestaniaTratamientos);
+    }
+
+    /**
+     * Abre la pestana de videojuegos terapeuticos del catalogo clinico.
+     * Solo accesible para SPECIALIST.
+     */
+    @FXML
+    void abrirPestaniaVideojuegos(ActionEvent event) {
+        cargarPestania("Videojuegos");
+        marcarPestaniaSeleccionada(btnPestaniaVideojuegos);
     }
 
     /**

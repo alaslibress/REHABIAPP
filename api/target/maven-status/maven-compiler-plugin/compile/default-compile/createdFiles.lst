@@ -54,9 +54,11 @@ com/rehabiapp/api/application/service/CatalogoService.class
 com/rehabiapp/api/application/mapper/PacienteDiscapacidadMapper.class
 com/rehabiapp/api/application/dto/NivelProgresionResponse.class
 com/rehabiapp/api/application/dto/TelemetriaSesionRequest.class
+com/rehabiapp/api/presentation/controller/InternalSessionReportController.class
 com/rehabiapp/api/domain/repository/DiscapacidadTratamientoRepository.class
 com/rehabiapp/api/application/mapper/SanitarioMapperImpl.class
 com/rehabiapp/api/application/mapper/NivelProgresionMapperImpl.class
+com/rehabiapp/api/domain/entity/SessionReport.class
 com/rehabiapp/api/application/mapper/TratamientoMapper.class
 com/rehabiapp/api/application/dto/PacienteResponse.class
 com/rehabiapp/api/application/mapper/CitaMapper.class
@@ -90,6 +92,7 @@ com/rehabiapp/api/infrastructure/config/FlywayConfig.class
 com/rehabiapp/api/domain/entity/Cita.class
 com/rehabiapp/api/domain/entity/SanitarioRol.class
 com/rehabiapp/api/application/dto/DiscapacidadResponse.class
+com/rehabiapp/api/domain/repository/SessionReportRepository.class
 com/rehabiapp/api/infrastructure/event/RegenerarMdListener.class
 com/rehabiapp/api/presentation/controller/TelemetriaController.class
 com/rehabiapp/api/application/mapper/VideojuegoMapperImpl.class
@@ -124,6 +127,7 @@ com/rehabiapp/api/domain/entity/Sanitario.class
 com/rehabiapp/api/domain/entity/PacienteTratamientoId.class
 com/rehabiapp/api/domain/repository/DiscapacidadRepository.class
 com/rehabiapp/api/domain/entity/Paciente.class
+com/rehabiapp/api/presentation/controller/InternalSessionReportController$SessionReportRequest.class
 com/rehabiapp/api/infrastructure/config/WebMvcConfig.class
 com/rehabiapp/api/domain/audit/RehabiRevisionListener.class
 com/rehabiapp/api/application/service/TratamientoPdfService$PdfBytes.class

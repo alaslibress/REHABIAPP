@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.Instant;
+import java.util.Map;
 
 /**
  * Telemetria de una sesion de juego terapeutico.
@@ -12,6 +13,10 @@ import java.time.Instant;
  * patientDni es PII: cifrado CSFLE Deterministic cuando CSFLE_ENABLED=true
  * (permite consultas por indice manteniendo confidencialidad).
  * patientToken es el hash SHA-256 del DNI + salt para uso en analitica anonimizada.
+ *
+ * rawMetrics contiene el payload libre por juego (polimorfismo por gameId).
+ * metricsHash = SHA-256 canonico de rawMetrics, usado como clave de idempotencia.
+ * reportStatus indica el estado de escritura del resumen MD en PostgreSQL.
  */
 @Document(collection = "game_sessions")
 public record GameSession(
@@ -51,9 +56,17 @@ public record GameSession(
         @Field("repetitionsTarget")
         Integer repetitionsTarget,
 
-        // Datos de movimiento — CSFLE Random (no consultable directamente)
-        @Field("movementMetrics")
-        MovementMetrics movementMetrics,
+        // Metricas libres por juego — clave del contrato polimorfrico
+        @Field("rawMetrics")
+        Map<String, Object> rawMetrics,
+
+        // Version del schema enviada por el cliente Unity
+        @Field("schemaVersion")
+        String schemaVersion,
+
+        // SHA-256 canonico de rawMetrics para idempotencia en reintentos
+        @Field("metricsHash")
+        String metricsHash,
 
         @Field("completed")
         Boolean completed,
@@ -76,7 +89,26 @@ public record GameSession(
 
         // Nombre legible del tratamiento (opcional, enriquecido por la API Core)
         @Field("tratamientoNombre")
-        String tratamientoNombre
+        String tratamientoNombre,
+
+        // Estado del reporte MD en PostgreSQL: PENDING | OK | FAILED
+        @Field("reportStatus")
+        String reportStatus,
+
+        // Numero de intentos de escritura del reporte en Postgres
+        @Field("reportAttempts")
+        Integer reportAttempts,
+
+        // Ultimo error al intentar escribir el reporte (truncado a 500 chars)
+        @Field("reportLastError")
+        String reportLastError,
+
+        // Shim de compatibilidad con pipelines existentes (WeeklyGame, RomTimeSeries, TreatmentProgress).
+        // Proyectado desde rawMetrics si las claves coinciden.
+        // Eliminar tras migrar pipelines a rawMetrics en iteracion futura.
+        @Field("movementMetrics")
+        @Deprecated
+        MovementMetrics movementMetrics
 
 ) {
     public record MovementMetrics(

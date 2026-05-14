@@ -22,6 +22,7 @@ Core RESTful API que conecta el ecosistema RehabiAPP. Hub central consumido por 
 4. **Testing requirement:** Cada nuevo endpoint, servicio o repository requiere integration tests (Spring Boot Test) o unit tests (JUnit 5 + Mockito). Ejecutar `./mvnw test` antes de marcar `[x]`.
 5. **No God Classes:** Controladores solo HTTP mapping. Logica en Application layer. NUNCA devolver `@Entity` directamente — usar DTOs MapStruct.
 6. **Security by default:** BCrypt para passwords, AES-256-GCM para campos clinicos, JWT en endpoints autenticados, audit_log en CRUD + READ de pacientes.
+7. **Arranque local:** Para arrancar el API en local **siempre** usar `./scripts/api-dev.sh`. NO ejecutar `./mvnw spring-boot:run` directo — deja procesos huerfanos que bloquean el puerto 8080 e impiden arrancar IntelliJ. Si IntelliJ falla con `BindException`, ejecutar `./scripts/api-stop.sh` antes de reintentar.
 
 ---
 
@@ -204,17 +205,27 @@ nivel_progresion, paciente_discapacidad, paciente_tratamiento,
 ## 7. RUNBOOK
 
 ```bash
-# Local stack
-docker compose -f infra/docker-compose.yml up postgres mongodb
-cd api && set -a && source .env.local && set +a && ./mvnw spring-boot:run
-cd data && ./mvnw spring-boot:run
+# Local stack (BD + pipeline de datos)
+docker compose -f infra/docker-compose.yml up postgresql mongodb data-pipeline
+
+# API — usar SIEMPRE los scripts (gestionan conflicto de puerto)
+cd api
+./scripts/api-dev.sh              # foreground (Ctrl+C para parar)
+./scripts/api-dev.sh --background # background con PID file en /tmp/rehabiapp-api.pid
+./scripts/api-stop.sh             # parar (funciona con PID file o buscando por puerto)
+./scripts/api-dev.sh --force      # mata instancia existente sin preguntar y rearranca
+
+# Si IntelliJ falla con BindException: ejecutar api-stop.sh y reintentar desde IntelliJ
 
 # Health
 curl http://localhost:8080/actuator/health     # API
-curl http://localhost:8081/actuator/health     # Data
+curl http://localhost:8082/actuator/health     # Data pipeline (8082 en dev local)
 
-# Swagger (tras Phase 10)
+# Swagger
 open http://localhost:8080/swagger-ui.html
+
+# Tests
+./mvnw test
 ```
 
 ---

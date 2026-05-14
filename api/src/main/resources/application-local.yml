@@ -19,9 +19,9 @@ spring:
 # URL del data pipeline — 8081 ocupado por phpMyAdmin en dev local
 rehabiapp:
   data-service:
-    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8083}
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8082}
   data:
-    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8083}
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8082}
 
 # Nivel de log detallado para desarrollo
 logging:

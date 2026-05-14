@@ -1,6 +1,12 @@
 # Configuracion principal del pipeline de datos de RehabiAPP
 # Puerto 8081 obligatorio para evitar colision con el API Core en 8080
 
+spring:
+  profiles:
+    # Perfil por defecto cuando SPRING_PROFILES_ACTIVE no esta seteado.
+    # Garantiza que logback-spring.xml tenga al menos un appender activo.
+    default: local
+
 server:
   port: ${SERVER_PORT:8081}
   tomcat:
@@ -56,3 +62,16 @@ rehabiapp:
       "[ROM-]": "Rango de movimiento (grados)"
       "[VEL-]": "Velocidad media (m/s)"
       "[FUERZA-]": "Velocidad maxima (m/s)"
+  # Cliente HTTP hacia el API Core para escritura de informes en PostgreSQL
+  api:
+    base-url: ${RH_API_BASE_URL:http://localhost:8080}
+    internal-key: ${RH_INTERNAL_KEY:changeme}
+    timeout-ms: ${RH_API_TIMEOUT_MS:5000}
+    max-retries: ${RH_API_MAX_RETRIES:3}
+  # Pool de conexiones MongoDB (ajuste fino para produccion)
+  mongo:
+    pool:
+      min-size: ${RH_MONGO_POOL_MIN:5}
+      max-size: ${RH_MONGO_POOL_MAX:50}
+      max-wait-time-ms: ${RH_MONGO_POOL_MAX_WAIT_MS:30000}
+      max-connection-idle-time-ms: ${RH_MONGO_POOL_IDLE_MS:600000}

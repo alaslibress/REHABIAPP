@@ -71,6 +71,7 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/PacienteTratamientoId.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/Sanitario.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/SanitarioRol.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/SessionReport.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/TelefonoPaciente.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/TelefonoSanitario.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/entity/Tratamiento.java
@@ -94,6 +95,7 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/PacienteRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/PacienteTratamientoRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/SanitarioRepository.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/SessionReportRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/TratamientoRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/TratamientoVideojuegoRepository.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/domain/repository/VideojuegoRepository.java
@@ -117,6 +119,7 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/presentation/controller/CatalogoController.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/presentation/controller/CitaController.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/presentation/controller/DashboardController.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/presentation/controller/InternalSessionReportController.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/presentation/controller/PacienteController.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/presentation/controller/ProgresoController.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/presentation/controller/SanitarioController.java

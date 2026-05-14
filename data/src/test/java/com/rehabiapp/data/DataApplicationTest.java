@@ -2,6 +2,10 @@ package com.rehabiapp.data;
 
 import com.rehabiapp.data.domain.repository.GameSessionRepository;
 import com.rehabiapp.data.domain.repository.PatientProgressRepository;
+import com.rehabiapp.data.domain.repository.TreatmentProgressRepository;
+import com.rehabiapp.data.domain.repository.PatientMarkdownRepository;
+import com.rehabiapp.data.ingestion.schema.MetricSchemaRegistry;
+import com.rehabiapp.data.internal.client.ApiInternalClient;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -14,6 +18,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  * MongoDB se excluye via perfil "test" y se sustituye por mocks de Mockito
  * para satisfacer las dependencias de beans que requieren MongoTemplate
  * y los repositorios Spring Data MongoDB.
+ * Los nuevos servicios con dependencias externas tambien se mockean.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -27,6 +32,18 @@ class DataApplicationTest {
 
     @MockitoBean
     PatientProgressRepository patientProgressRepository;
+
+    @MockitoBean
+    TreatmentProgressRepository treatmentProgressRepository;
+
+    @MockitoBean
+    PatientMarkdownRepository patientMarkdownRepository;
+
+    @MockitoBean
+    MetricSchemaRegistry metricSchemaRegistry;
+
+    @MockitoBean
+    ApiInternalClient apiInternalClient;
 
     @Test
     void contextLoads() {

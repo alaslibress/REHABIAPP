@@ -71,6 +71,22 @@ public class MongoIndexConfig {
                 .on("progressionLevel", Sort.Direction.ASC)
                 .on("sessionStart", Sort.Direction.DESC)
                 .named("idx_disability_level_start"));
+
+        // Indice unico para idempotencia de reintentos Unity (metricsHash)
+        ops.ensureIndex(new Index()
+                .on("patientDni", Sort.Direction.ASC)
+                .on("gameId", Sort.Direction.ASC)
+                .on("sessionStart", Sort.Direction.ASC)
+                .on("metricsHash", Sort.Direction.ASC)
+                .named("idx_idempotency_key")
+                .unique()
+                .sparse());
+
+        // Indice para el scheduler de reintentos de reporte Postgres
+        ops.ensureIndex(new Index()
+                .on("reportStatus", Sort.Direction.ASC)
+                .on("receivedAt", Sort.Direction.ASC)
+                .named("idx_report_status_received"));
     }
 
     private void crearIndicesPatientProgress() {

@@ -5,7 +5,7 @@ import { AppText } from './AppText';
 import { WhatsAppButton } from './WhatsAppButton';
 
 // Datos de contacto del hospital — constantes visibles al paciente
-const HOSPITAL_PHONE = '+34 628 67 88 88';
+const HOSPITAL_PHONE = '+34 628 67 85 90';
 const HOSPITAL_EMAIL = 'cita@rehabiapp.com';
 
 // Tarjeta de contacto: telefono + email + WhatsApp. Sustituye al formulario de cita.

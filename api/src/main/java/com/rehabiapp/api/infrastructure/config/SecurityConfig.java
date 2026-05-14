@@ -61,6 +61,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Rutas de autenticación — públicas (login, refresh)
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Endpoints internos entre servicios — protegidos por X-Internal-Key, no por JWT
+                        .requestMatchers("/api/internal/**").permitAll()
                         // Probes de K8s — accesibles sin autenticación desde el plano de control
                         .requestMatchers("/actuator/health/**").permitAll()
                         // Endpoint de métricas Prometheus — accesible desde el stack de observabilidad

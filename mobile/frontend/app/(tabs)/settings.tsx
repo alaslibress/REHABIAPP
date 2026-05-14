@@ -177,7 +177,7 @@ export default function SettingsScreen() {
           )}
           {testSent && (
             <AppText variant="caption" weight="medium" className="text-success text-center">
-              Notificacion programada para 5 s.
+              Notificacion programada para 3 s.
             </AppText>
           )}
         </View>

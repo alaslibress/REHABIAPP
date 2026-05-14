@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "fronted",
-    "slug": "fronted",
+    "name": "RehabiAPP",
+    "slug": "rehabiapp",
     "version": "1.0.0",
-    "scheme": "fronted",
+    "scheme": "rehabiapp",
     "platforms": [
       "ios",
       "android"
@@ -17,7 +17,14 @@
       "expo-router",
       "expo-secure-store",
       "expo-font",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/RehabiAPPLogoNoLetras.png",
+          "color": "#2563EB"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -27,21 +34,28 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/rehabiapp-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F0F4FF",
+      "dark": {
+        "image": "./assets/rehabiapp-logo.png",
+        "backgroundColor": "#0B1220"
+      }
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rehabiapp.mobile"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
+        "backgroundColor": "#F0F4FF"
+      },
+      "useNextNotificationsApi": true,
+      "package": "com.rehabiapp.mobile"
     }
   }
 }

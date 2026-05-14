@@ -33,7 +33,7 @@ public class TelemetriaController {
 
     @Operation(summary = "Ingesta una sesion de juego completada por un paciente")
     @PostMapping("/sesion-juego")
-    @PreAuthorize("hasAuthority('SCOPE_GAMES_TELEMETRY') or hasRole('SPECIALIST')")
+    @PreAuthorize("hasAuthority('SCOPE_GAMES_TELEMETRY') or hasRole('SPECIALIST') or hasRole('PATIENT')")
     public ResponseEntity<Map<String, Object>> ingestar(
             @Valid @RequestBody TelemetriaSesionRequest req) {
         Map<String, Object> resultado = telemetriaService.ingestar(req);

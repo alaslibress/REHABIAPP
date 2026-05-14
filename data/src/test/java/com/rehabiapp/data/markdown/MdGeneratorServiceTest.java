@@ -80,9 +80,19 @@ class MdGeneratorServiceTest {
                 null, "12345678A", gameId, "discap-1", 1,
                 inicio, inicio.plusSeconds(600), 600L, score,
                 10, 10,
-                new GameSession.MovementMetrics(45.0, 0.5, 1.0),
-                completed, inicio, "token", "ROM-HOMBRO-01", "hombro_derecho",
-                "Rehabilitacion hombro");
+                java.util.Map.of("rangeOfMotionDegrees", 45.0, "averageSpeed", 0.5),
+                "v1",
+                "hash-test",
+                completed,
+                inicio,
+                "token",
+                "ROM-HOMBRO-01",
+                "hombro_derecho",
+                "Rehabilitacion hombro",
+                "OK",
+                0,
+                null,
+                new GameSession.MovementMetrics(45.0, 0.5, 1.0));
     }
 
     private String normalizar(String texto) {

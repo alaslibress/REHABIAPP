@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/utils/theme';
 import { useFontScale } from '../../src/utils/fontScale';
 
@@ -27,8 +28,12 @@ const TAB_CONFIG: TabConfig[] = [
 export default function TabsLayout() {
   const { scheme } = useTheme();
   const scale = useFontScale();
+  const insets = useSafeAreaInsets();
 
   const isDark = scheme === 'dark';
+  // En dispositivos con gesture nav (Android) o home indicator (iOS) sumamos el inset
+  // para que los iconos no queden tapados por la zona de gestos del sistema.
+  const bottomInset = insets.bottom;
 
   const headerBg = isDark ? '#111827' : '#FFFFFF';
   const tabBarBg = isDark ? '#111827' : '#FFFFFF';
@@ -45,9 +50,17 @@ export default function TabsLayout() {
           backgroundColor: tabBarBg,
           borderTopWidth: 1,
           borderTopColor: tabBarBorder,
-          height: 60,
-          paddingBottom: 8,
+          // Altura base 60 + el inset del sistema para no chocar con la zona de gestos.
+          height: 60 + bottomInset,
+          // Padding inferior identico: deja respiro entre los iconos y el borde inferior.
+          paddingBottom: 8 + bottomInset,
           paddingTop: 4,
+          // Sombra elevada que enfatiza el contenedor blanco/oscuro de la barra.
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: isDark ? 0.4 : 0.08,
+          shadowRadius: 4,
         },
         tabBarLabelStyle: {
           fontSize: 11 * scale,

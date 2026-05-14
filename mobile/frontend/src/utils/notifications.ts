@@ -11,7 +11,7 @@ const isExpoGo =
 // Android + Expo Go = sin soporte de push remotas ni de algunas APIs nativas.
 // En ese caso el modulo `expo-notifications` puede lanzar al importarse,
 // asi que lo cargamos de forma perezosa y protegida.
-const remotePushDisabled = isExpoGo && Platform.OS === 'android';
+export const remotePushDisabled = isExpoGo && Platform.OS === 'android';
 
 // Carga perezosa y defensiva del modulo nativo. Si falla por cualquier motivo
 // (entorno no soportado, modulo ausente), devolvemos null y las funciones
@@ -44,6 +44,18 @@ export function initNotifications() {
         shouldSetBadge: false,
       }),
     });
+
+    // En Android los canales son obligatorios desde API 26+. Sin canal,
+    // scheduleNotificationAsync no muestra el banner aunque el permiso este concedido.
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'Notificaciones',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#2563EB',
+        sound: 'default',
+      }).catch(() => {});
+    }
   } catch {
     // Ignorar: entorno sin soporte
   }
@@ -115,8 +127,10 @@ export async function scheduleAppointmentReminder(appointment: Appointment): Pro
       identifier,
       content: {
         title: 'Recordatorio de cita',
-        body: `Tienes cita mañana a las ${appointment.time.substring(0, 5)} con ${nombreMedico}.`,
+        body: `Tienes cita maniana a las ${appointment.time.substring(0, 5)} con ${nombreMedico}.`,
         sound: true,
+        // Android: el canal "default" se crea en initNotifications().
+        ...(Platform.OS === 'android' ? { channelId: 'default' } : {}),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -144,10 +158,12 @@ export async function scheduleTestNotification(): Promise<void> {
         title: 'Notificacion de prueba',
         body: 'Las notificaciones funcionan correctamente.',
         sound: true,
+        // Android: el canal "default" se crea en initNotifications().
+        ...(Platform.OS === 'android' ? { channelId: 'default' } : {}),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: 5,
+        seconds: 3,
         repeats: false,
       },
     });

@@ -297,6 +297,461 @@ K.0 puede dejar marcas de logging permanentes (mejor diagnostico) o quitarlas tr
 
 ---
 
+## PHASE L — GESTION DE VIDEOJUEGOS (Asociacion videojuego ↔ discapacidad)
+
+> **Sintoma reportado:** el usuario tiene una discapacidad con `cod_dis = REAL` pero NO encuentra opcion en la UI para asociarla a un videojuego. En el formulario de tratamiento aparece el mensaje "la discapacidad no tiene videojuegos asociados".
+>
+> **Diagnostico del Thinker:**
+>
+> 1. La tabla `videojuego` (V13) tiene `cod_dis VARCHAR(20)` como FK simple — un videojuego pertenece a **UNA** discapacidad. NO es many-to-many.
+> 2. La API expone CRUD completo: `GET /api/videojuegos` (lista paginada), `GET /api/videojuegos/{id}`, `GET /api/videojuegos/discapacidad/{codDis}`, `POST /api/videojuegos` (SPECIALIST), `PUT /api/videojuegos/{id}` (SPECIALIST), `DELETE /api/videojuegos/{id}` (SPECIALIST, soft delete).
+> 3. El desktop SOLO tiene `VideojuegoDAO` con `listarTodos()` y `listarPorDiscapacidad(codDis)`. NO existe controlador, FXML ni pestana para gestionar el catalogo. El usuario no tiene forma de crear ni editar videojuegos.
+> 4. La asociacion videojuego↔discapacidad se materializa al **crear** un videojuego con un `cod_dis` concreto, o al **editar** un videojuego existente y cambiar su `cod_dis`. Por tanto, gestionar la asociacion = gestionar el catalogo de videojuegos.
+>
+> **Decision del Thinker:** crear pestana dedicada "Videojuegos" en `VentanaPrincipal` (consistente con Pacientes/Sanitarios/Discapacidades/Tratamientos), con listado + alta + edicion + soft delete. NO crear panel inline en la ficha de discapacidad (duplicaria logica; al editar un videojuego se necesita ComboBox de discapacidades y de campos como `parteCuerpo`/`urlUnity` que solo encajan en un formulario completo).
+>
+> **Decision secundaria:** la pestana es visible SOLO para SPECIALIST. NURSE no la ve (igual que Sanitarios/Discapacidades/Tratamientos hoy).
+
+### L.0 — Verificacion del estado actual (inventario)
+
+Doer ejecuta antes de tocar nada:
+
+```bash
+cd /home/alaslibres/DAM/RehabiAPP/desktop
+grep -rn "Videojuego" src/main/resources/ src/main/java/com/javafx/Interface/ | head -20
+ls src/main/resources/ | grep -iE "videojuego"
+ls src/main/java/com/javafx/Interface/ | grep -iE "videojuego"
+```
+
+Resultado esperado (estado de partida confirmado por el Thinker en 2026-05-13):
+- [x] `Clases/Videojuego.java` — record con 9 campos. Mantener tal cual.
+- [x] `DAO/VideojuegoDAO.java` — solo `listarTodos()` y `listarPorDiscapacidad(codDis)`. Esta fase lo extiende.
+- [ ] `VentanaVideojuegos.fxml` — NO existe.
+- [ ] `VentanaAgregarVideojuego.fxml` — NO existe.
+- [ ] `controladorVentanaVideojuegos.java` — NO existe.
+- [ ] `controladorAgregarVideojuego.java` — NO existe.
+- [ ] `btnPestaniaVideojuegos` en `VentanaPrincipal.fxml` — NO existe.
+
+Si el grep revela que algo del lado [ ] YA existe, parar y escalar al Thinker.
+
+### L.1 — Extender `VideojuegoDAO` con CRUD completo
+
+Editar `desktop/src/main/java/com/javafx/DAO/VideojuegoDAO.java` y anadir los siguientes metodos (sin tocar los existentes):
+
+```java
+/** Crea un videojuego. Requiere rol SPECIALIST. */
+public Videojuego crear(VideojuegoRequest request) {
+    return apiClient.post("/api/videojuegos", request, Videojuego.class);
+}
+
+/** Actualiza un videojuego existente. Requiere rol SPECIALIST. */
+public Videojuego actualizar(Long idVideojuego, VideojuegoRequest request) {
+    return apiClient.put("/api/videojuegos/" + idVideojuego, request, Videojuego.class);
+}
+
+/** Obtiene un videojuego por id. */
+public Videojuego obtenerPorId(Long idVideojuego) {
+    return apiClient.get("/api/videojuegos/" + idVideojuego, Videojuego.class);
+}
+
+/** Soft delete (activo=false en el API). Requiere rol SPECIALIST. */
+public void eliminar(Long idVideojuego) {
+    apiClient.delete("/api/videojuegos/" + idVideojuego);
+}
+```
+
+Crear nuevo record en `Clases/`:
+
+```java
+// desktop/src/main/java/com/javafx/Clases/VideojuegoRequest.java
+package com.javafx.Clases;
+
+/**
+ * DTO de entrada para alta o actualizacion de un videojuego (espejo de
+ * com.rehabiapp.api.application.dto.VideojuegoRequest del API).
+ */
+public record VideojuegoRequest(
+    String codigo,
+    String nombre,
+    String descripcion,
+    String codDis,
+    String parteCuerpo,
+    String urlUnity
+) {}
+```
+
+**Notas para el Doer:**
+
+- Verificar que `ApiClient.post(...)`, `put(...)`, `delete(...)` ya existen con la firma usada (3 args: path, body, responseType para post/put; 1 arg para delete). Si la firma real difiere, ADAPTAR la llamada — NO inventar nuevos helpers en `ApiClient.java` (esa clase esta marcada "NO TOCAR" en §M).
+- Si `ApiClient.delete(...)` no devuelve nada y la API responde 204, el metodo `eliminar` no necesita parsear cuerpo.
+- `apiClient.get("/api/videojuegos", new TypeReference<List<Videojuego>>(){})` ya existe — NO duplicar. El listado paginado del API (`PageResponse`) puede romper la deserializacion: si tras la prueba E2E aparece JSON mismatch, **escalar al Thinker** (no inventar un Pageable cliente). Posible alternativa documentada por el Thinker: anadir `?size=200` al path.
+
+### L.2 — Pestana "Videojuegos": `VentanaVideojuegos.fxml`
+
+Crear `desktop/src/main/resources/VentanaVideojuegos.fxml`. **Patron de referencia obligatorio:** `VentanaDiscapacidades.fxml`. Replicar:
+
+- Cabecera `panel-card-header` con titulo "Videojuegos" + buscador (TextField + boton `button-icono`) + boton "Anadir" (`button-primario`).
+- TableView `tblVideojuegos` con columnas:
+
+  | fx:id columna | Texto cabecera | Property |
+  |---|---|---|
+  | `colCodigo` | "Codigo" | `codigo` |
+  | `colNombre` | "Nombre" | `nombre` |
+  | `colDiscapacidad` | "Discapacidad" | `discapacidadNombre` |
+  | `colParteCuerpo` | "Parte cuerpo" | `parteCuerpo` |
+  | `colActivo` | "Activo" | `activo` (CheckBoxTableCell readonly, igual que tema actual) |
+
+- HBox inferior con paginacion (`pagPaginacion`, igual patron que Discapacidades).
+- HBox pie con botones `btnEliminarVideojuego` (button-peligro), `btnEditarVideojuego` (button-secundario). Doble-click en fila abre edicion (siguiendo el patron de Phase H, modo VER + EDITAR si se quiere; ESTA FASE solo implementa CREAR/EDITAR — VER queda opcional).
+- ComboBox `cmbFiltroDiscapacidad` en la cabecera para filtrar por discapacidad (incluye opcion "Todas").
+
+Plantilla minima (copiar el esqueleto de `VentanaDiscapacidades.fxml` y renombrar fx:id):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox fx:id="vboxContenedorPrinVideojuegos" maxHeight="Infinity" maxWidth="Infinity"
+      spacing="15.0" styleClass="panel-card"
+      xmlns="http://javafx.com/javafx/23.0.1"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.javafx.Interface.controladorVentanaVideojuegos">
+    <!-- Cabecera con titulo + buscador + filtro + Anadir.
+         Replicar layout de VentanaDiscapacidades.fxml. -->
+    <!-- TableView con columnas listadas arriba. -->
+    <!-- Paginacion + botones Eliminar/Editar al pie. -->
+</VBox>
+```
+
+Doer: NO inventar nuevos estilos CSS. Reutilizar `button-primario`, `button-secundario`, `button-peligro`, `button-icono`, `label-titulo`, `panel-card`, `panel-card-header` ya definidos en `tema_claro.css` y `tema_oscuro.css`.
+
+### L.3 — `controladorVentanaVideojuegos.java`
+
+Crear `desktop/src/main/java/com/javafx/Interface/controladorVentanaVideojuegos.java`. **Patron de referencia obligatorio:** `controladorVentanaDiscapacidades.java` (estructura initialize/configurarPermisos/cargar/buscar/abrirFormulario).
+
+Estructura esperada (sin escribir el codigo entero — Doer rellena segun el patron):
+
+```java
+public class controladorVentanaVideojuegos {
+
+    @FXML private TableView<Videojuego> tblVideojuegos;
+    @FXML private TableColumn<Videojuego, String> colCodigo, colNombre,
+                                                  colDiscapacidad, colParteCuerpo;
+    @FXML private TableColumn<Videojuego, Boolean> colActivo;
+    @FXML private TextField txfBuscarVideojuegos;
+    @FXML private ComboBox<Discapacidad> cmbFiltroDiscapacidad;
+    @FXML private Button btnAnadirVideojuego, btnEditarVideojuego,
+                         btnEliminarVideojuego, btnBuscarVideojuegos;
+    @FXML private HBox pagPaginacion;
+    @FXML private Label lblTituloPestaniaVideojuegos;
+
+    private final VideojuegoDAO videojuegoDAO = new VideojuegoDAO();
+    private final CatalogoService catalogoService = new CatalogoService();
+    private final ObservableList<Videojuego> listaVideojuegos = FXCollections.observableArrayList();
+    private List<Videojuego> todosVideojuegos = new ArrayList<>();
+    private PaginacionUtil<Videojuego> paginacion;
+
+    @FXML
+    public void initialize() {
+        configurarTabla();
+        cargarFiltroDiscapacidades();
+        cargarVideojuegos();
+        tblVideojuegos.setOnMouseClicked(this::manejarDobleClicTabla);
+    }
+
+    public void configurarPermisos() {
+        SesionUsuario sesion = SesionUsuario.getInstancia();
+        if (!sesion.esEspecialista()) {
+            // Defensa en profundidad — la pestana no deberia ser visible para NURSE,
+            // pero si lo es, los botones de mutacion se deshabilitan.
+            btnAnadirVideojuego.setDisable(true);
+            btnEditarVideojuego.setDisable(true);
+            btnEliminarVideojuego.setDisable(true);
+        }
+    }
+
+    private void cargarVideojuegos() {
+        try {
+            todosVideojuegos = videojuegoDAO.listarTodos();
+            // si todosVideojuegos == null → ArrayList vacia (defensa)
+            paginacion.setDatos(filtrarPorDiscapacidad(todosVideojuegos));
+        } catch (com.javafx.excepcion.RehabiAppException e) {
+            todosVideojuegos = new ArrayList<>();
+            paginacion.setDatos(todosVideojuegos);
+            VentanaUtil.mostrarVentanaInformativa(
+                "No se pudieron cargar los videojuegos: " + e.getMessage(),
+                TipoMensaje.ERROR);
+        } catch (Exception e) {
+            todosVideojuegos = new ArrayList<>();
+            paginacion.setDatos(todosVideojuegos);
+            System.err.println("Error inesperado: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // buscarVideojuegos, aplicarFiltros, abrirFormularioNuevoVideojuego,
+    // editarVideojuegoSeleccionado, eliminarVideojuegoSeleccionado,
+    // manejarDobleClicTabla → patron identico a controladorVentanaDiscapacidades.
+
+    private void cargarFiltroDiscapacidades() {
+        try {
+            List<Discapacidad> disc = catalogoService.listarDiscapacidades();
+            // Anadir entrada "Todas" sintetica (id=null o codigo especial) al ComboBox
+            cmbFiltroDiscapacidad.getItems().add(new Discapacidad(null, "Todas", null));
+            cmbFiltroDiscapacidad.getItems().addAll(disc);
+            cmbFiltroDiscapacidad.getSelectionModel().selectFirst();
+            cmbFiltroDiscapacidad.valueProperty().addListener((obs, oldV, newV) -> aplicarFiltros());
+        } catch (com.javafx.excepcion.RehabiAppException e) {
+            // No bloquear la pestana — log y seguir
+            System.err.println("Filtro discapacidades no cargado: " + e.getMessage());
+        }
+    }
+}
+```
+
+**Reglas obligatorias para el Doer:**
+1. NO usar `setStyle(...)` en el codigo Java.
+2. Toda llamada a `VideojuegoDAO.*` o `CatalogoService.*` envuelta en `try/catch RehabiAppException` ancho — el patron de K.1 aplica aqui IGUAL.
+3. La eliminacion debe pedir confirmacion con `VentanaUtil.mostrarVentanaConfirmacion(...)` antes de invocar `videojuegoDAO.eliminar(id)`.
+4. Tras crear/editar/eliminar, recargar el listado (`cargarVideojuegos()` y re-aplicar el filtro actual).
+
+### L.4 — Formulario alta/edicion: `VentanaAgregarVideojuego.fxml` + controlador
+
+Crear `desktop/src/main/resources/VentanaAgregarVideojuego.fxml`. **Patron de referencia:** `VentanaAgregarDiscapacidad.fxml`.
+
+Campos del formulario:
+
+| fx:id | Tipo | Campo del Request | Validacion |
+|---|---|---|---|
+| `txtCodigo` | TextField | `codigo` | obligatorio, max 50 |
+| `txtNombre` | TextField | `nombre` | obligatorio, max 200 |
+| `txtAreaDescripcion` | TextArea | `descripcion` | opcional |
+| `cmbDiscapacidad` | ComboBox<Discapacidad> | `codDis` | obligatorio (poblar con `catalogoService.listarDiscapacidades()`) |
+| `txtParteCuerpo` | TextField | `parteCuerpo` | obligatorio, max 100 |
+| `txtUrlUnity` | TextField | `urlUnity` | opcional, max 500 |
+| `lblTituloVentana` | Label | — | "Anadir Videojuego" o "Editar Videojuego" |
+| `btnGuardar`, `btnCancelar` | Button | — | patron habitual |
+
+El ComboBox `cmbDiscapacidad` debe mostrar `nombreDis` como texto pero conservar el objeto `Discapacidad` completo para recuperar `codDis` al guardar. Usar `setCellFactory` + `setButtonCell` o un `StringConverter<Discapacidad>` — replicar el patron de `controladorAgregarTratamiento` que ya hace esto para su propio ComboBox.
+
+Crear `desktop/src/main/java/com/javafx/Interface/controladorAgregarVideojuego.java` con:
+
+```java
+public class controladorAgregarVideojuego {
+
+    @FXML private TextField txtCodigo, txtNombre, txtParteCuerpo, txtUrlUnity;
+    @FXML private TextArea txtAreaDescripcion;
+    @FXML private ComboBox<Discapacidad> cmbDiscapacidad;
+    @FXML private Label lblTituloVentana;
+    @FXML private Button btnGuardar, btnCancelar;
+
+    private final VideojuegoDAO videojuegoDAO = new VideojuegoDAO();
+    private final CatalogoService catalogoService = new CatalogoService();
+
+    private boolean modoEdicion = false;
+    private Long idVideojuegoEditar = null;
+
+    @FXML
+    public void initialize() {
+        cargarComboDiscapacidades();
+    }
+
+    public void cargarDatosParaEdicion(Videojuego v) {
+        this.modoEdicion = true;
+        this.idVideojuegoEditar = v.idVideojuego();
+        lblTituloVentana.setText("Editar Videojuego");
+        txtCodigo.setText(v.codigo());
+        txtCodigo.setEditable(false); // codigo no editable tras alta (clave humana unica)
+        txtNombre.setText(v.nombre());
+        txtAreaDescripcion.setText(v.descripcion());
+        txtParteCuerpo.setText(v.parteCuerpo());
+        txtUrlUnity.setText(v.urlUnity());
+        // Seleccionar la discapacidad actual en el combo por su codDis
+        cmbDiscapacidad.getItems().stream()
+            .filter(d -> v.codDis().equals(d.codDis()))
+            .findFirst()
+            .ifPresent(cmbDiscapacidad.getSelectionModel()::select);
+    }
+
+    @FXML
+    void guardarVideojuego(ActionEvent event) {
+        // 1. Validar (codigo, nombre, discapacidad, parteCuerpo obligatorios).
+        // 2. Construir VideojuegoRequest.
+        // 3. Si modoEdicion → videojuegoDAO.actualizar(idVideojuegoEditar, req);
+        //    Si no, videojuegoDAO.crear(req).
+        // 4. Cerrar ventana y notificar al controlador padre (mediante callback o
+        //    refrescando al volver — usar mismo patron que controladorAgregarDiscapacidad).
+        // 5. Capturar RehabiAppException y mostrar modal de error.
+    }
+
+    @FXML
+    void cancelar(ActionEvent event) { ... }
+
+    private void cargarComboDiscapacidades() {
+        try {
+            cmbDiscapacidad.getItems().setAll(catalogoService.listarDiscapacidades());
+        } catch (RehabiAppException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                "No se pudieron cargar las discapacidades. El formulario no se puede usar.",
+                TipoMensaje.ERROR);
+            btnGuardar.setDisable(true);
+        }
+    }
+}
+```
+
+**Reglas obligatorias para el Doer:**
+
+1. El campo `codigo` se vuelve **read-only** en modo edicion (es clave humana unica; cambiarlo rompe referencias en `tratamiento_videojuego`). En modo alta es editable.
+2. El campo `discapacidad` (ComboBox) ES editable tanto en alta como en edicion — esta es **la pieza clave** que resuelve el problema del usuario: permite cambiar la discapacidad asociada a un videojuego existente.
+3. Validacion cliente antes de enviar al API: mostrar `VentanaUtil` con mensaje claro si falta cualquier campo obligatorio.
+4. Tras guardar exito, mostrar modal `"Videojuego guardado correctamente."` (`TipoMensaje.EXITO`) y cerrar la ventana (`((Stage) btnGuardar.getScene().getWindow()).close()`).
+5. Tras cerrar, el controlador padre (`controladorVentanaVideojuegos`) debe recargar el listado. Si se usa modal `showAndWait()`, basta con llamar a `cargarVideojuegos()` justo despues del `showAndWait()`.
+
+### L.5 — Registrar la pestana en `VentanaPrincipal`
+
+#### L.5.1 — `VentanaPrincipal.fxml`
+
+Localizar la zona de botones laterales (lineas 105-110 aprox., entre `btnPestaniaTratamientos` y `btnPestaniaAyuda`). Insertar:
+
+```xml
+<Button fx:id="btnPestaniaVideojuegos" mnemonicParsing="false"
+        onAction="#abrirPestaniaVideojuegos" prefHeight="60.0" prefWidth="225.0"
+        text="Videojuegos" />
+```
+
+Mantener el orden visual: Citas → Pacientes → Sanitarios → Discapacidades → Tratamientos → **Videojuegos** → Ayuda.
+
+#### L.5.2 — `controladorVentanaPrincipal.java`
+
+1. Anadir campo:
+   ```java
+   @FXML private Button btnPestaniaVideojuegos;
+   ```
+
+2. Anadir handler `@FXML void abrirPestaniaVideojuegos(ActionEvent event)`:
+   ```java
+   @FXML
+   void abrirPestaniaVideojuegos(ActionEvent event) {
+       cargarPestania("Videojuegos");
+       marcarPestaniaSeleccionada(btnPestaniaVideojuegos);
+   }
+   ```
+
+3. En el bloque `if (esEnfermero) { ... ocultar botones de gestion ... }` (lineas 215-221 aprox.), anadir:
+   ```java
+   btnPestaniaVideojuegos.setVisible(false);
+   btnPestaniaVideojuegos.setManaged(false);
+   ```
+
+4. En `cargarPestania(...)`, dentro del `if (controlador instanceof ...)` (linea 263 aprox.), anadir rama nueva:
+   ```java
+   } else if (controlador instanceof controladorVentanaVideojuegos) {
+       ((controladorVentanaVideojuegos) controlador).configurarPermisos();
+   }
+   ```
+
+> El switch dinamico `String rutaFXML = "/Ventana" + nombrePestania + ".fxml"` resuelve automaticamente `Videojuegos` → `/VentanaVideojuegos.fxml`. NO modificar esa logica.
+
+### L.6 — RBAC y matrix de validacion
+
+| Rol | Pestana visible | Anadir | Editar | Eliminar |
+|---|---|---|---|---|
+| SPECIALIST | Si | Si | Si | Si |
+| NURSE | No (oculta) | — | — | — |
+
+Validacion manual:
+
+| # | Caso | Esperado |
+|---|------|----------|
+| L.6.1 | Login `ADMIN0000/admin` → pestana "Videojuegos" visible y cargable | Tabla con todos los videojuegos del sistema |
+| L.6.2 | Login `00000002W/enfermero1234` (NURSE) → pestana "Videojuegos" ausente | Sin boton lateral, sin posibilidad de abrirla |
+| L.6.3 | SPECIALIST: pulsar "Anadir" | Modal con formulario en blanco, ComboBox discapacidades poblado |
+| L.6.4 | SPECIALIST: alta con codigo `VJ-REAL-001`, nombre `Test`, discapacidad `REAL`, parte cuerpo `Mano`, sin descripcion ni URL | Tras guardar, modal exito + nueva fila en tabla con discapacidad="REAL" |
+| L.6.5 | Volver a tratamientos: crear tratamiento con discapacidad `REAL` → tabla de juegos asociables muestra `VJ-REAL-001` | Comprobacion del flujo principal que motivo esta fase |
+| L.6.6 | SPECIALIST: doble-click sobre un videojuego con `cod_dis = OTRA` y cambiar el ComboBox a `REAL` + Guardar | Se actualiza la discapacidad del videojuego. Al volver a tratamientos con disc=REAL, ese juego aparece |
+| L.6.7 | SPECIALIST: intentar dar de alta con codigo duplicado | API responde 409 → modal "Codigo de videojuego ya existe" (extraerMensajeError debe devolver mensaje util) |
+| L.6.8 | SPECIALIST: alta sin discapacidad seleccionada | Validacion cliente bloquea antes de enviar al API |
+| L.6.9 | SPECIALIST: eliminar un videojuego que YA esta vinculado a un tratamiento | API decidira (soft delete deberia funcionar). Modal exito. La tabla de juegos del tratamiento ya no muestra ese videojuego (porque `activo=false`) |
+| L.6.10 | Apagar API y abrir pestana "Videojuegos" | Modal `"No se pudieron cargar los videojuegos: ..."` + tabla vacia. App NO se cuelga |
+| L.6.11 | Cambiar tema oscuro y repetir L.6.3..L.6.6 | Sin areas blancas, sin regresiones |
+
+### L.7 — Tests JUnit5
+
+`desktop/src/test/java/com/javafx/DAO/VideojuegoDAOTest.java`:
+
+- `crear_postEnviaRequestYDeserializa_videojuego`. Mockear `ApiClient.post(path, body, clazz)` para que devuelva un `Videojuego` cuando se llame con `/api/videojuegos` y un `VideojuegoRequest`. Verificar que el DAO devuelve el `Videojuego` esperado.
+- `actualizar_putAlPathCorrecto`. Mockear `ApiClient.put` y verificar path `/api/videojuegos/42` cuando id=42.
+- `eliminar_deleteAlPathCorrecto`. Mockear `ApiClient.delete` y verificar path.
+- `obtenerPorId_getDeserializaVideojuego`.
+
+Si TestFx no esta en `build.gradle`, NO testear el FXML — limitar tests a DAO y, opcionalmente, a una clase de logica package-private extraida del controlador (por ejemplo `filtrarPorDiscapacidad(List<Videojuego>, Discapacidad)` si se anade como metodo statico testeable).
+
+### L.8 — Validacion E2E E2E y aceptacion
+
+- [ ] `./gradlew clean compileJava test` → BUILD SUCCESS, sin tests rotos.
+- [ ] Pestana Videojuegos accesible solo para SPECIALIST.
+- [ ] Alta de videojuego con discapacidad `REAL` aparece en la tabla.
+- [ ] Edicion permite cambiar la discapacidad de un videojuego existente.
+- [ ] El videojuego con discapacidad `REAL` aparece en la tabla de juegos asociables al crear/editar un tratamiento con disc=REAL (caso L.6.5 — flujo completo que motivo la fase).
+- [ ] Soft delete oculta el videojuego de la tabla pero la fila sigue en BD (verificable via `psql` si hace falta).
+- [ ] TestSprite 100% (root `/CLAUDE.md` §10).
+
+### L.9 — Archivos modificados
+
+Crear:
+```
+desktop/src/main/resources/VentanaVideojuegos.fxml
+desktop/src/main/resources/VentanaAgregarVideojuego.fxml
+desktop/src/main/java/com/javafx/Interface/controladorVentanaVideojuegos.java
+desktop/src/main/java/com/javafx/Interface/controladorAgregarVideojuego.java
+desktop/src/main/java/com/javafx/Clases/VideojuegoRequest.java
+desktop/src/test/java/com/javafx/DAO/VideojuegoDAOTest.java
+```
+
+Modificar:
+```
+desktop/src/main/java/com/javafx/DAO/VideojuegoDAO.java     (L.1 — anadir crear/actualizar/obtenerPorId/eliminar)
+desktop/src/main/resources/VentanaPrincipal.fxml             (L.5.1 — boton pestana Videojuegos)
+desktop/src/main/java/com/javafx/Interface/controladorVentanaPrincipal.java
+                                                             (L.5.2 — handler + cargarPestania branch + RBAC hide para NURSE)
+```
+
+NO TOCAR:
+```
+desktop/src/main/java/com/javafx/Clases/Videojuego.java      (record estable)
+desktop/src/main/java/com/javafx/Clases/ApiClient.java       (estable)
+api/**                                                       (NUNCA — los endpoints CRUD ya estan en /api Phase 6)
+data/**                                                      (NUNCA)
+```
+
+### L.10 — Orden de ejecucion
+
+```
+L.0 (inventario)
+   ↓
+L.1 (DAO CRUD + VideojuegoRequest record)
+   ↓
+L.4 (Formulario AgregarVideojuego — FXML + controlador, NO depende del listado)
+   ↓
+L.2 (Listado VentanaVideojuegos — FXML)
+   ↓
+L.3 (controladorVentanaVideojuegos — usa L.1 y L.4)
+   ↓
+L.5 (Registrar pestana en VentanaPrincipal)
+   ↓
+L.6 (Validacion manual)
+   ↓
+L.7 (Tests)
+   ↓
+L.8 (Aceptacion + TestSprite)
+```
+
+Si tras L.5 la pestana no abre, aplicar el patron defensivo de Phase G (placeholder en `cargarPestania` + log con stack trace).
+
+---
+
 ---
 
 ## 0. CONTEXTO OBLIGATORIO (LEER ANTES DE TOCAR CODIGO)
@@ -880,14 +1335,15 @@ Una vez TestSprite verde, actualizar el checklist §7:
 ## K. ORDEN DE EJECUCION
 
 ```
-Phase G (Pacientes fix)  --> independiente
-Phase H (Ver Tratamiento) --> independiente
-Phase I (Progreso preview) --> independiente
+Phase G (Pacientes fix)         --> independiente
+Phase H (Ver Tratamiento)       --> independiente
+Phase I (Progreso preview)      --> independiente
+Phase L (Modulo Videojuegos)    --> independiente (resuelve "no puedo asociar disc REAL a videojuegos")
        |
        +--> Phase J (Testing al final)
 ```
 
-Recomendacion: G → H → I → J. Las tres son ortogonales pero G corrige un bug bloqueante en la pantalla mas usada, asi que va primero.
+Recomendacion: G → H → I → L → J. Las cuatro son ortogonales pero G corrige un bug bloqueante en la pantalla mas usada, asi que va primero. L se puede intercalar tras G si el usuario lo pide como prioritario (caso actual).
 
 ---
 
@@ -913,18 +1369,26 @@ Recomendacion: G → H → I → J. Las tres son ortogonales pero G corrige un b
 ```
 desktop/src/test/java/com/javafx/Interface/ControladorVentanaPacientesTest.java
 desktop/src/test/java/com/javafx/Interface/ControladorAgregarTratamientoModoVerTest.java
+desktop/src/test/java/com/javafx/DAO/VideojuegoDAOTest.java                       (Phase L)
+desktop/src/main/resources/VentanaVideojuegos.fxml                                (Phase L)
+desktop/src/main/resources/VentanaAgregarVideojuego.fxml                          (Phase L)
+desktop/src/main/java/com/javafx/Interface/controladorVentanaVideojuegos.java     (Phase L)
+desktop/src/main/java/com/javafx/Interface/controladorAgregarVideojuego.java      (Phase L)
+desktop/src/main/java/com/javafx/Clases/VideojuegoRequest.java                    (Phase L — DTO mirror del API)
 ```
 
 ### Modificar
 
 ```
 desktop/src/main/java/com/javafx/Interface/controladorVentanaPacientes.java     (Phase G — try/catch defensivo)
-desktop/src/main/java/com/javafx/Interface/controladorVentanaPrincipal.java     (Phase G — placeholder en pestana fallida)
+desktop/src/main/java/com/javafx/Interface/controladorVentanaPrincipal.java     (Phase G + L — placeholder pestana fallida; boton Videojuegos + RBAC)
 desktop/src/main/java/com/javafx/Interface/controladorVentanaTratamientos.java  (Phase H — boton Ver + handler + doble-click cambia a ver)
 desktop/src/main/java/com/javafx/Interface/controladorAgregarTratamiento.java   (Phase H — modo VER + cargarDatosParaVer + aplicarModoSoloLectura)
 desktop/src/main/java/com/javafx/Interface/controladorVentanaPacienteListar.java (Phase I — boton Progreso si falta)
+desktop/src/main/java/com/javafx/DAO/VideojuegoDAO.java                          (Phase L — anadir crear/actualizar/obtenerPorId/eliminar)
 desktop/src/main/resources/VentanaTratamientos.fxml                              (Phase H — anadir btnVerTratamiento)
 desktop/src/main/resources/VentanaListarPaciente.fxml                            (Phase I — boton Progreso si falta)
+desktop/src/main/resources/VentanaPrincipal.fxml                                  (Phase L — btnPestaniaVideojuegos)
 desktop/src/main/resources/tema_claro.css                                        (Phase G + I — label-error-pestania, refuerzo punto-baseline/actual si falta)
 desktop/src/main/resources/tema_oscuro.css                                        (idem)
 ```
@@ -956,7 +1420,8 @@ data/**                                                                   (NUNCA
 1. **Bug bloqueante:** Phase G arregla la pestana Pacientes que no abre. Reproducir → leer traza → aplicar el fix correspondiente (caso 1 a 5). Endurecer `cargarPestania` para que un fallo nunca rompa la UI silenciosamente.
 2. **Vista de tratamiento:** Phase H anade un nuevo modo VER al controlador `controladorAgregarTratamiento` reutilizando el FXML existente. Boton nuevo "Ver" en la pestana de tratamientos; doble-click abre VER (no editar). Sin nuevo FXML.
 3. **Progreso del paciente:** Phase I confirma el flujo end-to-end (la mayor parte ya esta) y anade el boton "Progreso" en la ficha del paciente si faltara. Decision firme: previsualizacion JavaFX `LineChart` (NO Jasper).
-4. **Testing:** Phase J pasa `./gradlew test`, smoke matrix manual, TestSprite 100%, y actualiza `/desktop/CLAUDE.md`.
+4. **Modulo Videojuegos:** Phase L crea pestana nueva "Videojuegos" (CRUD completo) — resuelve el caso de "tengo la disc REAL pero no puedo asociarla a un videojuego". El ComboBox de discapacidad en el formulario de alta/edicion es la pieza clave: SPECIALIST puede crear un videojuego con `cod_dis=REAL` o editar uno existente y cambiar su discapacidad.
+5. **Testing:** Phase J pasa `./gradlew test`, smoke matrix manual, TestSprite 100%, y actualiza `/desktop/CLAUDE.md`.
 
 Si algo no aparece arriba, NO inventar — escalar al Thinker.
 

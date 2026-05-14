@@ -5,7 +5,7 @@ import { AppText } from './AppText';
 // Numero de WhatsApp del centro de rehabilitacion. Formato E.164 sin '+'
 // porque la URL whatsapp://send?phone= NO acepta el simbolo '+' (lo reescribe).
 // Coincide con HOSPITAL_PHONE de HospitalContactCard pero sin espacios ni '+'.
-const WHATSAPP_PHONE = '34628678888';
+const WHATSAPP_PHONE = '34628678590';
 const WHATSAPP_MESSAGE = 'Hola, soy paciente de RehabiAPP y quiero pedir una cita.';
 
 // Construye la URL whatsapp:// con el mensaje URL-encoded

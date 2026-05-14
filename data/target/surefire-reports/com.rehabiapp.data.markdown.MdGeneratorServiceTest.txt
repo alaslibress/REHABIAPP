@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.rehabiapp.data.markdown.MdGeneratorServiceTest
 -------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.126 s -- in com.rehabiapp.data.markdown.MdGeneratorServiceTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.113 s -- in com.rehabiapp.data.markdown.MdGeneratorServiceTest

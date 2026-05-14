@@ -6,6 +6,12 @@ spring:
     # Perfil por defecto cuando SPRING_PROFILES_ACTIVE no esta seteado.
     # Garantiza que logback-spring.xml tenga al menos un appender activo.
     default: local
+  # MongoDB — nombre de base de datos explicito. Necesario porque
+  # MongoConnectionPoolConfig sobreescribe el bean MongoClientSettings de Spring Boot
+  # y la DB extraida del URI no se propaga; sin esta propiedad el driver cae a "test".
+  data:
+    mongodb:
+      database: ${SPRING_DATA_MONGODB_DATABASE:rehabiapp_telemetry}
 
 server:
   port: ${SERVER_PORT:8081}

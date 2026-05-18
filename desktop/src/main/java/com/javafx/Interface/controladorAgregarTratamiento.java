@@ -15,6 +15,7 @@ import com.javafx.excepcion.DuplicadoException;
 import com.javafx.excepcion.RehabiAppException;
 import com.javafx.excepcion.ValidacionException;
 import com.javafx.service.CatalogoService;
+import com.javafx.util.TableUiUtil;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -123,6 +124,7 @@ public class controladorAgregarTratamiento {
         colJuegoSel.setCellValueFactory(c -> c.getValue().seleccionadoProperty());
         colJuegoSel.setCellFactory(CheckBoxTableCell.forTableColumn(colJuegoSel));
         colJuegoCod.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getJuego().codigo()));
+        colJuegoCod.setCellFactory(TableUiUtil.monoCell()); // codigo monoespaciado
         colJuegoNom.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getJuego().nombre()));
         colJuegoCue.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getJuego().parteCuerpo()));
         tablaJuegos.setItems(juegosFila);

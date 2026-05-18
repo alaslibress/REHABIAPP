@@ -14,6 +14,7 @@ import com.javafx.excepcion.ValidacionException;
 import com.javafx.service.CatalogoService;
 import com.javafx.service.PacienteClinicoService;
 import com.javafx.service.PacienteService;
+import com.javafx.util.TableUiUtil;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -218,6 +219,8 @@ public class controladorAgregarPaciente {
         colFormDisNombre.setCellValueFactory(new PropertyValueFactory<>("nombreDis"));
         colFormDisNivel.setCellValueFactory(new PropertyValueFactory<>("nombreNivel"));
         colFormDisNotas.setCellValueFactory(new PropertyValueFactory<>("notas"));
+        // Nivel de progresion como badge semantico
+        colFormDisNivel.setCellFactory(TableUiUtil.badgeCell(n -> n, TableUiUtil::estiloNivel));
 
         //Configurar el spinner de edad (0-120 años)
         SpinnerValueFactory<Integer> valueFactory =

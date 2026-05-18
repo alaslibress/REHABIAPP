@@ -187,4 +187,11 @@ public class Sanitario implements Persona {
                 ", cargo='" + getCargo() + '\'' +
                 '}';
     }
+
+    // ----- Getters helper para JasperReports -----
+    // El modelo desktop no expone fecha de alta del sanitario; devolvemos null
+    // para que el template del listado renderice una cadena vacia.
+    public java.sql.Timestamp getFechaAlta() {
+        return null;
+    }
 }

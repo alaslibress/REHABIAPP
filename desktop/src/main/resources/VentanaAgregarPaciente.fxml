@@ -19,6 +19,7 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <ScrollPane fitToWidth="true" prefHeight="600.0" prefWidth="750.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorAgregarPaciente">
     <content>
@@ -27,7 +28,11 @@
                 <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
             </padding>
             <children>
-                <Label fx:id="lblTituloVentana" styleClass="label-titulo" text="Nuevo Paciente" />
+                <HBox styleClass="modal-header">
+                    <children>
+                        <Label fx:id="lblTituloVentana" styleClass="modal-title" text="Nuevo Paciente" />
+                    </children>
+                </HBox>
 
                 <Separator />
 
@@ -39,21 +44,21 @@
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Sanitario asignado:" />
-                                        <ComboBox fx:id="cmbSanitario" prefWidth="280.0" promptText="Selecciona un sanitario" />
+                                        <ComboBox fx:id="cmbSanitario" prefWidth="280.0" promptText="Selecciona un sanitario" styleClass="field-required" />
                                     </children>
                                 </HBox>
 
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Nombre:" />
-                                        <TextField fx:id="txtNombre" prefWidth="280.0" promptText="Introduce el nombre" />
+                                        <TextField fx:id="txtNombre" prefWidth="280.0" promptText="Introduce el nombre" styleClass="field-required" />
                                     </children>
                                 </HBox>
 
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Apellidos:" />
-                                        <TextField fx:id="txtApellidos" prefWidth="280.0" promptText="Introduce los apellidos" />
+                                        <TextField fx:id="txtApellidos" prefWidth="280.0" promptText="Introduce los apellidos" styleClass="field-required" />
                                     </children>
                                 </HBox>
 
@@ -62,7 +67,7 @@
                                         <Label prefWidth="140.0" text="Edad:" />
                                         <Spinner fx:id="spinnerEdad" editable="true" prefWidth="80.0" />
                                         <Label prefWidth="50.0" text="DNI:" />
-                                        <TextField fx:id="txtDNI" prefWidth="140.0" promptText="12345678X" />
+                                        <TextField fx:id="txtDNI" prefWidth="140.0" promptText="12345678X" styleClass="field-required" />
                                     </children>
                                 </HBox>
 
@@ -95,7 +100,7 @@
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Calle:" />
-                                        <TextField fx:id="txtCalle" prefWidth="280.0" promptText="Nombre de la calle" />
+                                        <TextField fx:id="txtCalle" prefWidth="280.0" promptText="Nombre de la calle" styleClass="field-required" />
                                     </children>
                                 </HBox>
 
@@ -113,7 +118,7 @@
                                         <Label prefWidth="140.0" text="Codigo Postal:" />
                                         <TextField fx:id="txtCodigoPostal" prefWidth="80.0" promptText="CP" />
                                         <Label prefWidth="70.0" text="Localidad:" />
-                                        <TextField fx:id="txtLocalidad" prefWidth="120.0" promptText="Ciudad" />
+                                        <TextField fx:id="txtLocalidad" prefWidth="120.0" promptText="Ciudad" styleClass="field-required" />
                                     </children>
                                 </HBox>
 
@@ -130,9 +135,9 @@
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
                                         <Label prefWidth="140.0" text="Sexo:" />
-                                        <ComboBox fx:id="cmbSexo" prefWidth="150.0" promptText="Selecciona sexo" />
+                                        <ComboBox fx:id="cmbSexo" prefWidth="150.0" promptText="Selecciona sexo" styleClass="field-required" />
                                         <Label prefWidth="110.0" text="Fecha Nac.:" />
-                                        <DatePicker fx:id="dpFechaNacimiento" prefWidth="150.0" promptText="dd/mm/aaaa" />
+                                        <DatePicker fx:id="dpFechaNacimiento" prefWidth="150.0" promptText="dd/mm/aaaa" styleClass="field-required" />
                                     </children>
                                 </HBox>
 
@@ -208,8 +213,12 @@
                             </TableView>
                             <HBox alignment="CENTER_LEFT" spacing="10.0">
                                 <children>
-                                    <Button fx:id="btnFormAsignarDis" onAction="#asignarDiscapacidadFormulario" text="Asignar discapacidad" />
-                                    <Button fx:id="btnFormDesasignarDis" onAction="#desasignarDiscapacidadFormulario" text="Desasignar" />
+                                    <Button fx:id="btnFormAsignarDis" onAction="#asignarDiscapacidadFormulario" styleClass="button,secondary" text="Asignar discapacidad">
+                                        <graphic><FontIcon iconLiteral="mdi2p-plus" iconSize="14" /></graphic>
+                                    </Button>
+                                    <Button fx:id="btnFormDesasignarDis" onAction="#desasignarDiscapacidadFormulario" styleClass="button,ghost" text="Desasignar">
+                                        <graphic><FontIcon iconLiteral="mdi2t-trash-can-outline" iconSize="14" /></graphic>
+                                    </Button>
                                 </children>
                             </HBox>
                         </VBox>
@@ -218,10 +227,12 @@
 
                 <Separator />
 
-                <HBox alignment="CENTER" spacing="10.0">
+                <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="modal-footer">
                     <children>
-                        <Button fx:id="btnCancelar" onAction="#cerrarVentana" prefWidth="120.0" styleClass="button-peligro" text="Cancelar" />
-                        <Button fx:id="btnGuardar" onAction="#guardarPaciente" prefWidth="120.0" styleClass="button-primario" text="Crear" />
+                        <Button fx:id="btnCancelar" onAction="#cerrarVentana" styleClass="button,ghost" text="Cancelar" />
+                        <Button fx:id="btnGuardar" onAction="#guardarPaciente" styleClass="button,primary" text="Crear">
+                            <graphic><FontIcon iconLiteral="mdi2c-content-save" iconSize="14" /></graphic>
+                        </Button>
                     </children>
                 </HBox>
             </children>

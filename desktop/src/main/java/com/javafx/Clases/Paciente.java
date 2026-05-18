@@ -314,4 +314,47 @@ public class Paciente implements Persona {
                 ", dniSanitario='" + getDniSanitario() + '\'' +
                 '}';
     }
+
+    // ----- Getters derivados para JasperReports -----
+    // El JRBeanCollectionDataSource resuelve los <field> del .jrxml por nombre
+    // JavaBean, asi que estos helpers exponen valores compuestos sin filtrar la
+    // logica al template.
+
+    /** Alias del NumSS con primera letra minuscula (property "numSs") para que
+     *  el .jrxml pueda usar field name="numSs" estandar JavaBean. */
+    public String getNumSs() { return getNumSS(); }
+
+    /** Direccion en una sola linea para la cabecera del informe del paciente. */
+    public String getDireccionCompleta() {
+        StringBuilder sb = new StringBuilder();
+        String calle = getCalle();
+        String numero = getNumero();
+        String piso = getPiso();
+        String cp = getCodigoPostal();
+        String localidad = getLocalidad();
+        if (calle != null && !calle.isBlank()) sb.append(calle);
+        if (numero != null && !numero.isBlank()) sb.append(sb.length() > 0 ? " " : "").append(numero);
+        if (piso != null && !piso.isBlank()) sb.append(", ").append(piso);
+        if (cp != null && !cp.isBlank()) sb.append(sb.length() > 0 ? ", " : "").append(cp);
+        if (localidad != null && !localidad.isBlank()) sb.append(sb.length() > 0 ? " " : "").append(localidad);
+        return sb.toString();
+    }
+
+    /** Telefonos concatenados (telefono1, telefono2) para la cabecera del informe. */
+    public String getTelefonos() {
+        String t1 = getTelefono1();
+        String t2 = getTelefono2();
+        boolean has1 = t1 != null && !t1.isBlank();
+        boolean has2 = t2 != null && !t2.isBlank();
+        if (has1 && has2) return t1 + " / " + t2;
+        if (has1) return t1;
+        if (has2) return t2;
+        return "";
+    }
+
+    /** Foto del paciente para el informe. Aun no implementado en el modelo
+     *  desktop — devolvemos null y JasperReports omite la imagen. */
+    public Object getFoto() {
+        return null;
+    }
 }

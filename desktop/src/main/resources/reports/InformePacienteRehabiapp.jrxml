@@ -46,17 +46,17 @@ GROUP BY
     p.email_pac, p.num_ss, p.edad_pac, p.protesis,
     p.fecha_alta, p.foto, d.calle, d.numero, d.piso, d.cp,
     l.nombre_localidad, l.provincia]]></query>
-	<field name="dni_pac" class="java.lang.String"/>
-	<field name="nombre_pac" class="java.lang.String"/>
-	<field name="apellido1_pac" class="java.lang.String"/>
-	<field name="apellido2_pac" class="java.lang.String"/>
-	<field name="email_pac" class="java.lang.String"/>
-	<field name="num_ss" class="java.lang.String"/>
-	<field name="edad_pac" class="java.lang.Integer"/>
-	<field name="protesis" class="java.lang.Integer"/>
-	<field name="fecha_alta" class="java.sql.Timestamp"/>
+	<field name="dni" class="java.lang.String"/>
+	<field name="nombre" class="java.lang.String"/>
+	<field name="apellido1" class="java.lang.String"/>
+	<field name="apellido2" class="java.lang.String"/>
+	<field name="email" class="java.lang.String"/>
+	<field name="numSs" class="java.lang.String"/>
+	<field name="edad" class="java.lang.Integer"/>
+	<field name="protesis" class="java.lang.Boolean"/>
+	<field name="fechaConsentimiento" class="java.lang.Object"/>
 	<field name="foto" class="java.lang.Object"/>
-	<field name="direccion_completa" class="java.lang.String"/>
+	<field name="direccionCompleta" class="java.lang.String"/>
 	<field name="telefonos" class="java.lang.String"/>
 	<background splitType="Stretch"/>
 	<title height="60" splitType="Stretch">
@@ -78,13 +78,13 @@ GROUP BY
 				</box>
 			</element>
 			<element kind="textField" uuid="12345678-1234-1234-1234-123456789005" x="180" y="25" width="600" height="30" fontSize="20.0" bold="true">
-				<expression><![CDATA[$F{nombre_pac} + " " + $F{apellido1_pac} + " " + $F{apellido2_pac}]]></expression>
+				<expression><![CDATA[$F{nombre} + " " + $F{apellido1} + " " + $F{apellido2}]]></expression>
 			</element>
 			<element kind="staticText" uuid="12345678-1234-1234-1234-123456789006" x="180" y="65" width="40" height="20" style="Etiqueta">
 				<text><![CDATA[DNI:]]></text>
 			</element>
 			<element kind="textField" uuid="12345678-1234-1234-1234-123456789007" x="220" y="65" width="100" height="20" style="Valor">
-				<expression><![CDATA[$F{dni_pac}]]></expression>
+				<expression><![CDATA[$F{dni}]]></expression>
 			</element>
 			<element kind="staticText" uuid="12345678-1234-1234-1234-123456789008" x="330" y="65" width="20" height="20" forecolor="#999999" hTextAlign="Center">
 				<text><![CDATA[|]]></text>
@@ -93,7 +93,7 @@ GROUP BY
 				<text><![CDATA[NSS:]]></text>
 			</element>
 			<element kind="textField" uuid="12345678-1234-1234-1234-123456789010" x="400" y="65" width="150" height="20" style="Valor">
-				<expression><![CDATA[$F{num_ss}]]></expression>
+				<expression><![CDATA[$F{numSs}]]></expression>
 			</element>
 			<element kind="line" uuid="12345678-1234-1234-1234-123456789011" x="180" y="95" width="600" height="1">
 				<pen lineWidth="1.5" lineColor="#006699"/>
@@ -102,13 +102,13 @@ GROUP BY
 				<text><![CDATA[Dirección:]]></text>
 			</element>
 			<element kind="textField" uuid="466ee328-dbdc-480e-ae97-7e282ba3c9cd" x="250" y="110" width="530" height="20" style="Valor">
-				<expression><![CDATA[$F{direccion_completa}]]></expression>
+				<expression><![CDATA[$F{direccionCompleta}]]></expression>
 			</element>
 			<element kind="staticText" uuid="9f05d432-d397-4add-9d0f-c0aba1f98dc7" x="180" y="140" width="50" height="20" style="Etiqueta">
 				<text><![CDATA[Email:]]></text>
 			</element>
 			<element kind="textField" uuid="0895a8f5-13ff-45a6-964b-00d7c2a748d4" x="230" y="140" width="220" height="20" style="Valor">
-				<expression><![CDATA[$F{email_pac}]]></expression>
+				<expression><![CDATA[$F{email}]]></expression>
 			</element>
 			<element kind="staticText" uuid="174b32e2-68a2-4212-8bd7-59b3c7b1225a" x="460" y="140" width="20" height="20" forecolor="#999999" hTextAlign="Center">
 				<text><![CDATA[|]]></text>

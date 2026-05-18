@@ -10,6 +10,7 @@ import com.javafx.excepcion.DuplicadoException;
 import com.javafx.excepcion.RehabiAppException;
 import com.javafx.service.CatalogoService;
 import com.javafx.util.PaginacionUtil;
+import com.javafx.util.TableUiUtil;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -19,7 +20,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -173,19 +173,14 @@ public class controladorVentanaDiscapacidades {
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombreDis"));
         colDescripcion.setCellValueFactory(new PropertyValueFactory<>("descripcionDis"));
 
-        // CellFactory para mostrar "Si"/"No" en vez de true/false
+        // Codigo con tipografia monoespaciada
+        colCodigo.setCellFactory(TableUiUtil.monoCell());
+
+        // "Necesita protesis" como badge semantico (true → "Si" ok, false → "No" neutro)
         colProtesis.setCellValueFactory(new PropertyValueFactory<>("necesitaProtesis"));
-        colProtesis.setCellFactory(column -> new TableCell<Discapacidad, Boolean>() {
-            @Override
-            protected void updateItem(Boolean item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                } else {
-                    setText(item ? "Si" : "No");
-                }
-            }
-        });
+        colProtesis.setCellFactory(TableUiUtil.badgeCell(
+                v -> Boolean.TRUE.equals(v) ? "Si" : "No",
+                v -> Boolean.TRUE.equals(v) ? "ok" : ""));
 
         tblDiscapacidades.setItems(listaDiscapacidades);
     }
@@ -252,6 +247,7 @@ public class controladorVentanaDiscapacidades {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -301,6 +297,7 @@ public class controladorVentanaDiscapacidades {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -352,9 +349,14 @@ public class controladorVentanaDiscapacidades {
                 cargarDiscapacidades();
 
             } catch (DuplicadoException e) {
-                // 409: hay pacientes asignados a esta discapacidad
+                // 409: el API ha rechazado el borrado. Casi siempre es porque la
+                // discapacidad esta vinculada a pacientes o a tratamientos
+                // (foreign key constraint). Damos un mensaje claro para que el
+                // usuario sepa que necesita reasignar/desvincular primero.
                 VentanaUtil.mostrarVentanaInformativa(
-                        "No se puede eliminar: " + e.getMessage(),
+                        "No se puede eliminar esta discapacidad: tiene pacientes o "
+                        + "tratamientos vinculados. Reasignelos o desvinculelos primero "
+                        + "antes de eliminarla.",
                         TipoMensaje.ADVERTENCIA
                 );
             } catch (ConexionException e) {

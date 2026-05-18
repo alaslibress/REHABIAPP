@@ -1,6 +1,8 @@
 package com.javafx.Interface;
 
 import com.javafx.Clases.AnimacionUtil;
+import com.javafx.util.ConstantesApp;
+import com.javafx.util.ThemeManager;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -51,9 +53,11 @@ public class controladorVentanaOpciones {
     private static final String KEY_TAMANIO_LETRA = "tamanio.letra";
     private static final String KEY_TEMA = "tema";
 
-    // Nombres de los archivos CSS
-    private static final String CSS_TEMA_CLARO = "/tema_claro.css";
-    private static final String CSS_TEMA_OSCURO = "/tema_oscuro.css";
+    // Rutas a los archivos CSS de tokens (rediseño Claude Design).
+    // Se conservan estos identificadores por compatibilidad con metodos
+    // estaticos publicos invocados desde otras pantallas.
+    private static final String CSS_TEMA_CLARO = ConstantesApp.CSS_TEMA_CLARO;
+    private static final String CSS_TEMA_OSCURO = ConstantesApp.CSS_TEMA_OSCURO;
 
     // Opciones de tamaño de letra
     private static final ObservableList<String> TAMANIOS_LETRA = FXCollections.observableArrayList(
@@ -178,18 +182,14 @@ public class controladorVentanaOpciones {
     public static void aplicarConfiguracionAEscena(Scene scene, String cssPath, int tamanioPx) {
         if (scene == null) return;
 
-        // Limpiar hojas de estilo anteriores (solo las de tema)
-        scene.getStylesheets().removeIf(s -> 
-            s.contains("tema_claro.css") || s.contains("tema_oscuro.css")
-        );
-
-        // Agregar la nueva hoja de estilo
+        // Delegar en ThemeManager: limpia tokens-* previos, anade el nuevo y
+        // garantiza que rehabiapp.css este presente exactamente una vez.
+        String themeCode = cssPath != null && cssPath.contains("dark") ? "dark" : "light";
         try {
-            String cssUrl = controladorVentanaOpciones.class.getResource(cssPath).toExternalForm();
-            scene.getStylesheets().add(cssUrl);
-            System.out.println("CSS aplicado: " + cssPath);
+            ThemeManager.applyTheme(scene, themeCode);
+            System.out.println("Tema aplicado: " + themeCode);
         } catch (Exception e) {
-            System.err.println("Error al cargar CSS " + cssPath + ": " + e.getMessage());
+            System.err.println("Error al aplicar tema " + themeCode + ": " + e.getMessage());
         }
 
         // Aplicar tamaño de fuente al root

@@ -19,11 +19,11 @@
     </padding>
     <children>
         <HBox styleClass="modal-header" spacing="10" alignment="CENTER_LEFT">
-            <Label fx:id="lblTituloProgreso" text="Progreso del paciente" styleClass="label-titulo"/>
+            <Label fx:id="lblTituloProgreso" text="Progreso del paciente" styleClass="modal-title"/>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label fx:id="lblUltimaActualizacion" text="" styleClass="label-secundario"/>
-            <Button fx:id="btnRecargar" text="Actualizar" onAction="#recargar" styleClass="button-secundario"/>
-            <Button fx:id="btnCerrar" text="Cerrar" onAction="#cerrar" styleClass="button-secundario">
+            <Label fx:id="lblUltimaActualizacion" text="" styleClass="modal-subtitle"/>
+            <Button fx:id="btnRecargar" text="Actualizar" onAction="#recargar" styleClass="button,secondary"/>
+            <Button fx:id="btnCerrar" text="Cerrar" onAction="#cerrar" styleClass="button,ghost">
                 <HBox.margin><Insets left="8"/></HBox.margin>
             </Button>
         </HBox>

@@ -11,12 +11,16 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="558.0" prefWidth="452.0" spacing="20.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorFiltroSanitarios">
+<VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="640.0" minWidth="-Infinity" prefHeight="640.0" prefWidth="452.0" spacing="20.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorFiltroSanitarios">
     <padding>
         <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
     </padding>
     <children>
-        <Label fx:id="lblTituloFiltros" styleClass="label-titulo" text="Filtrar Sanitarios" />
+        <HBox styleClass="modal-header">
+            <children>
+                <Label fx:id="lblTituloFiltros" styleClass="modal-title" text="Filtrar Sanitarios" />
+            </children>
+        </HBox>
         <Separator prefWidth="200.0" />
 
         <VBox alignment="CENTER_LEFT" spacing="12.0">
@@ -68,11 +72,11 @@
 
         <Separator prefWidth="200.0" />
 
-        <HBox alignment="CENTER_RIGHT" spacing="15.0">
+        <HBox alignment="CENTER_RIGHT" spacing="15.0" styleClass="modal-footer">
             <children>
-                <Button mnemonicParsing="false" onAction="#restablecerFiltros" prefHeight="38.0" prefWidth="120.0" text="Restablecer" />
-                <Button mnemonicParsing="false" onAction="#cerrarVentana" prefHeight="38.0" prefWidth="120.0" styleClass="button-peligro" text="Cancelar" />
-                <Button mnemonicParsing="false" onAction="#aplicarFiltros" prefHeight="38.0" prefWidth="120.0" styleClass="button-primario" text="Aplicar" />
+                <Button mnemonicParsing="false" onAction="#restablecerFiltros" styleClass="button,ghost" text="Restablecer" />
+                <Button mnemonicParsing="false" onAction="#cerrarVentana" styleClass="button,ghost" text="Cancelar" />
+                <Button mnemonicParsing="false" onAction="#aplicarFiltros" styleClass="button,primary" text="Aplicar" />
             </children>
         </HBox>
     </children>

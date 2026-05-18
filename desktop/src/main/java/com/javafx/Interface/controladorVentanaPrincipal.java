@@ -132,7 +132,7 @@ public class controladorVentanaPrincipal {
     private void marcarPestaniaSeleccionada(Button botonSeleccionado) {
         // Quitar estilo de selección del botón anterior
         if (botonPestaniaActual != null) {
-            botonPestaniaActual.getStyleClass().remove("pestania-seleccionada");
+            botonPestaniaActual.getStyleClass().remove("active");
             // Animación de deselección
             ScaleTransition scaleOut = new ScaleTransition(Duration.millis(150), botonPestaniaActual);
             scaleOut.setToX(1.0);
@@ -142,7 +142,9 @@ public class controladorVentanaPrincipal {
         
         // Aplicar estilo al nuevo botón seleccionado
         if (botonSeleccionado != null) {
-            botonSeleccionado.getStyleClass().add("pestania-seleccionada");
+            if (!botonSeleccionado.getStyleClass().contains("active")) {
+                botonSeleccionado.getStyleClass().add("active");
+            }
             
             // Animación de selección
             ScaleTransition scaleIn = new ScaleTransition(Duration.millis(200), botonSeleccionado);
@@ -535,6 +537,7 @@ public class controladorVentanaPrincipal {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             
             // Establecer icono
             VentanaUtil.establecerIconoVentana(stage);
@@ -574,6 +577,7 @@ public class controladorVentanaPrincipal {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             
             // Establecer icono
             VentanaUtil.establecerIconoVentana(stage);
@@ -617,6 +621,7 @@ public class controladorVentanaPrincipal {
                 stage.setTitle("RehabiAPP - Inicio de Sesión");
                 stage.setScene(scene);
                 stage.setResizable(false);
+                stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
                 
                 // Establecer icono
                 VentanaUtil.establecerIconoVentana(stage);

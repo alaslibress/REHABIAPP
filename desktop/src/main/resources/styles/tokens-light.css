@@ -1,0 +1,87 @@
+/* Tokens del tema claro (rediseño Claude Design - mayo 2026).
+   Define looked-up colors usados por rehabiapp.css y por cualquier
+   componente que necesite reusar la paleta. */
+.root {
+    /* Marca - derivada del logotipo */
+    -brand-50:  #EEF3FF;
+    -brand-100: #DCE5FF;
+    -brand-200: #B8C9FF;
+    -brand-300: #8BA5FF;
+    -brand-400: #5B7FFF;
+    -brand-500: #3D63F2;
+    -brand-600: #2952E8;
+    -brand-700: #1E3FBE;
+    -brand-800: #18348F;
+    -brand-900: #11225C;
+
+    /* Semanticos */
+    -danger-50:  #FEEAEA;
+    -danger-500: #E04848;
+    -danger-600: #C93838;
+    -danger-700: #A82828;
+    -warn-50:    #FEF3DC;
+    -warn-500:   #E8A33D;
+    -warn-700:   #A37020;
+    -ok-50:      #DCF5E7;
+    -ok-500:     #2EA66A;
+    -ok-700:     #1F7048;
+    -info-50:    #DDEFFF;
+    -info-500:   #2D8BE0;
+
+    /* Superficies (tema claro) */
+    -bg:            #F4F7FB;
+    -bg-elev-1:     #FFFFFF;
+    -bg-elev-2:     #FFFFFF;
+    -bg-sunken:     #EAEFF6;
+    -bg-hover:      #EEF3FF;
+
+    -sidebar-bg:    #FFFFFF;
+    -sidebar-border:#E4EAF2;
+    -topbar-bg:     #FFFFFF;
+    -topbar-border: #E4EAF2;
+
+    -border:        #DEE5EE;
+    -border-strong: #C7D1DE;
+    -divider:       #ECF0F5;
+
+    -text:          #0F1B33;
+    -text-2:        #4A5568;
+    -text-3:        #7A8699;
+    -text-muted:    #9AA4B5;
+    -text-on-brand: #FFFFFF;
+
+    -accent:        -brand-500;
+    -accent-hover:  -brand-600;
+    -accent-soft:   #EEF3FF;
+
+    /* Calendario */
+    -cal-cell-bg:       #FFFFFF;
+    -cal-cell-border:   #E4EAF2;
+    -cal-weekend:       #FCDDDD;
+    -cal-weekend-muted: #FDEEEE;
+    -cal-other:         #9AA4B5;
+
+    /* Tabla */
+    -table-header-bg: #F7FAFD;
+    -table-row-alt:   #FAFCFE;
+    -table-row-hover: #EEF3FF;
+
+    /* Terminal (ayuda) — en tema claro fondo crema y texto negro para
+       maxima legibilidad. En oscuro se mantiene el fondo casi-negro. */
+    -terminal-bg:   #F4F7FC;
+    -terminal-text: #0F1B33;
+
+    -fx-font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-base: -bg;
+    -fx-background: -bg;
+    -fx-control-inner-background: -bg-elev-1;
+    -fx-text-fill: -text;
+}
+
+/* Tema claro: los iconos mdi2 sueltos (sin variante semantica explicita)
+   se pintan en NEGRO sobre fondo claro para contraste. Los botones con
+   variante semantica (.primary/.danger/etc.) mantienen su color propio
+   definido en rehabiapp.css gracias a la mayor especificidad. */
+.ikonli-font-icon {
+    -fx-icon-color: #0F1B33;
+}

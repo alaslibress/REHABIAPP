@@ -10,33 +10,38 @@
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="500.0" prefWidth="480.0" spacing="12.0" styleClass="root modal-root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorAgregarSanitario">
     <padding>
         <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
     </padding>
     <children>
-        <Label fx:id="lblTituloVentana" styleClass="label-titulo" text="Nuevo Sanitario" />
+        <HBox styleClass="modal-header">
+            <children>
+                <Label fx:id="lblTituloVentana" styleClass="modal-title" text="Nuevo Sanitario" />
+            </children>
+        </HBox>
         <Separator prefWidth="200.0" />
 
         <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
                 <Label prefWidth="110.0" text="Nombre:" />
-                <TextField fx:id="txfNombreSanitario" prefWidth="280.0" promptText="Nombre" />
+                <TextField fx:id="txfNombreSanitario" prefWidth="280.0" promptText="Nombre" styleClass="field-required" />
             </children>
         </HBox>
 
         <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
                 <Label prefWidth="110.0" text="Apellidos:" />
-                <TextField fx:id="txfApellidosSanitario" prefWidth="280.0" promptText="Primer apellido Segundo apellido" />
+                <TextField fx:id="txfApellidosSanitario" prefWidth="280.0" promptText="Primer apellido Segundo apellido" styleClass="field-required" />
             </children>
         </HBox>
 
         <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
                 <Label prefWidth="110.0" text="DNI:" />
-                <TextField fx:id="txfDNISanitario" prefWidth="280.0" promptText="12345678X" />
+                <TextField fx:id="txfDNISanitario" prefWidth="280.0" promptText="12345678X" styleClass="field-required" />
             </children>
         </HBox>
 
@@ -55,14 +60,14 @@
         <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
                 <Label prefWidth="110.0" text="Email:" />
-                <TextField fx:id="txfEmailSanitario" prefWidth="280.0" promptText="ejemplo@correo.com" />
+                <TextField fx:id="txfEmailSanitario" prefWidth="280.0" promptText="ejemplo@correo.com" styleClass="field-required" />
             </children>
         </HBox>
 
         <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
                 <Label prefWidth="110.0" text="Telefonos:" />
-                <TextField fx:id="txfTelUnoSanitario" prefWidth="120.0" promptText="Telefono 1" />
+                <TextField fx:id="txfTelUnoSanitario" prefWidth="120.0" promptText="Telefono 1" styleClass="field-required" />
                 <Separator orientation="VERTICAL" prefHeight="20.0" />
                 <TextField fx:id="txfTelDosSanitario" prefWidth="120.0" promptText="Telefono 2 (opcional)" />
             </children>
@@ -71,17 +76,19 @@
         <HBox alignment="CENTER_LEFT" prefHeight="35.0" prefWidth="200.0" spacing="10.0">
             <children>
                 <Label prefWidth="110.0" text="Contrasena:" />
-                <PasswordField fx:id="pssContraseniaNuevoSanitario" prefWidth="280.0" promptText="Introduce una contraseña" />
+                <PasswordField fx:id="pssContraseniaNuevoSanitario" prefWidth="280.0" promptText="Introduce una contraseña" styleClass="field-required" />
             </children>
         </HBox>
 
-        <HBox alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="200.0" spacing="10.0">
+        <HBox alignment="CENTER_RIGHT" prefHeight="45.0" prefWidth="200.0" spacing="10.0" styleClass="modal-footer">
             <VBox.margin>
                 <Insets top="15.0" />
             </VBox.margin>
             <children>
-                <Button fx:id="btnCancelarSanitarioNuevo" mnemonicParsing="false" onAction="#cerrarVentana" prefWidth="110.0" styleClass="button-peligro" text="Cancelar" />
-                <Button fx:id="btnCrearSanitarioNuevo" mnemonicParsing="false" onAction="#crearNuevoSanitario" prefWidth="110.0" styleClass="button-primario" text="Crear" />
+                <Button fx:id="btnCancelarSanitarioNuevo" mnemonicParsing="false" onAction="#cerrarVentana" styleClass="button,ghost" text="Cancelar" />
+                <Button fx:id="btnCrearSanitarioNuevo" mnemonicParsing="false" onAction="#crearNuevoSanitario" styleClass="button,primary" text="Crear">
+                    <graphic><FontIcon iconLiteral="mdi2c-content-save" iconSize="14" /></graphic>
+                </Button>
             </children>
         </HBox>
     </children>

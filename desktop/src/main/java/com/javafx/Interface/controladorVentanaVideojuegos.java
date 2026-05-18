@@ -11,6 +11,7 @@ import com.javafx.excepcion.DuplicadoException;
 import com.javafx.excepcion.RehabiAppException;
 import com.javafx.service.CatalogoService;
 import com.javafx.util.PaginacionUtil;
+import com.javafx.util.TableUiUtil;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -22,12 +23,12 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -98,18 +99,20 @@ public class controladorVentanaVideojuegos {
     }
 
     private void configurarTabla() {
-        colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigo"));
-        colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
-        colDiscapacidad.setCellValueFactory(new PropertyValueFactory<>("discapacidadNombre"));
-        colParteCuerpo.setCellValueFactory(new PropertyValueFactory<>("parteCuerpo"));
-        colActivo.setCellValueFactory(new PropertyValueFactory<>("activo"));
-        colActivo.setCellFactory(column -> new TableCell<Videojuego, Boolean>() {
-            @Override
-            protected void updateItem(Boolean item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : item ? "Si" : "No");
-            }
-        });
+        // Videojuego es un record Java — los accesores son codigo(), nombre(), etc.
+        // PropertyValueFactory solo soporta JavaBeans (getX/isX), asi que usamos
+        // lambdas para leer directamente del record y devolver Observable*.
+        colCodigo.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().codigo()));
+        colNombre.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().nombre()));
+        colDiscapacidad.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().discapacidadNombre()));
+        colParteCuerpo.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().parteCuerpo()));
+        colActivo.setCellValueFactory(c -> new SimpleBooleanProperty(c.getValue().activo()));
+        // Codigo del videojuego → tipografia monoespaciada
+        colCodigo.setCellFactory(TableUiUtil.monoCell());
+        // Activo como badge semantico (true → "Activo" ok, false → "Inactivo" danger)
+        colActivo.setCellFactory(TableUiUtil.badgeCell(
+                v -> Boolean.TRUE.equals(v) ? "Activo" : "Inactivo",
+                v -> Boolean.TRUE.equals(v) ? "ok" : "danger"));
         tblVideojuegos.setItems(listaVideojuegos);
     }
 
@@ -205,6 +208,7 @@ public class controladorVentanaVideojuegos {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
             cargarVideojuegos();
@@ -236,6 +240,7 @@ public class controladorVentanaVideojuegos {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
             cargarVideojuegos();

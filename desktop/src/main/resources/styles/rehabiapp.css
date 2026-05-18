@@ -1,0 +1,386 @@
+/* ============================================================
+   rehabiapp.css - reglas comunes de componente (Claude Design)
+   ------------------------------------------------------------
+   Se carga junto a tokens-light.css o tokens-dark.css. Usa los
+   looked-up colors definidos en los tokens.
+   ============================================================ */
+
+/* ---------- 3.1 Regla universal de botones (texto entero) ---------- */
+.button {
+    -fx-min-width: -fx-pref-width;
+    -fx-content-display: LEFT;
+    -fx-graphic-text-gap: 8;
+    -fx-padding: 8 18 8 18;
+    -fx-background-radius: 10;
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-text-overrun: CLIP;
+    -fx-wrap-text: false;
+}
+
+/* ---------- 3.2 Variantes de boton ---------- */
+.button.primary {
+    -fx-background-color: -accent;
+    -fx-text-fill: -text-on-brand;
+}
+.button.primary:hover { -fx-background-color: -accent-hover; }
+
+.button.secondary {
+    -fx-background-color: -accent-soft;
+    -fx-text-fill: -accent;
+}
+.button.secondary:hover {
+    -fx-background-color: -accent;
+    -fx-text-fill: -text-on-brand;
+}
+
+.button.ghost {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text-2;
+    -fx-border-color: -border;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+.button.ghost:hover {
+    -fx-background-color: -bg-hover;
+    -fx-text-fill: -text;
+}
+
+.button.danger {
+    -fx-background-color: -danger-500;
+    -fx-text-fill: white;
+}
+.button.danger:hover { -fx-background-color: -danger-600; }
+
+.button.success {
+    -fx-background-color: -ok-500;
+    -fx-text-fill: white;
+}
+
+/* Icon-only square button - solo para "+", filtro, etc. */
+.button.icon-only {
+    -fx-min-width: 40; -fx-pref-width: 40; -fx-max-width: 40;
+    -fx-min-height: 40; -fx-pref-height: 40; -fx-max-height: 40;
+    -fx-padding: 0;
+    -fx-background-color: -bg-elev-1;
+    -fx-border-color: -border;
+    -fx-border-radius: 10;
+}
+.button.icon-only.accent {
+    -fx-background-color: -accent;
+    -fx-border-color: -accent;
+    -fx-text-fill: white;
+}
+
+/* ---------- 3.3 Topbar ---------- */
+.topbar {
+    -fx-background-color: -topbar-bg;
+    -fx-border-color: transparent transparent -topbar-border transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 12 24 12 24;
+    -fx-spacing: 24;
+    -fx-alignment: CENTER_LEFT;
+}
+.topbar .logo-image {
+    -fx-image: url("../assets/logo.png");
+}
+.topbar .wordmark {
+    -fx-font-size: 18;
+    -fx-font-weight: bold;
+    -fx-text-fill: -text;
+    -fx-fill: -text;       /* Soporta nodos Text dentro de TextFlow */
+}
+.topbar .wordmark.accent {
+    -fx-text-fill: -accent;
+    -fx-fill: -accent;
+}
+.topbar .tagline {
+    -fx-font-size: 11;
+    -fx-font-style: italic;
+    -fx-text-fill: -text-3;
+}
+
+/* ---------- 3.4 Sidebar ---------- */
+.sidebar {
+    -fx-background-color: -sidebar-bg;
+    -fx-border-color: transparent -sidebar-border transparent transparent;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 20 0 16 0;
+}
+.sidebar .user-card {
+    -fx-background-color: -bg-sunken;
+    -fx-background-radius: 14;
+    -fx-border-color: -border;
+    -fx-border-radius: 14;
+    -fx-padding: 16;
+    -fx-alignment: CENTER;
+}
+.sidebar .nav-item {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text-2;
+    -fx-padding: 10 12 10 12;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+    -fx-graphic-text-gap: 12;
+    -fx-min-width: -fx-pref-width;
+}
+.sidebar .nav-item:hover {
+    -fx-background-color: -bg-hover;
+    -fx-text-fill: -text;
+}
+.sidebar .nav-item.active {
+    -fx-background-color: -accent-soft;
+    -fx-text-fill: -accent;
+    -fx-font-weight: bold;
+    /* Borde izquierdo accent para reforzar visualmente la pestana actual. */
+    -fx-border-color: transparent transparent transparent -accent;
+    -fx-border-width: 0 0 0 4;
+    -fx-border-radius: 0 10 10 0;
+}
+.sidebar .nav-item.active .ikonli-font-icon {
+    -fx-icon-color: -accent;
+}
+
+/* ---------- 3.5 Inputs ---------- */
+.text-field, .text-area, .combo-box, .date-picker, .spinner {
+    -fx-background-color: -bg-elev-1;
+    -fx-border-color: -border;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-text-fill: -text;
+    -fx-prompt-text-fill: -text-muted;
+    -fx-padding: 6 12 6 12;
+    -fx-min-height: 38;
+}
+.text-field:focused, .combo-box:focused, .date-picker:focused, .spinner:focused {
+    -fx-border-color: -accent;
+    -fx-effect: dropshadow(gaussian, derive(-accent, 40%), 6, 0.4, 0, 0);
+}
+
+/* Marca roja a la izquierda para campos obligatorios */
+.field-required {
+    -fx-border-color: -danger-500 -border -border -border;
+    -fx-border-width: 1 1 1 4;
+}
+
+/* ---------- 3.6 Tabla ---------- */
+.table-view {
+    -fx-background-color: -bg-elev-1;
+    -fx-border-color: -border;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+    -fx-padding: 0;
+}
+.table-view .column-header,
+.table-view .column-header-background {
+    -fx-background-color: -table-header-bg;
+    -fx-border-color: transparent transparent -border transparent;
+    -fx-padding: 4 0 4 0;
+}
+.table-view .column-header .label {
+    -fx-text-fill: -text-2;
+    -fx-font-weight: bold;
+    -fx-font-size: 11;
+    -fx-alignment: CENTER-LEFT;
+    -fx-padding: 8 16 8 16;
+}
+.table-row-cell { -fx-background-color: -bg-elev-1; -fx-cell-size: 44; }
+.table-row-cell:odd { -fx-background-color: -table-row-alt; }
+.table-row-cell:hover { -fx-background-color: -table-row-hover; }
+.table-row-cell:selected { -fx-background-color: -accent-soft; }
+.table-row-cell:selected .text { -fx-fill: -text; }
+.table-view .table-cell {
+    -fx-text-fill: -text;
+    -fx-border-color: transparent;
+    -fx-padding: 12 16 12 16;
+    -fx-alignment: CENTER-LEFT;
+}
+.table-cell.col-num {
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-text-fill: -text-2;
+}
+
+/* ---------- 3.7 Badges / pills ---------- */
+.badge {
+    -fx-padding: 3 10 3 10;
+    -fx-background-radius: 999;
+    -fx-font-size: 11;
+    -fx-font-weight: bold;
+    -fx-text-fill: -text-2;
+    -fx-background-color: -bg-sunken;
+    -fx-border-color: -border;
+    -fx-border-radius: 999;
+}
+.badge.brand   { -fx-background-color: -accent-soft; -fx-text-fill: -accent;    -fx-border-color: transparent; }
+.badge.ok      { -fx-background-color: -ok-50;       -fx-text-fill: -ok-700;    -fx-border-color: transparent; }
+.badge.danger  { -fx-background-color: -danger-50;   -fx-text-fill: -danger-700;-fx-border-color: transparent; }
+.badge.warn    { -fx-background-color: -warn-50;     -fx-text-fill: -warn-700;  -fx-border-color: transparent; }
+.badge.info    { -fx-background-color: -info-50;     -fx-text-fill: -info-500;  -fx-border-color: transparent; }
+
+/* ---------- 3.8 Modales ---------- */
+.modal-stage .root, .dialog-pane {
+    -fx-background-color: -bg-elev-1;
+    -fx-background-radius: 14;
+    -fx-border-color: -border;
+    -fx-border-radius: 14;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 60, 0.2, 0, 20);
+}
+/* Texto siempre centrado en el contenido de los modales Alert/Dialog —
+   alinea el Label que JavaFX genera dentro del .content del DialogPane. */
+.dialog-pane > .content,
+.dialog-pane > .content.label,
+.dialog-pane .content .label,
+.alert .dialog-pane > .content {
+    -fx-alignment: CENTER;
+    -fx-text-alignment: CENTER;
+    -fx-content-display: CENTER;
+}
+.dialog-pane > .button-bar > .container {
+    -fx-alignment: CENTER;
+}
+.modal-header {
+    -fx-padding: 20 24 16 24;
+    -fx-border-color: transparent transparent -divider transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-spacing: 12;
+    -fx-alignment: CENTER_LEFT;
+}
+.modal-title {
+    -fx-font-size: 18;
+    -fx-font-weight: bold;
+    -fx-text-fill: -text;
+}
+.modal-subtitle {
+    -fx-font-size: 12;
+    -fx-text-fill: -text-3;
+}
+.modal-body {
+    -fx-padding: 20 24 20 24;
+    -fx-spacing: 16;
+}
+.modal-footer {
+    -fx-padding: 16 24 16 24;
+    -fx-border-color: -divider transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-background-color: -bg-sunken;
+    -fx-spacing: 12;
+    -fx-alignment: CENTER_RIGHT;
+}
+
+/* ---------- 3.9 Bloque terminal (Ayuda) ---------- */
+.terminal {
+    -fx-background-color: -terminal-bg;
+    -fx-background-radius: 14;
+    -fx-text-fill: -terminal-text;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 13;
+    -fx-padding: 24;
+    -fx-border-color: -border;
+    -fx-border-radius: 14;
+}
+
+/* ---------- 4. Color de iconos Phosphor por variante ---------- */
+.button.primary .ikonli-font-icon   { -fx-icon-color: -text-on-brand; }
+.button.secondary .ikonli-font-icon { -fx-icon-color: -accent; }
+.button.ghost .ikonli-font-icon     { -fx-icon-color: -text-2; }
+.button.danger .ikonli-font-icon    { -fx-icon-color: white; }
+.button.success .ikonli-font-icon   { -fx-icon-color: white; }
+.button.icon-only .ikonli-font-icon { -fx-icon-color: -text-2; }
+.button.icon-only.accent .ikonli-font-icon { -fx-icon-color: white; }
+
+/* ---------- 4.1 Indicador de conexion (login) ----------
+   Pinta el Circle con clase .indicador-conexion segun estado:
+     -wait  = gris azulado (cargando)
+     -ok    = verde (API responde)
+     -ko    = rojo (API caida)
+   Sin esta regla, JavaFX pinta el Circle en negro por defecto. */
+.indicador-conexion {
+    -fx-fill: -text-3;
+    -fx-stroke: -border;
+    -fx-stroke-width: 1;
+}
+.indicador-conexion-wait {
+    -fx-fill: -warn-500;
+    -fx-stroke: -warn-700;
+}
+.indicador-conexion-ok {
+    -fx-fill: -ok-500;
+    -fx-stroke: -ok-700;
+}
+.indicador-conexion-ko {
+    -fx-fill: -danger-500;
+    -fx-stroke: -danger-700;
+}
+
+/* ---------- 5. Topbar (barra superior principal) ----------
+   Spec §3.3 refresco: logotipo a la izquierda, barra de busqueda centrada
+   y boton de perfil circular a la derecha. */
+.topbar-search {
+    -fx-alignment: center;
+}
+.topbar-search-label {
+    -fx-text-fill: -text-2;
+    -fx-font-size: 13;
+}
+.topbar-search-field {
+    -fx-pref-width: 360;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-padding: 8 12 8 12;
+}
+
+/* Boton de perfil — circular, fondo accent suave, icono mdi2 grande.
+   Tamano fijo 48x48 (multiple de 8, accesible para touch). */
+.topbar-perfil-button {
+    -fx-min-width: 48;
+    -fx-min-height: 48;
+    -fx-max-width: 48;
+    -fx-max-height: 48;
+    -fx-pref-width: 48;
+    -fx-pref-height: 48;
+    -fx-background-color: -accent-soft;
+    -fx-background-radius: 24;
+    -fx-border-color: -border;
+    -fx-border-radius: 24;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+}
+.topbar-perfil-button:hover {
+    -fx-background-color: -accent;
+}
+.topbar-perfil-button:hover .ikonli-font-icon {
+    -fx-icon-color: white;
+}
+.topbar-perfil-button .ikonli-font-icon {
+    -fx-icon-color: -accent;
+}
+
+/* ---------- 6. Spinner editor visible ----------
+   El TextField interno del Spinner heredaba inconsistente — forzamos
+   text-fill y padding para que el numero siempre se vea sobre el fondo. */
+.spinner > .text-field {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -text;
+    -fx-font-size: 14;
+    -fx-padding: 4 6 4 8;
+    -fx-alignment: CENTER_LEFT;
+}
+.spinner > .increment-arrow-button,
+.spinner > .decrement-arrow-button {
+    -fx-padding: 2 6 2 6;
+}
+
+/* Label de mensaje en ventanas emergentes (Confirmacion / Error / Aviso /
+   Advertencia / Pregunta). Centra el texto en todas las líneas y el bloque
+   completo dentro del VBox padre. */
+.modal-texto-centrado {
+    -fx-alignment: CENTER;
+    -fx-text-alignment: CENTER;
+    -fx-content-display: CENTER;
+    -fx-text-fill: -text;
+    -fx-font-size: 14;
+    -fx-padding: 4 0 4 0;
+}

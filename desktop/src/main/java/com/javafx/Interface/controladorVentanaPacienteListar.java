@@ -16,6 +16,7 @@ import com.javafx.excepcion.RehabiAppException;
 import com.javafx.excepcion.ValidacionException;
 import com.javafx.service.CatalogoService;
 import com.javafx.service.PacienteClinicoService;
+import com.javafx.util.TableUiUtil;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
@@ -38,6 +39,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.util.Duration;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -90,7 +92,7 @@ public class controladorVentanaPacienteListar {
     @FXML private TableColumn<PacienteDiscapacidad, String> colDisNombre;
     @FXML private TableColumn<PacienteDiscapacidad, String> colDisNivel;
     @FXML private TableColumn<PacienteDiscapacidad, String> colDisNotas;
-    @FXML private HBox hboxBotonesDiscapacidad;
+    @FXML private FlowPane hboxBotonesDiscapacidad;
     @FXML private Button btnAsignarDiscapacidad;
     @FXML private Button btnDesasignarDiscapacidad;
     @FXML private Button btnSubirNivel;
@@ -105,7 +107,7 @@ public class controladorVentanaPacienteListar {
     @FXML private TableColumn<PacienteTratamiento, Boolean> colTratVisible;
     @FXML private Label lblNivelActual;
     @FXML private CheckBox chkFiltrarPorNivel;
-    @FXML private HBox hboxBotonesTratamiento;
+    @FXML private FlowPane hboxBotonesTratamiento;
     @FXML private Button btnAsignarTratamiento;
     @FXML private Button btnDesasignarTratamiento;
     @FXML private Button btnToggleVisibilidad;
@@ -166,6 +168,7 @@ public class controladorVentanaPacienteListar {
 
     private void configurarColumnasDiscapacidades() {
         colDisCodigo.setCellValueFactory(new PropertyValueFactory<>("codDis"));
+        colDisCodigo.setCellFactory(TableUiUtil.monoCell()); // codigo monoespaciado
         colDisNotas.setCellValueFactory(new PropertyValueFactory<>("notas"));
 
         //Columna de nombre con indicador de protesis
@@ -194,7 +197,7 @@ public class controladorVentanaPacienteListar {
             }
         });
 
-        //Columna de nivel con tooltip informativo
+        //Columna de nivel — badge semantico + tooltip informativo
         colDisNivel.setCellValueFactory(new PropertyValueFactory<>("nombreNivel"));
         colDisNivel.setCellFactory(columna -> new TableCell<>() {
             @Override
@@ -203,11 +206,18 @@ public class controladorVentanaPacienteListar {
 
                 if (vacia || nombreNivel == null) {
                     setText(null);
+                    setGraphic(null);
                     setTooltip(null);
                     return;
                 }
 
-                setText(nombreNivel);
+                // Reemplaza el texto plano por un badge segun el nivel clinico
+                javafx.scene.control.Label badge = new javafx.scene.control.Label(nombreNivel);
+                badge.getStyleClass().add("badge");
+                String modificador = TableUiUtil.estiloNivel(nombreNivel);
+                if (!modificador.isEmpty()) badge.getStyleClass().add(modificador);
+                setText(null);
+                setGraphic(badge);
 
                 //Buscar datos completos del nivel para el tooltip
                 NivelProgresion nivel = mapaNiveles.get(nombreNivel);
@@ -238,6 +248,14 @@ public class controladorVentanaPacienteListar {
             return new SimpleStringProperty(nombreNivel);
         });
         colTratVisible.setCellValueFactory(new PropertyValueFactory<>("visible"));
+        // Nivel del tratamiento como badge semantico
+        colTratNivel.setCellFactory(TableUiUtil.badgeCell(
+                n -> n,
+                TableUiUtil::estiloNivel));
+        // Visible (true → "Si" ok, false → "No" neutro)
+        colTratVisible.setCellFactory(TableUiUtil.badgeCell(
+                v -> Boolean.TRUE.equals(v) ? "Si" : "No",
+                v -> Boolean.TRUE.equals(v) ? "ok" : ""));
     }
 
     /**
@@ -806,6 +824,7 @@ public class controladorVentanaPacienteListar {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -916,6 +935,7 @@ public class controladorVentanaPacienteListar {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(true);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             com.javafx.Clases.VentanaUtil.establecerIconoVentana(stage);
 
             ctrl.inicializarConDni(pacienteActual.getDni());

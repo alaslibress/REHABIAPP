@@ -10,6 +10,7 @@ import com.javafx.excepcion.ConexionException;
 import com.javafx.excepcion.RehabiAppException;
 import com.javafx.service.PacienteService;
 import com.javafx.util.PaginacionUtil;
+import com.javafx.util.TableUiUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -73,7 +74,7 @@ public class controladorVentanaPacientes {
     private TableColumn<Paciente, String> colNombre;
 
     @FXML
-    private TableColumn<Paciente, Integer> colProtesis;
+    private TableColumn<Paciente, Boolean> colProtesis;
 
     @FXML
     private TableColumn<Paciente, String> colSexo;
@@ -260,6 +261,20 @@ public class controladorVentanaPacientes {
         colSexo.setCellValueFactory(new PropertyValueFactory<>("sexo"));
         colProtesis.setCellValueFactory(new PropertyValueFactory<>("protesis"));
 
+        // DNI y edad usan tipografia monoespaciada (col-num)
+        colDNI.setCellFactory(TableUiUtil.monoCell());
+        colEdad.setCellFactory(TableUiUtil.monoCell());
+
+        // Sexo como badge (M → info, F → brand)
+        colSexo.setCellFactory(TableUiUtil.badgeCell(
+                s -> s,
+                TableUiUtil::estiloSexo));
+
+        // Protesis como badge semantico: true → "Si" ok, false → "No" neutro
+        colProtesis.setCellFactory(TableUiUtil.badgeCell(
+                v -> Boolean.TRUE.equals(v) ? "Si" : "No",
+                v -> Boolean.TRUE.equals(v) ? "ok" : ""));
+
         //Asignar la lista observable a la tabla
         tblPacientes.setItems(listaPacientes);
     }
@@ -339,6 +354,9 @@ public class controladorVentanaPacientes {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            // Ancho minimo para que los botones Asignar/Desasignar/Subir/Bajar/Editar
+            // quepan en una sola fila sin truncar texto (rediseño Claude Design).
+            stage.setMinWidth(840);
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -385,6 +403,7 @@ public class controladorVentanaPacientes {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -428,6 +447,7 @@ public class controladorVentanaPacientes {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -664,6 +684,7 @@ public class controladorVentanaPacientes {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(true);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
 
             ctrl.inicializarConDni(sel.getDni());

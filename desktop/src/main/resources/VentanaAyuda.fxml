@@ -8,6 +8,7 @@
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="688.0" prefWidth="854.0" spacing="15.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaAyuda">
     <padding>
@@ -17,12 +18,13 @@
         <Label fx:id="lblTituloPestania" styleClass="label-titulo" text="Ayuda" />
         <ScrollPane fitToHeight="true" fitToWidth="true" VBox.vgrow="ALWAYS">
             <content>
-                <TextArea fx:id="txtAreaAyuda" editable="false" prefHeight="531.0" prefWidth="813.0" styleClass="text-area-ayuda" wrapText="true" />
+                <TextArea fx:id="txtAreaAyuda" editable="false" prefHeight="531.0" prefWidth="813.0" styleClass="terminal" wrapText="true" />
             </content>
         </ScrollPane>
         <HBox alignment="CENTER_RIGHT" spacing="10.0">
             <children>
-                <Button fx:id="btnContactar" mnemonicParsing="false" onAction="#contactarSoporte" prefHeight="35.0" prefWidth="220.0" styleClass="button-primario" text="Contactar con soporte">
+                <Button fx:id="btnContactar" mnemonicParsing="false" onAction="#contactarSoporte" styleClass="button,primary" text="Contactar con soporte">
+                    <graphic><FontIcon iconLiteral="mdi2l-lifebuoy" iconSize="14" /></graphic>
                     <tooltip>
                         <Tooltip text="Abrir cliente de correo para contactar con soporte" />
                     </tooltip>

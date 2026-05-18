@@ -19,7 +19,7 @@
             <Insets bottom="30.0" left="50.0" right="50.0" top="30.0" />
          </VBox.margin>
       </Label>
-      <Button fx:id="btnInformacion" mnemonicParsing="false" styleClass="button-primario" text="Aceptar">
+      <Button fx:id="btnInformacion" mnemonicParsing="false" styleClass="button,primary" text="Aceptar">
          <VBox.margin>
             <Insets bottom="20.0" />
          </VBox.margin>

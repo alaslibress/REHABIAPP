@@ -11,6 +11,7 @@ import com.javafx.excepcion.DuplicadoException;
 import com.javafx.excepcion.RehabiAppException;
 import com.javafx.service.CatalogoService;
 import com.javafx.util.PaginacionUtil;
+import com.javafx.util.TableUiUtil;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -135,6 +136,13 @@ public class controladorVentanaTratamientos {
         colDefinicion.setCellValueFactory(new PropertyValueFactory<>("definicionTrat"));
         colDiscapacidad.setCellValueFactory(new PropertyValueFactory<>("discapacidadesAsociadas"));
         colNivel.setCellValueFactory(new PropertyValueFactory<>("nombreNivel"));
+
+        // Codigo del tratamiento → tipografia monoespaciada
+        colCodigo.setCellFactory(TableUiUtil.monoCell());
+        // Nivel clinico de progresion → badge (agudo/subagudo/fortalecimiento/funcional)
+        colNivel.setCellFactory(TableUiUtil.badgeCell(
+                n -> n,
+                TableUiUtil::estiloNivel));
 
         tblTratamientos.setItems(listaTratamientos);
     }
@@ -264,6 +272,8 @@ public class controladorVentanaTratamientos {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            stage.setMinHeight(640); // Botones del footer siempre visibles
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -339,6 +349,8 @@ public class controladorVentanaTratamientos {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            stage.setMinHeight(640); // Botones del footer siempre visibles
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -389,6 +401,8 @@ public class controladorVentanaTratamientos {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            stage.setMinHeight(640); // Botones del footer siempre visibles
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -442,9 +456,14 @@ public class controladorVentanaTratamientos {
                 aplicarFiltros();
 
             } catch (DuplicadoException e) {
-                // 409: hay pacientes asignados a este tratamiento
+                // 409: el API ha rechazado el borrado. Casi siempre es porque el
+                // tratamiento esta vinculado a pacientes, discapacidades o
+                // videojuegos (foreign key constraint). Damos un mensaje claro
+                // para que el usuario sepa que necesita reasignar primero.
                 VentanaUtil.mostrarVentanaInformativa(
-                        "No se puede eliminar: " + e.getMessage(),
+                        "No se puede eliminar este tratamiento: tiene pacientes, "
+                        + "discapacidades o videojuegos vinculados. Reasignelos o "
+                        + "desvinculelos primero antes de eliminarlo.",
                         TipoMensaje.ADVERTENCIA
                 );
             } catch (ConexionException e) {
@@ -509,6 +528,8 @@ public class controladorVentanaTratamientos {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            stage.setMinHeight(640); // Botones del footer siempre visibles
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
         } catch (Exception e) {

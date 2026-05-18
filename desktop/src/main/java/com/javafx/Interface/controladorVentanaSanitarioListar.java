@@ -150,6 +150,7 @@ public class controladorVentanaSanitarioListar {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 

@@ -21,6 +21,21 @@ async function obtenerPerfil(dniPac, javaToken) {
     throw crearError('PATIENT_NOT_FOUND');
   }
 
+  // Foto: el API Java expone GET /api/pacientes/{dni}/foto como bytes binarios
+  // (image/png). El movil necesita un data URI base64 para mostrar el avatar
+  // en <Image source={{uri: ...}}>. Convertimos aqui.
+  // Tolerante a 204 No Content (paciente sin foto): devolvemos null.
+  let avatarDataUri = null;
+  try {
+    const foto = await apiClient.getBinary(`/api/pacientes/${dniPac}/foto`, javaToken);
+    if (foto && foto.buffer && foto.buffer.length > 0) {
+      const ct = foto.contentType || 'image/png';
+      avatarDataUri = `data:${ct};base64,${foto.buffer.toString('base64')}`;
+    }
+  } catch {
+    // Fallo no critico — el avatar no es esencial para mostrar el perfil.
+  }
+
   // Mapeo Java PacienteResponse -> GraphQL Patient
   // Los campos clinicos (alergias, antecedentes, medicacionActual) se omiten
   return {
@@ -36,12 +51,9 @@ async function obtenerPerfil(dniPac, javaToken) {
     // La direccion es un objeto relacional en Java — no disponible directamente
     address: null,
     active: data.activo,
-    // Campos nuevos expuestos a la app movil (Phase G.1).
-    // numSs y sexo ya vienen en el mock; avatarDataUri es null hasta que el API Java
-    // exponga el campo (sera GET /api/pacientes/{dni}/avatar en una iteracion futura).
     numSs: data.numSs || null,
     sexo: data.sexo || null,
-    avatarDataUri: data.avatarDataUri || null,
+    avatarDataUri,
   };
 }
 

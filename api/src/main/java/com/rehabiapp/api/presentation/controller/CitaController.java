@@ -79,6 +79,20 @@ public class CitaController {
     }
 
     /**
+     * Lista todas las citas (pasadas y futuras) de un paciente, paginadas.
+     * Usado por la app movil para mostrar el historial de citas propio del paciente.
+     *
+     * <p>GET /api/citas/paciente/{dniPac}?page=0&size=50&sort=fechaCita,asc</p>
+     */
+    @GetMapping("/paciente/{dniPac}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PageResponse<CitaResponse>> listarPorPaciente(
+            @PathVariable String dniPac,
+            Pageable pageable) {
+        return ResponseEntity.ok(citaService.listarPorPaciente(dniPac, pageable));
+    }
+
+    /**
      * Crea una nueva cita médica en el sistema.
      * Verifica que el paciente y el sanitario existen y están activos.
      *

@@ -52,8 +52,9 @@ function transformarCita(cita) {
     id: construirId(cita.dniPac, cita.dniSan, cita.fechaCita, cita.horaCita),
     date: cita.fechaCita,
     time: horaFormateada,
-    // DEPENDENCIA PENDIENTE: nombre del sanitario requiere llamada adicional a /api/sanitarios/{dniSan}
-    practitionerName: cita.dniSan,
+    // CitaResponse del API trae `nombreSanitario` enriquecido (nombre + apellidos).
+    // Mantenemos fallback al DNI por si el contrato cambia o el sanitario fue dado de baja.
+    practitionerName: cita.nombreSanitario || cita.dniSan,
     practitionerSpecialty: null,
     status: 'SCHEDULED',
     notes: null,
@@ -71,21 +72,44 @@ function transformarCita(cita) {
  * @returns {Promise<Array>} Appointment[]
  */
 async function obtenerCitas(dniPac, javaToken, filtros = {}) {
+  // Usa el endpoint del API que devuelve TODAS las citas del paciente
+  // (pasadas y futuras), paginado. Antes pedia /api/citas?fecha=<hoy> y
+  // filtraba — eso solo mostraba citas del dia actual, asi que el historial
+  // movil salia vacio practicamente siempre.
   const hoy = new Date().toISOString().split('T')[0];
-  const data = await apiClient.get(`/api/citas?fecha=${hoy}`, javaToken);
-  let lista = Array.isArray(data) ? data : [];
+  // Sort usa `id.fechaCita` / `id.horaCita` — la PK es @EmbeddedId CitaId,
+  // Spring Data no acepta `fechaCita` directo en el sort param.
+  const resp = await apiClient.get(
+    `/api/citas/paciente/${encodeURIComponent(dniPac)}?page=0&size=500&sort=id.fechaCita,asc&sort=id.horaCita,asc`,
+    javaToken,
+  );
 
-  // Filtrar por el paciente autenticado
-  lista = lista.filter((c) => c.dniPac === dniPac);
-
-  // Filtrar solo citas proximas
-  if (filtros.upcoming === true) {
-    lista = lista.filter((c) => c.fechaCita >= hoy);
+  // /api responde con PageResponse {contenido, totalElementos, ...} o array
+  // directo segun version; aceptamos ambos shapes.
+  let lista;
+  if (Array.isArray(resp)) {
+    lista = resp;
+  } else if (resp && Array.isArray(resp.contenido)) {
+    lista = resp.contenido;
+  } else if (resp && Array.isArray(resp.content)) {
+    lista = resp.content;
+  } else {
+    lista = [];
   }
 
-  // Filtrar por estado (en Java no existe estado — solo SCHEDULED disponible)
+  // Filtro defensivo — el API ya filtra por DNI, esto previene fugas si cambia el contrato.
+  lista = lista.filter((c) => c.dniPac === dniPac);
+
+  // Filtrar por horizonte temporal (proximas/pasadas).
+  if (filtros.upcoming === true) {
+    lista = lista.filter((c) => c.fechaCita >= hoy);
+  } else if (filtros.upcoming === false) {
+    lista = lista.filter((c) => c.fechaCita < hoy);
+  }
+
+  // Filtro por estado (Java aun no expone estado — solo SCHEDULED disponible).
   if (filtros.status && filtros.status !== 'SCHEDULED') {
-    return []; // Solo SCHEDULED disponible por ahora
+    return [];
   }
 
   return lista.map(transformarCita);

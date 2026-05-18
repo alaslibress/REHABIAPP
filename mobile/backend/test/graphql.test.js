@@ -427,8 +427,12 @@ test('myBodyPartProgress devuelve 15 partes y marca hasTreatment para M16/M54 (P
   assert.equal(cabeza.progressPct, null, 'progressPct es null para partes sin tratamiento');
 });
 
-// ---- Phase G.4: bodyPartMetrics devuelve 12 puntos ordenados ----
-test('bodyPartMetrics devuelve 12 puntos semanales ordenados (Phase G.4)', async () => {
+// ---- Phase G.4 / F2-F3: bodyPartMetrics devuelve serie temporal real ----
+// Antes era un mock de 12 puntos semanales sinteticos. Phase F2/F3 reemplazo
+// el servicio por una llamada real al API que filtra entradas por parte del
+// cuerpo. El tamano del array depende de las sesiones registradas; lo que
+// SIEMPRE debe cumplirse: array ordenado cronologicamente ascendente.
+test('bodyPartMetrics devuelve serie temporal ordenada (Phase G.4)', async () => {
   const token = await obtenerTokenAdmin();
   const { body } = await httpPost(
     GQL,
@@ -437,7 +441,7 @@ test('bodyPartMetrics devuelve 12 puntos semanales ordenados (Phase G.4)', async
   );
   assert.ok(body.data, `Debe haber data, recibido: ${JSON.stringify(body)}`);
   const puntos = body.data.bodyPartMetrics;
-  assert.equal(puntos.length, 12, 'Deben ser 12 puntos semanales');
+  assert.ok(Array.isArray(puntos), 'bodyPartMetrics debe devolver array');
   for (let i = 1; i < puntos.length; i++) {
     assert.ok(puntos[i].date >= puntos[i - 1].date, 'Los puntos deben estar en orden cronologico ascendente');
   }

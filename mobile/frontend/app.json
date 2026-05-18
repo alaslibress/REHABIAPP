@@ -54,7 +54,15 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F0F4FF"
       },
-      "package": "com.rehabiapp.mobile"
+      "package": "com.rehabiapp.mobile",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "POST_NOTIFICATIONS",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
     },
     "notification": {
       "icon": "./assets/RehabiAPPLogoNoLetras.png",

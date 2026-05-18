@@ -31,6 +31,12 @@ public interface CitaRepository extends JpaRepository<Cita, CitaId> {
     Page<Cita> findByIdDniSan(String dniSan, Pageable pageable);
 
     /**
+     * Devuelve todas las citas de un paciente (pasadas y futuras), con paginacion.
+     * Usado por la app movil para mostrar el historial completo del paciente.
+     */
+    Page<Cita> findByIdDniPac(String dniPac, Pageable pageable);
+
+    /**
      * Devuelve las citas futuras de un paciente ordenadas por fecha y hora ascendente.
      * El primer elemento de la lista corresponde a la proxima cita del paciente.
      */

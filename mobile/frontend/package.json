@@ -8,6 +8,11 @@
     "start": "expo start --offline",
     "start:online": "expo start",
     "prebuild": "expo prebuild",
+    "prebuild:android": "EXPO_PUBLIC_API_URL=https://rehabiapp-api.duckdns.org expo prebuild --platform android --clean --no-install",
+    "build:apk": "npm run prebuild:android && cd android && ./gradlew assembleRelease",
+    "build:apk:debug": "npm run prebuild:android && cd android && ./gradlew assembleDebug",
+    "build:eas:preview": "EXPO_PUBLIC_API_URL=https://rehabiapp-api.duckdns.org eas build --platform android --profile preview",
+    "build:eas:production": "EXPO_PUBLIC_API_URL=https://rehabiapp-api.duckdns.org eas build --platform android --profile production",
     "lint": "eslint \"**/*.{js,jsx,ts,tsx}\" && prettier -c \"**/*.{js,jsx,ts,tsx,json}\"",
     "format": "eslint \"**/*.{js,jsx,ts,tsx}\" --fix && prettier \"**/*.{js,jsx,ts,tsx,json}\" --write",
     "web": "expo start --offline --web"

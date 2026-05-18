@@ -43,14 +43,29 @@
 		body "caddy OK"
 	}
 
+	# Rutas del BFF mobile (GraphQL + health propio).
+	# /graphql -> Apollo Server (mobile/backend).
+	handle /graphql* {
+		reverse_proxy rehabiapp-bff:3000 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+	handle /bff-health {
+		rewrite * /health
+		reverse_proxy rehabiapp-bff:3000
+	}
+
 	# Todo el resto va a la API. /actuator/health/* sirve para health-checks externos.
-	reverse_proxy rehabiapp-api:8080 {
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		# Timeout generoso para subida de PDFs (10MB).
-		transport http {
-			read_timeout 60s
-			write_timeout 60s
+	handle {
+		reverse_proxy rehabiapp-api:8080 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			# Timeout generoso para subida de PDFs (10MB).
+			transport http {
+				read_timeout 60s
+				write_timeout 60s
+			}
 		}
 	}
 }

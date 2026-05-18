@@ -1,0 +1,66 @@
+# Caddy v2 — version local (replica del Caddyfile de AWS Academy).
+#
+# Diferencias con AWS:
+#   - Sin Let's Encrypt: usamos `tls internal` -> Caddy emite un certificado
+#     auto-firmado con su CA local. La primera vez que arrancas Caddy genera
+#     una CA root en /data/caddy/pki/authorities/local/. Importala en tu
+#     navegador si quieres "candado verde" sin warnings.
+#   - Dominio fijo `rehabiapp.localhost` (resuelve a 127.0.0.1 sin tocar /etc/hosts).
+#
+# Mantiene rutas identicas al AWS:
+#   /graphql, /bff-health  -> rehabiapp-bff:3000
+#   resto                  -> rehabiapp-api:8080
+
+{
+	# Email simbolico — no se usa con tls internal.
+	email rehabiapp-local@duck.com
+}
+
+rehabiapp.localhost {
+
+	# Certificado auto-firmado local. Cero conexion externa.
+	tls internal
+
+	encode gzip zstd
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+		level INFO
+	}
+
+	respond /caddy-health 200 {
+		body "caddy OK"
+	}
+
+	# BFF GraphQL mobile.
+	handle /graphql* {
+		reverse_proxy rehabiapp-bff:3000 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+	handle /bff-health {
+		rewrite * /health
+		reverse_proxy rehabiapp-bff:3000
+	}
+
+	# Todo lo demas a la API.
+	handle {
+		reverse_proxy rehabiapp-api:8080 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			transport http {
+				read_timeout 60s
+				write_timeout 60s
+			}
+		}
+	}
+}

@@ -95,6 +95,70 @@ services:
       rehabiapp-mongodb:
         condition: service_healthy
 
+  rehabiapp-bff:
+    build:
+      context: ../../mobile/backend
+      dockerfile: Dockerfile
+    image: rehabiapp-bff:aws-academy
+    container_name: rehabiapp-bff
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      LOG_LEVEL: info
+      MOCK_API: "false"
+      API_BASE_URL: http://rehabiapp-api:8080
+      JWT_SECRET: ${JWT_SIGNING_KEY}
+    depends_on:
+      rehabiapp-api:
+        condition: service_healthy
+    networks:
+      - rehabiapp-aws
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+  rehabiapp-chatbot:
+    build:
+      context: ../../chatbot
+      dockerfile: Dockerfile
+    image: rehabiapp-chatbot:aws-academy
+    container_name: rehabiapp-chatbot
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      PORT: "4000"
+      # Conexion al mismo RDS Postgres que la API (RGPD: clinica unica fuente de verdad).
+      PGHOST: ${CHATBOT_PGHOST:-rehabiapp-db.c092mtewefo7.us-east-1.rds.amazonaws.com}
+      PGPORT: ${CHATBOT_PGPORT:-5432}
+      PGDATABASE: ${CHATBOT_PGDATABASE:-rehabiapp}
+      PGUSER: ${SPRING_DATASOURCE_USERNAME}
+      PGPASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      PGSSLMODE: ${CHATBOT_PGSSLMODE:-require}
+      OLLAMA_URL: ${CHATBOT_OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${CHATBOT_OLLAMA_MODEL:-qwen2.5:latest}
+      HOSPITAL_PHONE_E164: ${CHATBOT_HOSPITAL_PHONE_E164:-+34600000000}
+      AUDIT_ACTOR: CHATBOT_BOT
+    volumes:
+      - chatbot-wweb-session:/app/.wwebjs_auth
+      - chatbot-wweb-cache:/app/.wwebjs_cache
+    # extra_hosts permite que el container resuelva `host.docker.internal` al
+    # host EC2. Se usa para llegar al Ollama del developer via tunnel SSH inverso
+    # (puerto 11434 expuesto en EC2 -> reenviado al laptop del dev).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      rehabiapp-api:
+        condition: service_healthy
+    networks:
+      - rehabiapp-aws
+
   rehabiapp-mongodb:
     image: mongo:7
     container_name: rehabiapp-mongodb
@@ -116,6 +180,8 @@ volumes:
   caddy-data:
   caddy-config:
   mongo-data:
+  chatbot-wweb-session:
+  chatbot-wweb-cache:
 
 networks:
   rehabiapp-aws:

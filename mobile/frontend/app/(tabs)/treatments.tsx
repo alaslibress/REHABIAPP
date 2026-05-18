@@ -7,6 +7,7 @@ import { DownloadProgressModal } from '../../src/components/DownloadProgressModa
 import { EmptyState } from '../../src/components/EmptyState';
 import { FirstAidKit } from 'phosphor-react-native';
 import { useTheme } from '../../src/utils/theme';
+import { useRefreshOnFocus } from '../../src/utils/useRefreshOnFocus';
 import { parseGraphQLError } from '../../src/utils/errorHandler';
 
 export default function TreatmentsScreen() {
@@ -17,6 +18,9 @@ export default function TreatmentsScreen() {
   const fetchTratamientos = useTreatmentsStore(function (s) { return s.fetch; });
   const downloadPdf = useTreatmentsStore(function (s) { return s.downloadPdf; });
   const showError = useErrorStore(function (s) { return s.showError; });
+
+  // Refresca tratamientos al enfocar la pestana / volver del background.
+  useRefreshOnFocus(fetchTratamientos);
 
   const [refrescando, setRefrescando] = useState(false);
   const [descargando, setDescargando] = useState(false);

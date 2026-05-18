@@ -12,6 +12,7 @@ import { LogoutButton } from '../../src/components/LogoutButton';
 import { ConfirmModal } from '../../src/components/ConfirmModal';
 import { AppText } from '../../src/components/AppText';
 import { useTheme } from '../../src/utils/theme';
+import { useRefreshOnFocus } from '../../src/utils/useRefreshOnFocus';
 import { maskDni, maskSsn } from '../../src/utils/mask';
 import { parseGraphQLError } from '../../src/utils/errorHandler';
 
@@ -19,11 +20,16 @@ export default function ProfileScreen() {
   const { scheme } = useTheme();
   const patient = useUserStore(function (s) { return s.patient; });
   const disabilities = useUserStore(function (s) { return s.disabilities; });
+  const fetchProfile = useUserStore(function (s) { return s.fetchProfile; });
   const logout = useAuthStore(function (s) { return s.logout; });
   const showError = useErrorStore(function (s) { return s.showError; });
 
   const refrescando = useBootstrapStore(function (s) { return s.refreshing; });
   const refrescar = useBootstrapStore(function (s) { return s.hydrate; });
+
+  // Refresca avatar + datos del perfil al enfocar / volver del background.
+  // Asi una foto subida desde desktop aparece sin necesidad de relogin.
+  useRefreshOnFocus(fetchProfile);
 
   const [confirmVisible, setConfirmVisible] = useState(false);
 

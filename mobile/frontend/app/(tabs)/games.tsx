@@ -10,6 +10,7 @@ import { GameCard } from '../../src/components/GameCard';
 import { EmptyState } from '../../src/components/EmptyState';
 import { Heart } from 'phosphor-react-native';
 import { useTheme } from '../../src/utils/theme';
+import { useRefreshOnFocus } from '../../src/utils/useRefreshOnFocus';
 import type { AssignedGame } from '../../src/types/games';
 
 export default function GamesScreen() {
@@ -17,6 +18,9 @@ export default function GamesScreen() {
   const items = useGamesStore(function (s) { return s.items; });
   const loading = useGamesStore(function (s) { return s.loading; });
   const fetchJuegos = useGamesStore(function (s) { return s.fetch; });
+
+  // Refresca juegos al enfocar la pestana / volver del background.
+  useRefreshOnFocus(fetchJuegos);
 
   const [refrescando, setRefrescando] = useState(false);
 

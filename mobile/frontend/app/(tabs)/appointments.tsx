@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ScrollView, View, RefreshControl } from 'react-native';
 import { useAppointmentsStore } from '../../src/store/appointmentsStore';
+import { useRefreshOnFocus } from '../../src/utils/useRefreshOnFocus';
 import { AppointmentCard } from '../../src/components/AppointmentCard';
 import { HospitalContactCard } from '../../src/components/HospitalContactCard';
 import { ConfirmModal } from '../../src/components/ConfirmModal';
@@ -18,6 +19,13 @@ export default function AppointmentsScreen() {
   const fetchCitas = useAppointmentsStore(function (s) { return s.fetch; });
   const fetchPasadas = useAppointmentsStore(function (s) { return s.fetchPast; });
   const cancelCita = useAppointmentsStore(function (s) { return s.cancel; });
+
+  // Refresca citas (proximas + pasadas) al enfocar la pestana o al volver
+  // del background. Sin esto los datos cacheados via persist quedaban
+  // estancados hasta pull-to-refresh manual.
+  useRefreshOnFocus(useCallback(async function () {
+    await Promise.all([fetchCitas(), fetchPasadas()]);
+  }, [fetchCitas, fetchPasadas]));
 
   // Estado del modal de confirmacion de cancelacion
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { useProgressStore } from '../../src/store/progressStore';
 import { useErrorStore } from '../../src/store/errorStore';
 import { BodyDiagram } from '../../src/components/BodyDiagram';
 import { ProgressChartModal } from '../../src/components/ProgressChartModal';
 import { useTheme } from '../../src/utils/theme';
+import { useRefreshOnFocus } from '../../src/utils/useRefreshOnFocus';
 import { parseGraphQLError } from '../../src/utils/errorHandler';
 import type { BodyPartProgress } from '../../src/types/progress';
 
@@ -21,12 +22,8 @@ export default function ProgressScreen() {
   const [selectedPart, setSelectedPart] = useState<BodyPartProgress | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Refetch al entrar en la pestana — garantiza muneco actualizado tras un fix
-  // en el BFF (o tras un cambio de asignacion clinica) sin necesidad de
-  // pull-to-refresh manual ni de relogin.
-  useEffect(function () {
-    fetchProgress().catch(function () {});
-  }, [fetchProgress]);
+  // Refresca progreso al enfocar la pestana / volver del background.
+  useRefreshOnFocus(fetchProgress);
 
   const handleRefresh = useCallback(async function () {
     setRefrescando(true);

@@ -15,6 +15,7 @@ import { useBootstrapStore } from '../../src/store/bootstrapStore';
 import { Bubble } from '../../src/components/Bubble';
 import { Positioned } from '../../src/components/Positioned';
 import { useTheme } from '../../src/utils/theme';
+import { useRefreshOnFocus } from '../../src/utils/useRefreshOnFocus';
 import { getGreeting } from '../../src/utils/greeting';
 
 // Pantalla Inicio rediseñada (rebrand 2026-05): 6 burbujas flotantes
@@ -29,6 +30,9 @@ export default function HomeScreen() {
   const refrescando = useBootstrapStore(function (s) { return s.refreshing; });
   const refrescar = useBootstrapStore(function (s) { return s.hydrate; });
   const patientName = patient?.name ?? 'Paciente';
+
+  // Refresca perfil y bootstrap completo al enfocar Inicio / volver del background.
+  useRefreshOnFocus(fetchProfile);
 
   // Cargar el perfil del paciente al montar la pantalla de inicio una sola vez
   useEffect(function () {

@@ -41,6 +41,7 @@
 /home/alaslibres/DAM/RehabiAPP/data/src/main/java/com/rehabiapp/data/internal/client/ApiInternalClient.java
 /home/alaslibres/DAM/RehabiAPP/data/src/main/java/com/rehabiapp/data/internal/controller/InternalController.java
 /home/alaslibres/DAM/RehabiAPP/data/src/main/java/com/rehabiapp/data/internal/dto/CheckNewDataResponse.java
+/home/alaslibres/DAM/RehabiAPP/data/src/main/java/com/rehabiapp/data/internal/dto/ProgressSummaryResponse.java
 /home/alaslibres/DAM/RehabiAPP/data/src/main/java/com/rehabiapp/data/markdown/MdGeneratorService.java
 /home/alaslibres/DAM/RehabiAPP/data/src/main/java/com/rehabiapp/data/markdown/SessionReportMdGenerator.java
 /home/alaslibres/DAM/RehabiAPP/data/src/main/java/com/rehabiapp/data/observability/DataMetrics.java

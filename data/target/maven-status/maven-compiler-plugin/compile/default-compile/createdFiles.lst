@@ -32,6 +32,7 @@ com/rehabiapp/data/analytics/controller/AnalyticsController.class
 com/rehabiapp/data/analytics/dto/TreatmentProgressDto.class
 com/rehabiapp/data/util/TreatmentMetricResolver.class
 com/rehabiapp/data/config/CsfleProperties.class
+com/rehabiapp/data/internal/dto/ProgressSummaryResponse.class
 com/rehabiapp/data/analytics/service/AnalyticsService.class
 com/rehabiapp/data/domain/document/GameSession.class
 com/rehabiapp/data/domain/document/PatientProgress.class

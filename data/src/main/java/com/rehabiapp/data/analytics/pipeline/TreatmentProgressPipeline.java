@@ -67,6 +67,15 @@ public class TreatmentProgressPipeline {
                         .append("codTrat", new Document("$ne", null)));
 
         // Stage 2: dia truncado y metricValue segun prefijo del codTrat.
+        //
+        // Para tratamientos ROM-/VEL-/FUERZA- se usa el shim `movementMetrics` (legacy).
+        // Para el resto (juegos polimorficos: PIANO, BALON, etc.) cae al fallback que
+        // intenta extraer una metrica generica desde `rawMetrics`. Orden de preferencia:
+        //   1. score directo de la sesion (siempre presente, comparable entre juegos).
+        //   2. rawMetrics.accuracyPct (precision en %, normalizado 0-100).
+        //   3. rawMetrics.irsScore (indice de rendimiento integrado).
+        // Si ninguno aplica, devuelve null y el documento queda sin valor (la pipeline
+        // posterior tolera null en deltaPorcentaje).
         AggregationOperation addFields = ctx -> new Document("$addFields", new Document()
                 .append("day", new Document("$dateTrunc", new Document()
                         .append("date", "$sessionStart")
@@ -89,7 +98,13 @@ public class TreatmentProgressPipeline {
                                                         List.of("$codTrat", "FUERZA-")), -1)))
                                         .append("then", "$movementMetrics.maxSpeed")
                         ))
-                        .append("default", "$movementMetrics.rangeOfMotionDegrees")
+                        // Fallback generico para juegos polimorficos (PIANO, BALON, etc.):
+                        // score → rawMetrics.accuracyPct → rawMetrics.irsScore.
+                        .append("default", new Document("$ifNull", List.of(
+                                "$score",
+                                "$rawMetrics.accuracyPct",
+                                "$rawMetrics.irsScore"
+                        )))
                 ))
         );
 

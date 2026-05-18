@@ -5,11 +5,12 @@ import { useErrorStore } from '../../src/store/errorStore';
 import { DisabilitySection } from '../../src/components/DisabilitySection';
 import { DownloadProgressModal } from '../../src/components/DownloadProgressModal';
 import { EmptyState } from '../../src/components/EmptyState';
+import { FirstAidKit } from 'phosphor-react-native';
 import { useTheme } from '../../src/utils/theme';
 import { parseGraphQLError } from '../../src/utils/errorHandler';
 
 export default function TreatmentsScreen() {
-  const { scheme } = useTheme();
+  const { scheme, theme } = useTheme();
   const items = useTreatmentsStore(function (s) { return s.items; });
   const disabilities = useTreatmentsStore(function (s) { return s.disabilities; });
   const loading = useTreatmentsStore(function (s) { return s.loading; });
@@ -47,7 +48,7 @@ export default function TreatmentsScreen() {
     return (
       <View className={`flex-1 ${bgClass} justify-center items-center p-6`}>
         <EmptyState
-          icon="medkit-outline"
+          Icon={FirstAidKit}
           title="Sin tratamientos"
           message="No tienes tratamientos asignados todavia."
         />
@@ -64,8 +65,8 @@ export default function TreatmentsScreen() {
           <RefreshControl
             refreshing={refrescando}
             onRefresh={handleRefresh}
-            tintColor="#2563EB"
-            colors={['#2563EB']}
+            tintColor={theme.accent}
+            colors={[theme.accent]}
           />
         }
       >

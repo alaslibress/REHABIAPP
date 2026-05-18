@@ -1,5 +1,5 @@
 import { Linking, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { WhatsappLogo } from 'phosphor-react-native';
 import { AppText } from './AppText';
 
 // Numero de WhatsApp del centro de rehabilitacion. Formato E.164 sin '+'
@@ -46,7 +46,7 @@ export function WhatsAppButton() {
       onPress={handlePress}
       className="flex-row items-center justify-center gap-2 border border-success rounded-full py-3 px-5 min-h-12"
     >
-      <Ionicons name="logo-whatsapp" size={20} color="#22C55E" />
+      <WhatsappLogo size={20} color="#2EA66A" weight="regular" />
       <AppText variant="body" weight="medium" className="text-success">
         Abrir WhatsApp
       </AppText>

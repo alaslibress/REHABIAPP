@@ -1,22 +1,24 @@
+import React from 'react';
 import { View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import type { IconProps } from 'phosphor-react-native';
 import { AppText } from './AppText';
-
-type IoniconName = keyof typeof Ionicons.glyphMap;
+import { useTheme } from '../utils/theme';
 
 type EmptyStateProps = {
-  icon: IoniconName;
+  // Componente icono Phosphor (ej. <CalendarBlank />)
+  Icon: React.ComponentType<IconProps>;
   title: string;
   message?: string;
 };
 
 // Estado vacio centrado con icono, titulo y mensaje opcional
 export function EmptyState(props: EmptyStateProps) {
-  const { icon, title, message } = props;
+  const { Icon, title, message } = props;
+  const { theme } = useTheme();
 
   return (
     <View className="flex-1 justify-center items-center px-8 gap-4">
-      <Ionicons name={icon} size={56} color="#64748B" />
+      <Icon size={56} color={theme.text3} weight="regular" />
 
       <AppText
         variant="subtitle"

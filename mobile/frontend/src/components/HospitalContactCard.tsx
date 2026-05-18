@@ -1,6 +1,7 @@
 import { Linking, Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Phone, Envelope } from 'phosphor-react-native';
 import { FloatingCard } from './FloatingCard';
+import { useTheme } from '../utils/theme';
 import { AppText } from './AppText';
 import { WhatsAppButton } from './WhatsAppButton';
 
@@ -10,6 +11,7 @@ const HOSPITAL_EMAIL = 'cita@rehabiapp.com';
 
 // Tarjeta de contacto: telefono + email + WhatsApp. Sustituye al formulario de cita.
 export function HospitalContactCard() {
+  const { theme } = useTheme();
   function handleLlamar() {
     Linking.openURL(`tel:${HOSPITAL_PHONE.replace(/\s+/g, '')}`).catch(function () {});
   }
@@ -41,7 +43,7 @@ export function HospitalContactCard() {
         onPress={handleLlamar}
         className="flex-row items-center gap-3 py-3 px-3 rounded-xl bg-background dark:bg-background-dark border border-border dark:border-border-dark mb-3 min-h-12"
       >
-        <Ionicons name="call-outline" size={22} color="#2563EB" />
+        <Phone size={22} color={theme.accent} weight="regular" />
         <View className="flex-1">
           <AppText variant="caption" className="text-text-secondary dark:text-text-secondary-dark">
             Telefono
@@ -61,7 +63,7 @@ export function HospitalContactCard() {
         onPress={handleEmail}
         className="flex-row items-center gap-3 py-3 px-3 rounded-xl bg-background dark:bg-background-dark border border-border dark:border-border-dark mb-4 min-h-12"
       >
-        <Ionicons name="mail-outline" size={22} color="#2563EB" />
+        <Envelope size={22} color={theme.accent} weight="regular" />
         <View className="flex-1">
           <AppText variant="caption" className="text-text-secondary dark:text-text-secondary-dark">
             Email

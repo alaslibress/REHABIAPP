@@ -1,6 +1,7 @@
 import { View, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { CalendarBlank } from 'phosphor-react-native';
 import { FloatingCard } from './FloatingCard';
+import { useTheme } from '../utils/theme';
 import { AppText } from './AppText';
 import type { Appointment } from '../types/appointments';
 
@@ -39,6 +40,7 @@ function EstadoBadge({ status }: { status: string }) {
 
 export function AppointmentCard(props: AppointmentCardProps) {
   const { appointment, onCancel, readOnly = false } = props;
+  const { theme } = useTheme();
   const horaFormateada = appointment.time.substring(0, 5);
 
   return (
@@ -46,7 +48,7 @@ export function AppointmentCard(props: AppointmentCardProps) {
       <View className="flex-row items-center gap-3">
         {/* Icono izquierdo */}
         <View className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 justify-center items-center">
-          <Ionicons name="calendar-outline" size={20} color="#2563EB" />
+          <CalendarBlank size={20} color={theme.accent} weight="regular" />
         </View>
 
         {/* Informacion central */}

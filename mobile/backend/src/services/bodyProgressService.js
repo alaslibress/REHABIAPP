@@ -13,6 +13,9 @@ const PARTES_POR_DISCAPACIDAD = {
   M54: ['TORSO'],
   M75: ['LEFT_SHOULDER', 'RIGHT_SHOULDER'],
   G56: ['LEFT_HAND', 'RIGHT_HAND'],
+  // Rehabilitacion movilidad fina manos (juego PIANO) — paciente Juan tiene
+  // lesion solo en la mano derecha.
+  'M-PIANO': ['RIGHT_HAND'],
 };
 
 // Etiqueta legible por parte del cuerpo. Usada como `name` en el GraphQL response.
@@ -56,56 +59,135 @@ async function obtenerProgresoPorParte(dniPac, javaToken) {
     for (const p of partes) partesAfectadas.add(p);
   }
 
-  // Hash deterministico para que el progreso mock sea estable entre llamadas.
-  // Real /api Phase 12 sustituira esto por valores agregados de MongoDB.
-  function hashEstable(parte) {
-    let h = 0;
-    for (const c of `${dniPac}-${parte}`) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-    return h;
+  // Pedimos el progreso real al API (agregado desde MongoDB via /data).
+  // Si falla, seguimos sin metricas reales — el muneco se pinta igualmente.
+  let progresoReal = [];
+  try {
+    const resp = await apiClient.get(`/api/pacientes/${dniPac}/progreso`, javaToken);
+    if (Array.isArray(resp)) progresoReal = resp;
+  } catch {
+    // El upstream puede estar caido o no haber sesiones — caso normal.
+  }
+
+  // Agrupamos los datos reales por parte del cuerpo (case-insensitive).
+  // Para cada parte calculamos progressPct y improvementPct a partir de las
+  // entradas reales: progressPct = score mas reciente (clamp 0-100),
+  // improvementPct = ((ultimo - primero) / primero) * 100.
+  const datosPorParte = {};
+  for (const trat of progresoReal) {
+    if (!trat.parteCuerpo) continue;
+    const etiquetaTrat = trat.parteCuerpo.toLowerCase();
+    const entradas = Array.isArray(trat.entradas) ? trat.entradas : [];
+    if (entradas.length === 0) continue;
+    if (!datosPorParte[etiquetaTrat]) datosPorParte[etiquetaTrat] = [];
+    for (const e of entradas) {
+      if (e?.valor != null && e?.fecha) {
+        datosPorParte[etiquetaTrat].push({ fecha: e.fecha, valor: Number(e.valor) });
+      }
+    }
+  }
+  for (const k of Object.keys(datosPorParte)) {
+    datosPorParte[k].sort(function (a, b) { return String(a.fecha).localeCompare(String(b.fecha)); });
   }
 
   return TODAS_LAS_PARTES.map((parte) => {
     const tieneTratamiento = partesAfectadas.has(parte);
-    const seed = hashEstable(parte);
+    const etiqueta = (ETIQUETAS_PARTE[parte] || '').toLowerCase();
+    const datos = datosPorParte[etiqueta] || [];
+
+    let progressPct = null;
+    let improvementPct = null;
+    let periodLabel = 'Sin datos';
+
+    if (tieneTratamiento) {
+      if (datos.length > 0) {
+        // progressPct simboliza adherencia al plan de rehabilitacion:
+        // 10 sesiones completadas equivalen al 100% (objetivo clinico tipico).
+        // Asi 1 sesion sale 10%, 5 sesiones 50%, etc. — visualmente honesto.
+        const objetivoSesiones = 10;
+        progressPct = Number(Math.min(100, (datos.length / objetivoSesiones) * 100).toFixed(1));
+
+        // improvementPct: variacion porcentual del score entre primera y ultima
+        // entrada. Con una sola sesion no hay base de comparacion -> 0.
+        if (datos.length >= 2) {
+          const primero = datos[0].valor;
+          const ultimo = datos[datos.length - 1].valor;
+          if (primero !== 0) {
+            improvementPct = Number((((ultimo - primero) / primero) * 100).toFixed(1));
+          } else {
+            improvementPct = 0;
+          }
+        } else {
+          improvementPct = 0;
+        }
+        const sufijo = datos.length === 1 ? 'sesion registrada' : 'sesiones registradas';
+        periodLabel = `${datos.length} ${sufijo}`;
+      } else {
+        // Tratamiento asignado pero sin sesiones aun.
+        progressPct = 0;
+        improvementPct = 0;
+        periodLabel = 'Aun sin sesiones';
+      }
+    }
+
     return {
       id: parte,
       name: ETIQUETAS_PARTE[parte],
       hasTreatment: tieneTratamiento,
-      progressPct: tieneTratamiento ? Number((40 + (seed % 60)).toFixed(1)) : null,
-      improvementPct: tieneTratamiento ? Number((-5 + (seed % 30)).toFixed(1)) : null,
-      periodLabel: tieneTratamiento ? 'Ultimas 4 semanas' : 'Sin datos',
+      progressPct,
+      improvementPct,
+      periodLabel,
     };
   });
 }
 
 /**
- * Devuelve la serie temporal de una parte del cuerpo concreta.
- * Mock: 12 puntos semanales con tendencia ligeramente positiva (deterministica por parte+dni).
+ * Devuelve la serie temporal real de una parte del cuerpo concreta.
+ *
+ * Estrategia: consume `GET /api/pacientes/{dni}/progreso` (que a su vez
+ * agrega desde MongoDB via /data) y filtra los tratamientos cuya
+ * `parteCuerpo` coincide con el bodyPartId solicitado.
+ *
+ * Si el API no responde o no hay entradas para esa parte, devuelve [] —
+ * la pantalla muestra un grafico vacio en lugar de datos inventados.
  *
  * @param {string} dniPac
- * @param {string} bodyPartId
- * @param {string|null} _javaToken
+ * @param {string} bodyPartId  Id frontend (ej "RIGHT_HAND")
+ * @param {string|null} javaToken
  * @returns {Promise<Array>} BodyPartMetric[]
  */
-async function obtenerMetricasPorParte(dniPac, bodyPartId, _javaToken) {
-  // Hash determinista para que la grafica sea estable entre llamadas (no cambia en cada refresh).
-  let seed = 0;
-  for (const c of `${dniPac}-${bodyPartId}`) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+async function obtenerMetricasPorParte(dniPac, bodyPartId, javaToken) {
+  // Mapeo bodyPartId -> etiqueta legible que usa el pipeline (case-insensitive).
+  const etiquetaEsperada = (ETIQUETAS_PARTE[bodyPartId] || '').toLowerCase();
+  if (!etiquetaEsperada) return [];
 
-  const hoy = new Date();
-  const puntos = [];
-  for (let i = 11; i >= 0; i -= 1) {
-    const fecha = new Date(hoy.getTime() - i * 7 * 24 * 60 * 60 * 1000);
-    const isoDate = fecha.toISOString().slice(0, 10);
-    // Score crece con el tiempo (i menor = mas reciente = mayor score), con ruido.
-    const base = 50 + (11 - i) * 3;
-    const ruido = ((seed >> i) & 0x07) - 3;
-    puntos.push({
-      date: isoDate,
-      score: Number((base + ruido).toFixed(1)),
-      metricType: 'angulo_flexion',
-    });
+  let tratamientos;
+  try {
+    tratamientos = await apiClient.get(`/api/pacientes/${dniPac}/progreso`, javaToken);
+  } catch {
+    return [];
   }
+  if (!Array.isArray(tratamientos)) return [];
+
+  // Filtramos tratamientos cuya parteCuerpo coincide con la pedida.
+  // Concatenamos las entradas de todos los tratamientos que machean para que
+  // el grafico muestre la evolucion completa de esa zona corporal.
+  const puntos = [];
+  for (const trat of tratamientos) {
+    const parte = (trat.parteCuerpo || '').toLowerCase();
+    if (parte !== etiquetaEsperada) continue;
+    const entradas = Array.isArray(trat.entradas) ? trat.entradas : [];
+    for (const e of entradas) {
+      if (e?.valor == null || !e?.fecha) continue;
+      puntos.push({
+        date: String(e.fecha).slice(0, 10),
+        score: Number(Number(e.valor).toFixed(2)),
+        metricType: trat.metricaNombre || 'score',
+      });
+    }
+  }
+  // Orden cronologico ascendente — el grafico espera fechas ordenadas.
+  puntos.sort(function (a, b) { return a.date.localeCompare(b.date); });
   return puntos;
 }
 

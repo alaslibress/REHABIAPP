@@ -112,6 +112,22 @@ function extraerNetworkError(error: unknown): any | null {
 }
 
 // Convierte un error GraphQL en un AppError estructurado.
+// Construye un AppError directamente desde un codigo conocido. Util para
+// errores generados localmente en el frontend (ej. permiso de notificaciones
+// rechazado por el SO) que no provienen de una respuesta GraphQL.
+export function buildAppErrorFromCode(code: ErrorCode): AppError {
+  const mapped = ERROR_MESSAGES[code];
+  if (mapped) {
+    return { title: 'Error', subtitle: mapped.subtitle, message: mapped.message, code };
+  }
+  return {
+    title: 'Error',
+    subtitle: ERROR_MESSAGES.INTERNAL_ERROR.subtitle,
+    message: ERROR_MESSAGES.INTERNAL_ERROR.message,
+    code: 'INTERNAL_ERROR',
+  };
+}
+
 // Sigue una cadena de prioridad para extraer la maxima informacion posible:
 // 1. Codigo conocido del BFF en extensions.code -> mensaje del mapa local
 // 2. Estructura del BFF (extensions.subtitulo + extensions.texto) -> usar directamente

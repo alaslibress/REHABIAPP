@@ -33,14 +33,13 @@ type AppTextProps = TextProps & {
 export function AppText(props: AppTextProps) {
   const { variant = 'body', weight = 'regular', style, children, ...rest } = props;
   const scale = useFontScale();
-  const { scheme } = useTheme();
+  const { theme } = useTheme();
 
   const baseFontSize = VARIANT_SIZES[variant];
   const fontFamily = WEIGHT_FAMILIES[weight];
 
-  // Color por defecto: blanco roto en oscuro (#F1F5F9 = text-primary-dark),
-  // gris pizarra en claro (#1E293B = text-primary).
-  const defaultColor = scheme === 'dark' ? '#F1F5F9' : '#1E293B';
+  // Color por defecto leido del tema (text.primary), con override via style/className.
+  const defaultColor = theme.text;
 
   return (
     <Text

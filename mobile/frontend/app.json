@@ -54,8 +54,16 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F0F4FF"
       },
-      "useNextNotificationsApi": true,
       "package": "com.rehabiapp.mobile"
+    },
+    "notification": {
+      "icon": "./assets/RehabiAPPLogoNoLetras.png",
+      "color": "#2563EB"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
     }
   }
 }

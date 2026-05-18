@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
+import { IdentificationCard, ShieldCheck, Cake, MapPin, Phone, Envelope } from 'phosphor-react-native';
 import { useUserStore } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { useBootstrapStore } from '../../src/store/bootstrapStore';
@@ -66,12 +67,12 @@ export default function ProfileScreen() {
 
         {/* Datos personales */}
         <View className={`rounded-2xl px-4 ${cardClass}`}>
-          <InfoRow label="DNI" value={maskDni(patient.dni)} icon="card-outline" />
-          <InfoRow label="N. Seguridad Social" value={maskSsn(patient.numSs)} icon="shield-checkmark-outline" />
-          <InfoRow label="Fecha de nacimiento" value={patient.birthDate} icon="calendar-outline" />
-          <InfoRow label="Direccion" value={patient.address} icon="location-outline" />
-          <InfoRow label="Telefono" value={patient.phone} icon="call-outline" />
-          <InfoRow label="Email" value={patient.email} icon="mail-outline" />
+          <InfoRow label="DNI" value={maskDni(patient.dni)} Icon={IdentificationCard} />
+          <InfoRow label="N. Seguridad Social" value={maskSsn(patient.numSs)} Icon={ShieldCheck} />
+          <InfoRow label="Fecha de nacimiento" value={patient.birthDate} Icon={Cake} />
+          <InfoRow label="Direccion" value={patient.address} Icon={MapPin} />
+          <InfoRow label="Telefono" value={patient.phone} Icon={Phone} />
+          <InfoRow label="Email" value={patient.email} Icon={Envelope} />
         </View>
 
         {/* Patologias */}

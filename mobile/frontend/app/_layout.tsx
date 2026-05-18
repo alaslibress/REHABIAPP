@@ -19,7 +19,8 @@ import { useBootstrapStore } from '../src/store/bootstrapStore';
 import { useSettingsStore } from '../src/store/settingsStore';
 import { ErrorPopup } from '../src/components/ErrorPopup';
 import { useErrorStore } from '../src/store/errorStore';
-import { ThemeContext, type ThemeMode, type ThemeScheme } from '../src/utils/theme';
+import { useColorScheme as useNwColorScheme } from 'nativewind';
+import { ThemeContext, resolveTheme, type ThemeMode, type ThemeScheme } from '../src/utils/theme';
 import { FontScaleContext, type FontScale } from '../src/utils/fontScale';
 import { initNotifications, remotePushDisabled } from '../src/utils/notifications';
 
@@ -95,15 +96,26 @@ function ThemeProvider(props: { children: React.ReactNode }) {
     return systemScheme === 'dark' ? 'dark' : 'light';
   }, [themeMode, systemScheme]);
 
+  // NativeWind v4 resuelve `dark:` SOLO via su propio useColorScheme — NO mira
+  // la clase `dark` del View raiz. Hay que sincronizarlo cada vez que el usuario
+  // cambia el tema en Ajustes, de lo contrario los componentes con `dark:bg-X`
+  // siguen pintando los tokens light pese al provider de tema.
+  const nwScheme = useNwColorScheme();
+  useEffect(function () {
+    nwScheme.setColorScheme(scheme);
+  }, [scheme, nwScheme]);
+
   const value = useMemo(function () {
     return {
       scheme,
       mode: themeMode as ThemeMode,
       setMode: setThemeMode,
+      theme: resolveTheme(scheme),
     };
   }, [scheme, themeMode, setThemeMode]);
 
-  // La clase "dark" en el View raiz activa los tokens dark: de NativeWind
+  // La clase "dark" en el View raiz queda como redundancia (no la usa NW v4),
+  // pero ayuda a inspectores y a CSS web.
   return (
     <ThemeContext.Provider value={value}>
       <View className={`flex-1 ${scheme === 'dark' ? 'dark' : ''}`}>

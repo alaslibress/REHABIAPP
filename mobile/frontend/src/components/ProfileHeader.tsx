@@ -1,5 +1,5 @@
 import { Image, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { UserCircle } from 'phosphor-react-native';
 import { AppText } from './AppText';
 import { calcularEdad } from '../utils/mask';
 import type { Patient } from '../types/user';
@@ -36,10 +36,10 @@ export function ProfileHeader(props: ProfileHeaderProps) {
             resizeMode="cover"
           />
         ) : (
-          <Ionicons
-            name="person-circle-outline"
+          <UserCircle
             size={80}
-            color={isDark ? '#94A3B8' : '#64748B'}
+            color={isDark ? '#A8B3C7' : '#6C7A91'}
+            weight="regular"
           />
         )}
       </View>

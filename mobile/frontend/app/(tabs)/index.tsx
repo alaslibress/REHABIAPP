@@ -1,83 +1,28 @@
 import { useEffect } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, View, Text } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
+import {
+  GearSix,
+  CalendarBlank,
+  UserCircle,
+  ChartBar,
+  GameController,
+  FirstAidKit,
+} from 'phosphor-react-native';
 import { useUserStore } from '../../src/store/userStore';
 import { useErrorStore } from '../../src/store/errorStore';
 import { useBootstrapStore } from '../../src/store/bootstrapStore';
-import { FloatingBalloon } from '../../src/components/FloatingBalloon';
+import { Bubble } from '../../src/components/Bubble';
+import { Positioned } from '../../src/components/Positioned';
+import { useTheme } from '../../src/utils/theme';
 import { getGreeting } from '../../src/utils/greeting';
 
-// Configuracion de cada globo: icono, ruta y parametros de animacion
-// Las posiciones simulan un desorden organico pero visualmente equilibrado
-type BalloonConfig = {
-  id: string;
-  iconName: string;
-  route: string;
-  positionX: number;
-  positionY: number;
-  animationDelay: number;
-  animationDuration: number;
-};
-
-const BALLOON_CONFIG: BalloonConfig[] = [
-  {
-    id: 'profile',
-    iconName: 'person-circle-outline',
-    route: '/(tabs)/profile',
-    positionX: 38,
-    positionY: 35,
-    animationDelay: 0,
-    animationDuration: 2800,
-  },
-  {
-    id: 'settings',
-    iconName: 'settings-outline',
-    route: '/(tabs)/settings',
-    positionX: 12,
-    positionY: 18,
-    animationDelay: 400,
-    animationDuration: 3200,
-  },
-  {
-    id: 'appointments',
-    iconName: 'calendar-outline',
-    route: '/(tabs)/appointments',
-    positionX: 65,
-    positionY: 15,
-    animationDelay: 200,
-    animationDuration: 2600,
-  },
-  {
-    id: 'progress',
-    iconName: 'bar-chart-outline',
-    route: '/(tabs)/progress',
-    positionX: 8,
-    positionY: 55,
-    animationDelay: 600,
-    animationDuration: 3000,
-  },
-  {
-    id: 'games',
-    iconName: 'game-controller-outline',
-    route: '/(tabs)/games',
-    positionX: 62,
-    positionY: 58,
-    animationDelay: 300,
-    animationDuration: 2400,
-  },
-  {
-    id: 'treatments',
-    iconName: 'medkit-outline',
-    route: '/(tabs)/treatments',
-    positionX: 35,
-    positionY: 72,
-    animationDelay: 500,
-    animationDuration: 3400,
-  },
-];
-
+// Pantalla Inicio rediseñada (rebrand 2026-05): 6 burbujas flotantes
+// con animaciones asincronas (delay + duration unicos por burbuja).
+// La burbuja central "Perfil" usa variante big con fondo accent.
 export default function HomeScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
   const patient = useUserStore(function (s) { return s.patient; });
   const fetchProfile = useUserStore(function (s) { return s.fetchProfile; });
   const showError = useErrorStore(function (s) { return s.showError; });
@@ -85,63 +30,75 @@ export default function HomeScreen() {
   const refrescar = useBootstrapStore(function (s) { return s.hydrate; });
   const patientName = patient?.name ?? 'Paciente';
 
-  // Cargar el perfil del paciente al montar la pantalla de inicio.
-  // Se ejecuta una sola vez despues de que AuthGuard haya navegado aqui
-  // (lo que garantiza que el token JWT ya esta almacenado en SecureStore).
+  // Cargar el perfil del paciente al montar la pantalla de inicio una sola vez
   useEffect(function () {
-    // Solo cargar si no tenemos el perfil aun (evita llamadas duplicadas)
     if (!patient) {
       fetchProfile().catch(function (err) {
-        // fetchProfile ya parsea el error a AppError (via parseGraphQLError)
         showError(err);
       });
     }
   }, []);
 
-  function handleBalloonPress(route: string) {
-    router.push(route as any);
+  function go(route: string) {
+    router.push(route as Href);
   }
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
-      {/* Mensaje de bienvenida con saludo dinamico segun la hora — tarjeta centrada */}
-      <View className="px-6 pt-6 pb-4">
-        <View className="bg-surface dark:bg-surface-dark rounded-2xl px-5 py-4 shadow-md border border-primary-200 dark:border-primary-600">
-          <Text className="text-2xl font-bold text-text-primary dark:text-text-primary-dark leading-8 text-center">
+    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, padding: 16 }}
+        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} />}
+      >
+        {/* Tarjeta de saludo */}
+        <View
+          style={{
+            backgroundColor: theme.elev1,
+            borderColor: theme.border,
+            borderWidth: 1,
+            borderRadius: 14,
+            padding: 16,
+            marginBottom: 16,
+          }}
+        >
+          <Text
+            style={{
+              color: theme.text,
+              fontWeight: '700',
+              fontSize: 15,
+              textAlign: 'center',
+            }}
+          >
             {getGreeting(patientName)}
           </Text>
         </View>
-      </View>
 
-      {/* Spinner mientras el paciente no se ha cargado aun */}
-      {patient == null && refrescando ? (
-        <View className="py-3 items-center">
-          <ActivityIndicator size="small" />
-        </View>
-      ) : null}
+        {/* Spinner inicial mientras no haya datos del paciente */}
+        {patient == null && refrescando ? (
+          <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color={theme.accent} />
+          </View>
+        ) : null}
 
-      {/* Area de globos flotantes con posiciones organicas */}
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        refreshControl={
-          <RefreshControl refreshing={refrescando} onRefresh={refrescar} />
-        }
-      >
-        <View className="flex-1 relative mx-4 mb-4">
-          {BALLOON_CONFIG.map(function (balloon) {
-            return (
-              <FloatingBalloon
-                key={balloon.id}
-                iconName={balloon.iconName as any}
-                size={32}
-                positionX={balloon.positionX}
-                positionY={balloon.positionY}
-                animationDelay={balloon.animationDelay}
-                animationDuration={balloon.animationDuration}
-                onPress={function () { handleBalloonPress(balloon.route); }}
-              />
-            );
-          })}
+        {/* Area de burbujas flotantes */}
+        <View style={{ flex: 1, position: 'relative', minHeight: 480 }}>
+          <Positioned top="6%" left="12%">
+            <Bubble Icon={GearSix} label="Ajustes" delay={-200} duration={5600} onPress={function () { go('/(tabs)/settings'); }} />
+          </Positioned>
+          <Positioned top="6%" right="12%">
+            <Bubble Icon={CalendarBlank} label="Citas" delay={-1400} duration={6200} onPress={function () { go('/(tabs)/appointments'); }} />
+          </Positioned>
+          <Positioned top="28%" left="50%" centerX>
+            <Bubble big Icon={UserCircle} label="Perfil" delay={-800} duration={7000} onPress={function () { go('/(tabs)/profile'); }} />
+          </Positioned>
+          <Positioned top="48%" left="6%">
+            <Bubble Icon={ChartBar} label="Progreso" delay={-2000} duration={6500} onPress={function () { go('/(tabs)/progress'); }} />
+          </Positioned>
+          <Positioned top="50%" right="8%">
+            <Bubble Icon={GameController} label="Juegos" delay={-2600} duration={5900} onPress={function () { go('/(tabs)/games'); }} />
+          </Positioned>
+          <Positioned top="72%" left="50%" centerX>
+            <Bubble Icon={FirstAidKit} label="Cura" delay={-3200} duration={6800} onPress={function () { go('/(tabs)/treatments'); }} />
+          </Positioned>
         </View>
       </ScrollView>
     </View>

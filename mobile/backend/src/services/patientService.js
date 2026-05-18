@@ -66,22 +66,35 @@ async function obtenerDiscapacidades(dniPac, javaToken) {
 }
 
 /**
- * Obtiene el resumen de progreso terapeutico del paciente.
- * Endpoint pendiente en la API de Java — devuelve datos mock hasta que este disponible.
+ * Obtiene el resumen plano del progreso terapeutico del paciente.
+ * Consume el endpoint `GET /api/pacientes/{dni}/progreso/resumen` del API Java
+ * (que a su vez proxia al pipeline /data y agrega desde MongoDB).
+ *
+ * Tolera fallos del upstream devolviendo un resumen vacio para no romper la
+ * welcome card del movil cuando /data o Mongo no estan disponibles.
  *
  * @param {string} dniPac
  * @param {string|null} javaToken
  * @returns {Promise<object>} ProgressSummary
  */
 async function obtenerProgreso(dniPac, javaToken) {
-  // DEPENDENCIA PENDIENTE: endpoint /api/pacientes/{dniPac}/progreso no existe aun en Java
-  // Cuando se implemente, sustituir este mock por la llamada real
-  return {
-    totalSessions: 0,
-    averageScore: null,
-    improvementRate: null,
-    lastSessionDate: null,
-  };
+  try {
+    const data = await apiClient.get(`/api/pacientes/${dniPac}/progreso/resumen`, javaToken);
+    return {
+      totalSessions: data?.totalSessions ?? 0,
+      averageScore: data?.averageScore ?? null,
+      improvementRate: data?.improvementRate ?? null,
+      lastSessionDate: data?.lastSessionDate ?? null,
+    };
+  } catch (err) {
+    // Fallback defensivo: si el API o /data fallan, no rompemos el dashboard.
+    return {
+      totalSessions: 0,
+      averageScore: null,
+      improvementRate: null,
+      lastSessionDate: null,
+    };
+  }
 }
 
 module.exports = { obtenerPerfil, obtenerDiscapacidades, obtenerProgreso };

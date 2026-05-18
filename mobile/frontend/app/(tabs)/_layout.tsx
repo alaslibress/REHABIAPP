@@ -1,89 +1,82 @@
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  House,
+  CalendarBlank,
+  GameController,
+  FirstAidKit,
+  ChartBar,
+  UserCircle,
+  GearSix,
+  type IconProps,
+} from 'phosphor-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/utils/theme';
 import { useFontScale } from '../../src/utils/fontScale';
 
-// Tipo para los nombres de iconos de Ionicons
-type TabIconName = keyof typeof Ionicons.glyphMap;
-
-// Configuracion de cada pestana de navegacion
+// Configuracion de cada pestana de navegacion (rebrand Phosphor)
 type TabConfig = {
   name: string;
   title: string;
-  icon: TabIconName;
-  iconFocused: TabIconName;
+  Icon: React.ComponentType<IconProps>;
 };
 
 const TAB_CONFIG: TabConfig[] = [
-  { name: 'index', title: 'Inicio', icon: 'home-outline', iconFocused: 'home' },
-  { name: 'appointments', title: 'Citas', icon: 'calendar-outline', iconFocused: 'calendar' },
-  { name: 'games', title: 'Juegos', icon: 'game-controller-outline', iconFocused: 'game-controller' },
-  { name: 'treatments', title: 'Cura', icon: 'medkit-outline', iconFocused: 'medkit' },
-  { name: 'progress', title: 'Progreso', icon: 'bar-chart-outline', iconFocused: 'bar-chart' },
-  { name: 'profile', title: 'Perfil', icon: 'person-outline', iconFocused: 'person' },
-  { name: 'settings', title: 'Ajustes', icon: 'settings-outline', iconFocused: 'settings' },
+  { name: 'index', title: 'Inicio', Icon: House },
+  { name: 'appointments', title: 'Citas', Icon: CalendarBlank },
+  { name: 'games', title: 'Juegos', Icon: GameController },
+  { name: 'treatments', title: 'Cura', Icon: FirstAidKit },
+  { name: 'progress', title: 'Progreso', Icon: ChartBar },
+  { name: 'profile', title: 'Perfil', Icon: UserCircle },
+  { name: 'settings', title: 'Ajustes', Icon: GearSix },
 ];
 
 export default function TabsLayout() {
-  const { scheme } = useTheme();
+  const { theme } = useTheme();
   const scale = useFontScale();
   const insets = useSafeAreaInsets();
 
-  const isDark = scheme === 'dark';
-  // En dispositivos con gesture nav (Android) o home indicator (iOS) sumamos el inset
-  // para que los iconos no queden tapados por la zona de gestos del sistema.
-  const bottomInset = insets.bottom;
-
-  const headerBg = isDark ? '#111827' : '#FFFFFF';
-  const tabBarBg = isDark ? '#111827' : '#FFFFFF';
-  const tabBarBorder = isDark ? '#1F2937' : '#E2E8F0';
-  const headerTextColor = isDark ? '#F1F5F9' : '#1E293B';
-  const inactiveTint = isDark ? '#94A3B8' : '#64748B';
-
+  // Safe area bottom: la tab-nav no debe quedar bajo la zona de gestos.
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#2563EB',
-        tabBarInactiveTintColor: inactiveTint,
+        tabBarActiveTintColor: theme.accent,
+        tabBarInactiveTintColor: theme.text3,
         tabBarStyle: {
-          backgroundColor: tabBarBg,
+          backgroundColor: theme.elev1,
           borderTopWidth: 1,
-          borderTopColor: tabBarBorder,
-          // Altura base 60 + el inset del sistema para no chocar con la zona de gestos.
-          height: 60 + bottomInset,
-          // Padding inferior identico: deja respiro entre los iconos y el borde inferior.
-          paddingBottom: 8 + bottomInset,
+          borderTopColor: theme.divider,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom + 6,
           paddingTop: 4,
-          // Sombra elevada que enfatiza el contenedor blanco/oscuro de la barra.
           elevation: 8,
-          shadowColor: '#000',
+          shadowColor: theme.shadow.color,
           shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: isDark ? 0.4 : 0.08,
+          shadowOpacity: theme.shadow.opacity,
           shadowRadius: 4,
         },
         tabBarLabelStyle: {
-          fontSize: 11 * scale,
-          fontFamily: 'Inter_500Medium',
+          fontSize: 10 * scale,
+          fontFamily: 'Inter_600SemiBold',
         },
         headerShown: true,
         headerStyle: {
-          backgroundColor: headerBg,
+          backgroundColor: theme.bg,
           elevation: 2,
-          shadowColor: '#000',
+          shadowColor: theme.shadow.color,
           shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: isDark ? 0.3 : 0.1,
+          shadowOpacity: theme.shadow.opacity,
           shadowRadius: 2,
         },
-        headerTintColor: headerTextColor,
+        headerTintColor: theme.text,
         headerTitleStyle: {
-          fontFamily: 'Inter_600SemiBold',
+          fontFamily: 'Inter_700Bold',
           fontSize: 18 * scale,
-          color: headerTextColor,
+          color: theme.text,
         },
       }}
     >
       {TAB_CONFIG.map(function (tab) {
+        const Icon = tab.Icon;
         return (
           <Tabs.Screen
             key={tab.name}
@@ -91,8 +84,9 @@ export default function TabsLayout() {
             options={{
               title: tab.title,
               tabBarIcon: function ({ focused, color, size }) {
-                const iconName = focused ? tab.iconFocused : tab.icon;
-                return <Ionicons name={iconName} size={size} color={color} />;
+                return (
+                  <Icon size={size} color={color} weight={focused ? 'fill' : 'regular'} />
+                );
               },
             }}
           />

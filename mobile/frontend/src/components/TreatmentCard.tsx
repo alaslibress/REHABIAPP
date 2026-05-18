@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { View, Pressable } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { CaretDown, CaretUp, FilePdf } from 'phosphor-react-native';
 import { FloatingCard } from './FloatingCard';
+import { useTheme } from '../utils/theme';
 import { AppText } from './AppText';
 import { LevelBadge } from './LevelBadge';
 import type { Treatment } from '../types/treatments';
@@ -12,8 +13,10 @@ type Props = {
 };
 
 export function TreatmentCard({ treatment, onDownloadPdf }: Props) {
+  const { theme } = useTheme();
   const [expandido, setExpandido] = useState(false);
   const [descargando, setDescargando] = useState(false);
+  const ChevronIcon = expandido ? CaretUp : CaretDown;
 
   async function handleDescarga() {
     setDescargando(true);
@@ -41,11 +44,7 @@ export function TreatmentCard({ treatment, onDownloadPdf }: Props) {
           </AppText>
           <LevelBadge level={treatment.progressionLevel} />
         </View>
-        <Ionicons
-          name={expandido ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          color="#64748B"
-        />
+        <ChevronIcon size={20} color={theme.text3} weight="regular" />
       </Pressable>
 
       {/* Cuerpo expandible */}
@@ -102,14 +101,14 @@ export function TreatmentCard({ treatment, onDownloadPdf }: Props) {
               disabled={descargando}
               className={`flex-row items-center justify-center gap-2 py-3 rounded-xl min-h-12 ${descargando ? 'bg-primary-300' : 'bg-primary-600'}`}
             >
-              <Ionicons name="document-text-outline" size={18} color="white" />
+              <FilePdf size={18} color="#FFFFFF" weight="regular" />
               <AppText variant="label" weight="semibold" className="text-white">
                 {descargando ? 'Descargando...' : 'Descargar PDF'}
               </AppText>
             </Pressable>
           ) : (
             <View className="flex-row items-center justify-center gap-2 py-3 rounded-xl min-h-12 bg-border dark:bg-border-dark">
-              <Ionicons name="document-text-outline" size={18} color="#94A3B8" />
+              <FilePdf size={18} color={theme.textMuted} weight="regular" />
               <AppText variant="label" className="text-text-secondary dark:text-text-secondary-dark">
                 PDF pendiente
               </AppText>

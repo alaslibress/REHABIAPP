@@ -1,6 +1,7 @@
 import { View, Image, Pressable, Dimensions } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { GameController } from 'phosphor-react-native';
 import { FloatingCard } from './FloatingCard';
+import { useTheme } from '../utils/theme';
 import { AppText } from './AppText';
 import { DifficultyBadge } from './DifficultyBadge';
 import type { AssignedGame } from '../types/games';
@@ -13,6 +14,7 @@ type Props = {
 const CARD_WIDTH = (Dimensions.get('window').width - 48) / 2;
 
 export function GameCard({ game, onPlay }: Props) {
+  const { theme } = useTheme();
   return (
     <FloatingCard style={{ width: CARD_WIDTH, marginBottom: 16 }}>
       {/* Thumbnail o placeholder */}
@@ -27,7 +29,7 @@ export function GameCard({ game, onPlay }: Props) {
           className="w-full rounded-xl justify-center items-center bg-primary-600/10"
           style={{ height: 120 }}
         >
-          <Ionicons name="game-controller-outline" size={40} color="#2563EB" />
+          <GameController size={40} color={theme.accent} weight="regular" />
         </View>
       )}
 

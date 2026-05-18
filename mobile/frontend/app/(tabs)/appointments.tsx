@@ -5,11 +5,12 @@ import { AppointmentCard } from '../../src/components/AppointmentCard';
 import { HospitalContactCard } from '../../src/components/HospitalContactCard';
 import { ConfirmModal } from '../../src/components/ConfirmModal';
 import { EmptyState } from '../../src/components/EmptyState';
+import { CalendarBlank, Clock } from 'phosphor-react-native';
 import { AppText } from '../../src/components/AppText';
 import { useTheme } from '../../src/utils/theme';
 
 export default function AppointmentsScreen() {
-  const { scheme } = useTheme();
+  const { scheme, theme } = useTheme();
   const items = useAppointmentsStore(function (s) { return s.items; });
   const loading = useAppointmentsStore(function (s) { return s.loading; });
   const pastItems = useAppointmentsStore(function (s) { return s.pastItems; });
@@ -54,8 +55,8 @@ export default function AppointmentsScreen() {
         <RefreshControl
           refreshing={refrescando}
           onRefresh={handleRefresh}
-          tintColor="#2563EB"
-          colors={['#2563EB']}
+          tintColor={theme.accent}
+          colors={[theme.accent]}
         />
       }
     >
@@ -67,7 +68,7 @@ export default function AppointmentsScreen() {
       {items.length === 0 && !loading ? (
         <View className="mb-6">
           <EmptyState
-            icon="calendar-outline"
+            Icon={CalendarBlank}
             title="No tienes citas proximas."
           />
         </View>
@@ -93,7 +94,7 @@ export default function AppointmentsScreen() {
       {pastItems.length === 0 && !loadingPast ? (
         <View className="mb-6">
           <EmptyState
-            icon="time-outline"
+            Icon={Clock}
             title="Aun no tienes citas pasadas."
           />
         </View>

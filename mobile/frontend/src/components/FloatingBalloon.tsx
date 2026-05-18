@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -9,16 +9,17 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
+import type { IconProps } from 'phosphor-react-native';
+import { useTheme } from '../utils/theme';
 
-// Propiedades del componente globo flotante
+// Propiedades del componente globo flotante (rebrand Phosphor + tokens)
 type FloatingBalloonProps = {
-  iconName: keyof typeof Ionicons.glyphMap;
+  Icon: React.ComponentType<IconProps>;
   size: number;
-  positionX: number;         // Porcentaje horizontal (0-100)
-  positionY: number;         // Porcentaje vertical (0-100)
-  animationDelay: number;    // Milisegundos de retardo para efecto organico
-  animationDuration: number; // Duracion del ciclo de oscilacion en milisegundos
+  positionX: number;
+  positionY: number;
+  animationDelay: number;
+  animationDuration: number;
   onPress: () => void;
 };
 
@@ -27,7 +28,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 // Globo flotante con animacion continua de oscilacion vertical
 export function FloatingBalloon(props: FloatingBalloonProps) {
   const {
-    iconName,
+    Icon,
     size,
     positionX,
     positionY,
@@ -36,10 +37,10 @@ export function FloatingBalloon(props: FloatingBalloonProps) {
     onPress,
   } = props;
 
+  const { theme } = useTheme();
   const translateY = useSharedValue(0);
 
   useEffect(function () {
-    // Oscilacion continua arriba y abajo con retardo inicial para efecto organico
     translateY.value = withDelay(
       animationDelay,
       withRepeat(
@@ -47,16 +48,14 @@ export function FloatingBalloon(props: FloatingBalloonProps) {
           withTiming(-12, { duration: animationDuration, easing: Easing.inOut(Easing.ease) }),
           withTiming(12, { duration: animationDuration, easing: Easing.inOut(Easing.ease) }),
         ),
-        -1,  // Repetir indefinidamente
-        true // Invertir en cada repeticion
-      )
+        -1,
+        true,
+      ),
     );
   }, []);
 
   const animatedStyle = useAnimatedStyle(function () {
-    return {
-      transform: [{ translateY: translateY.value }],
-    };
+    return { transform: [{ translateY: translateY.value }] };
   });
 
   return (
@@ -67,12 +66,15 @@ export function FloatingBalloon(props: FloatingBalloonProps) {
           position: 'absolute',
           left: `${positionX}%`,
           top: `${positionY}%`,
+          backgroundColor: theme.bubble,
+          borderColor: theme.border,
+          borderWidth: 1,
         },
         animatedStyle,
       ]}
-      className="min-h-12 min-w-12 w-20 h-20 rounded-full bg-surface dark:bg-surface-dark items-center justify-center shadow-lg border border-transparent dark:border-primary-700"
+      className="min-h-12 min-w-12 w-20 h-20 rounded-full items-center justify-center shadow-lg"
     >
-      <Ionicons name={iconName} size={size} color="#60A5FA" />
+      <Icon size={size} color={theme.accent} weight="regular" />
     </AnimatedPressable>
   );
 }

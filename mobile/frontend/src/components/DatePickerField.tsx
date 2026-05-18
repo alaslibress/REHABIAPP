@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Pressable, View, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Ionicons } from '@expo/vector-icons';
+import { CalendarBlank, Clock } from 'phosphor-react-native';
 import { AppText } from './AppText';
+import { useTheme } from '../utils/theme';
 
 type DatePickerFieldProps = {
   label: string;
@@ -28,7 +29,9 @@ function formatear(value: Date, mode: 'date' | 'time'): string {
 // Campo presionable que muestra el valor formateado y abre el selector nativo
 export function DatePickerField(props: DatePickerFieldProps) {
   const { label, value, onChange, mode, minimumDate } = props;
+  const { theme } = useTheme();
   const [mostrar, setMostrar] = useState(false);
+  const PhosphorIcon = mode === 'date' ? CalendarBlank : Clock;
 
   function handleChange(_event: any, fecha?: Date) {
     // En Android el picker se cierra solo al seleccionar
@@ -49,11 +52,7 @@ export function DatePickerField(props: DatePickerFieldProps) {
         <AppText variant="body" className="text-text-primary dark:text-text-primary-dark">
           {formatear(value, mode)}
         </AppText>
-        <Ionicons
-          name={mode === 'date' ? 'calendar-outline' : 'time-outline'}
-          size={18}
-          color="#64748B"
-        />
+        <PhosphorIcon size={18} color={theme.text3} weight="regular" />
       </Pressable>
 
       {mostrar && (

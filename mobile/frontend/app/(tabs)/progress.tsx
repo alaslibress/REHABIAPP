@@ -1,10 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { useProgressStore } from '../../src/store/progressStore';
 import { useErrorStore } from '../../src/store/errorStore';
 import { BodyDiagram } from '../../src/components/BodyDiagram';
 import { ProgressChartModal } from '../../src/components/ProgressChartModal';
-import { EmptyState } from '../../src/components/EmptyState';
 import { useTheme } from '../../src/utils/theme';
 import { parseGraphQLError } from '../../src/utils/errorHandler';
 import type { BodyPartProgress } from '../../src/types/progress';
@@ -21,6 +20,13 @@ export default function ProgressScreen() {
   const [refrescando, setRefrescando] = useState(false);
   const [selectedPart, setSelectedPart] = useState<BodyPartProgress | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // Refetch al entrar en la pestana — garantiza muneco actualizado tras un fix
+  // en el BFF (o tras un cambio de asignacion clinica) sin necesidad de
+  // pull-to-refresh manual ni de relogin.
+  useEffect(function () {
+    fetchProgress().catch(function () {});
+  }, [fetchProgress]);
 
   const handleRefresh = useCallback(async function () {
     setRefrescando(true);
@@ -49,19 +55,10 @@ export default function ProgressScreen() {
   }
 
   const bgClass = scheme === 'dark' ? 'bg-background-dark' : 'bg-background';
-  const hayActivas = bodyParts.some(function (p) { return p.hasTreatment; });
 
-  if (!hayActivas && bodyParts.length > 0) {
-    return (
-      <View className={`flex-1 ${bgClass}`}>
-        <EmptyState
-          icon="body-outline"
-          title="Sin zonas activas"
-          message="No tienes tratamientos asignados a zonas del cuerpo."
-        />
-      </View>
-    );
-  }
+  // Siempre pintamos el muneco: si no hay zonas activas, BodyDiagram las pinta
+  // en gris claro. Antes mostrabamos un EmptyState que ocultaba el cuerpo y
+  // dejaba al paciente sin referencia visual.
 
   return (
     <ScrollView

@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { X } from 'phosphor-react-native';
 import { BackdropModal } from './BackdropModal';
 import { AppText } from './AppText';
 import { useTheme } from '../utils/theme';
@@ -30,7 +30,7 @@ export function LegalTextModal(props: LegalTextModalProps) {
             {title}
           </AppText>
           <Pressable onPress={onClose} hitSlop={12}>
-            <Ionicons name="close-outline" size={24} color={isDark ? '#F1F5F9' : '#1E293B'} />
+            <X size={24} color={isDark ? '#E8ECF3' : '#0F1B33'} weight="regular" />
           </Pressable>
         </View>
 

@@ -94,7 +94,17 @@ export async function getExpoPushToken(): Promise<string | null> {
   if (Platform.OS === 'web') return null;
   if (remotePushDisabled) return null;
   try {
-    const token = await Notifications.getExpoPushTokenAsync();
+    // SDK 53+ obliga a pasar projectId explicitamente (lo lee de
+    // app.json -> extra.eas.projectId). Si no hay projectId real, devolvemos
+    // null en lugar de romper: las notificaciones LOCALES no lo necesitan
+    // y el flujo de reminders de cita sigue funcionando.
+    const projectId =
+      (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId ??
+      (Constants as unknown as { easConfig?: { projectId?: string } }).easConfig?.projectId;
+    if (!projectId || projectId === '00000000-0000-0000-0000-000000000000') {
+      return null;
+    }
+    const token = await Notifications.getExpoPushTokenAsync({ projectId });
     return token.data;
   } catch {
     return null;

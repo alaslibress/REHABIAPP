@@ -1,5 +1,5 @@
-import { Pressable, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Pressable } from 'react-native';
+import { SignOut } from 'phosphor-react-native';
 import { AppText } from './AppText';
 
 type LogoutButtonProps = {
@@ -16,7 +16,7 @@ export function LogoutButton(props: LogoutButtonProps) {
       className="flex-row items-center justify-center gap-2 border border-error rounded-xl h-14 w-full"
       style={function ({ pressed }) { return pressed ? { opacity: 0.7 } : {}; }}
     >
-      <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+      <SignOut size={20} color="#E04848" weight="regular" />
       <AppText variant="body" weight="semibold" className="text-error">
         Cerrar sesion
       </AppText>

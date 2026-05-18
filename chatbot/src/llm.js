@@ -21,19 +21,31 @@ function construirMensajes(historial, nuevoMensaje) {
   ];
 }
 
+// Timeout duro a la llamada Ollama. Si el tunnel SSH inverso se cae o el modelo
+// tarda demasiado, el handler de WhatsApp se quedaba esperando indefinidamente.
+// Eso bloqueaba el event loop y WhatsApp Web forzaba reconexion -> crash Puppeteer.
+const OLLAMA_TIMEOUT_MS = parseInt(process.env.OLLAMA_TIMEOUT_MS || '25000', 10);
+
 // Llama a Qwen y parsea la respuesta JSON. Si el modelo devuelve algo no parseable,
 // devolvemos un fallback con intent='other'.
 async function extraerIntencion(historial, nuevoMensaje) {
   const mensajes = construirMensajes(historial, nuevoMensaje);
   let raw;
   try {
-    const respuesta = await cliente.chat({
-      model: config.ollama.model,
-      messages: mensajes,
-      format: 'json',
-      stream: false,
-      options: { temperature: 0.2 },
-    });
+    const respuesta = await Promise.race([
+      cliente.chat({
+        model: config.ollama.model,
+        messages: mensajes,
+        format: 'json',
+        stream: false,
+        options: { temperature: 0.2 },
+      }),
+      new Promise(function (_, reject) {
+        setTimeout(function () {
+          reject(new Error('Ollama timeout ' + OLLAMA_TIMEOUT_MS + 'ms'));
+        }, OLLAMA_TIMEOUT_MS);
+      }),
+    ]);
     raw = respuesta.message.content;
   } catch (err) {
     logger.error({ err: err.message }, 'Fallo llamada a Ollama');

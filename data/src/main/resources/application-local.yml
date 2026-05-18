@@ -1,11 +1,37 @@
-# Perfil LOCAL: desarrollo en maquina del desarrollador
-# MongoDB local sin TLS, logging verbose para depuracion
+# Perfil LOCAL — desarrollo en maquina local o stack Docker Compose local.
+# Activa con: SPRING_PROFILES_ACTIVE=local
+#
+# Modo 1 (data fuera de Docker, ./mvnw spring-boot:run):
+#   SPRING_DATA_MONGODB_URI=mongodb://localhost:27017/rehabiapp_telemetry
+#   RH_API_BASE_URL=http://localhost:8080
+#
+# Modo 2 (data dentro de infra/local/docker-compose.local.yml):
+#   SPRING_DATA_MONGODB_URI=mongodb://rehabiapp-mongodb:27017/rehabiapp_telemetry
+#   RH_API_BASE_URL=http://rehabiapp-api:8080
+#   (el compose inyecta estos valores automaticamente)
 
 spring:
   data:
     mongodb:
       # URI de MongoDB local con fallback al valor por defecto de desarrollo
       uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/rehabiapp_telemetry}
+      # auto-index-creation desactivado por seguridad/perf — alineado con skill
+      # obligatorio springboot4-mongodb (los indices se crean por migracion).
+      auto-index-creation: false
+
+# Bind 0.0.0.0 para que el contenedor sea alcanzable desde la API en la
+# misma red Docker. Sin efectos al correr fuera de Docker.
+server:
+  address: 0.0.0.0
+
+# Cliente HTTP hacia el /api Core. En stack Docker local el compose lo
+# sobreescribe a `http://rehabiapp-api:8080`; fuera de docker queda en localhost.
+rehabiapp:
+  api:
+    base-url: ${RH_API_BASE_URL:http://localhost:8080}
+    internal-key: ${RH_INTERNAL_KEY:changeme}
+    timeout-ms: ${RH_API_TIMEOUT_MS:5000}
+    max-retries: ${RH_API_MAX_RETRIES:3}
 
 logging:
   level:

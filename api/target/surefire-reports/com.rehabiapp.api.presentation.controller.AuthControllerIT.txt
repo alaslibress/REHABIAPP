@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.rehabiapp.api.presentation.controller.AuthControllerIT
 -------------------------------------------------------------------------------
-Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.288 s -- in com.rehabiapp.api.presentation.controller.AuthControllerIT
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.281 s -- in com.rehabiapp.api.presentation.controller.AuthControllerIT

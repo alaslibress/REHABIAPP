@@ -86,6 +86,19 @@ VALUES
 ON CONFLICT (cod_dis, cod_trat) DO NOTHING;
 
 -- ============================================================
+-- GEO MINIMA — localidad + cp referenciados por la direccion de prueba.
+-- Necesario para deploy en fresh DB (RDS Academy) donde no hay catalogo de CPs preseed.
+-- ============================================================
+
+INSERT INTO localidad (nombre_localidad, provincia)
+VALUES ('Madrid', 'Madrid')
+ON CONFLICT (nombre_localidad) DO NOTHING;
+
+INSERT INTO cp (cp, nombre_localidad)
+VALUES ('28001', 'Madrid')
+ON CONFLICT (cp) DO NOTHING;
+
+-- ============================================================
 -- DIRECCION DE PRUEBA
 -- Requerida por la FK NOT NULL id_direccion de la tabla paciente.
 -- ============================================================
@@ -182,9 +195,9 @@ ON CONFLICT (cod_trat, id_videojuego) DO NOTHING;
 -- Tres proximas citas con el especialista de prueba
 -- ============================================================
 
-INSERT INTO cita (dni_pac, dni_san, fecha_cita, hora)
+INSERT INTO cita (dni_pac, dni_san, fecha_cita, hora_cita)
 VALUES
     ('12345678Z', '87654321B', '2026-04-10', '10:00:00'),
     ('12345678Z', '87654321B', '2026-04-17', '11:30:00'),
     ('12345678Z', '87654321B', '2026-04-24', '09:00:00')
-ON CONFLICT (dni_pac, dni_san, fecha_cita, hora) DO NOTHING;
+ON CONFLICT (dni_pac, dni_san, fecha_cita, hora_cita) DO NOTHING;

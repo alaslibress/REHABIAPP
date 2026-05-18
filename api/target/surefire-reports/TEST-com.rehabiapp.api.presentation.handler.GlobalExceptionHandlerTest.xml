@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.rehabiapp.api.presentation.controller.ProgresoControllerIT" time="0.025" tests="1" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.rehabiapp.api.presentation.handler.GlobalExceptionHandlerTest" time="0.04" tests="3" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="24"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -62,14 +62,16 @@
     <property name="java.class.version" value="68.0"/>
     <property name="LOGGED_APPLICATION_NAME" value="[rehabiapp-api] "/>
   </properties>
-  <testcase name="regenerar_comoNurse_retorna403" classname="com.rehabiapp.api.presentation.controller.ProgresoControllerIT" time="0.02">
-    <system-out><![CDATA[02:11:43 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils - Could not detect default configuration classes for test class [com.rehabiapp.api.presentation.controller.ProgresoControllerIT]: ProgresoControllerIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-02:11:43 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration com.rehabiapp.api.ApiApplication for test class com.rehabiapp.api.presentation.controller.ProgresoControllerIT
-02:11:43 INFO  [main] o.s.t.c.s.AnnotationConfigContextLoaderUtils - Could not detect default configuration classes for test class [com.rehabiapp.api.presentation.controller.ProgresoControllerIT]: ProgresoControllerIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-02:11:43 INFO  [main] o.s.b.t.c.SpringBootTestContextBootstrapper - Found @SpringBootConfiguration com.rehabiapp.api.ApiApplication for test class com.rehabiapp.api.presentation.controller.ProgresoControllerIT
-02:11:43 INFO  [main] o.s.b.t.m.w.SpringBootMockServletContext - Initializing Spring TestDispatcherServlet ''
-02:11:43 INFO  [main] o.s.t.w.s.TestDispatcherServlet - Initializing Servlet ''
-02:11:43 INFO  [main] o.s.t.w.s.TestDispatcherServlet - Completed initialization in 0 ms
+  <testcase name="serverErrorUpstreamPreservaStatus" classname="com.rehabiapp.api.presentation.handler.GlobalExceptionHandlerTest" time="0.034">
+    <system-out><![CDATA[02:11:43 WARN  [main] c.r.a.p.h.GlobalExceptionHandler - Upstream respondio 503 SERVICE_UNAVAILABLE: 
+]]></system-out>
+  </testcase>
+  <testcase name="clientErrorUpstreamPreservaStatusYExtraeProblemDetail" classname="com.rehabiapp.api.presentation.handler.GlobalExceptionHandlerTest" time="0.005">
+    <system-out><![CDATA[02:11:43 WARN  [main] c.r.a.p.h.GlobalExceptionHandler - Upstream respondio 422 UNPROCESSABLE_ENTITY: {"title":"Validation failed","status":422,"detail":"clave obligatoria ausente: fingerSpeed","type":"about:blank"}
+]]></system-out>
+  </testcase>
+  <testcase name="clientErrorUpstreamConBodyNoJsonDevuelveTextoCrudo" classname="com.rehabiapp.api.presentation.handler.GlobalExceptionHandlerTest" time="0.001">
+    <system-out><![CDATA[02:11:43 WARN  [main] c.r.a.p.h.GlobalExceptionHandler - Upstream respondio 400 BAD_REQUEST: texto plano no JSON
 ]]></system-out>
   </testcase>
 </testsuite>

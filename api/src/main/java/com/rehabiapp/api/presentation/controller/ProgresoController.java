@@ -1,6 +1,7 @@
 package com.rehabiapp.api.presentation.controller;
 
 import com.rehabiapp.api.application.dto.CheckProgresoResponse;
+import com.rehabiapp.api.application.dto.ProgresoResumenResponse;
 import com.rehabiapp.api.application.dto.ProgresoTratamientoResponse;
 import com.rehabiapp.api.application.service.ProgresoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -58,6 +59,13 @@ public class ProgresoController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/markdown;charset=UTF-8"))
                 .body(progresoService.obtenerMarkdown(dni));
+    }
+
+    @Operation(summary = "Devuelve el resumen plano de progreso para la welcome card movil")
+    @GetMapping("/resumen")
+    @PreAuthorize("hasAnyRole('SPECIALIST','NURSE','PATIENT')")
+    public ResponseEntity<ProgresoResumenResponse> resumen(@PathVariable String dni) {
+        return ResponseEntity.ok(progresoService.obtenerResumen(dni));
     }
 
     @Operation(summary = "Solicita la regeneracion forzada del Markdown")

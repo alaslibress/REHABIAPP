@@ -1,6 +1,7 @@
 package com.rehabiapp.api.application.service;
 
 import com.rehabiapp.api.application.dto.CheckProgresoResponse;
+import com.rehabiapp.api.application.dto.ProgresoResumenResponse;
 import com.rehabiapp.api.application.dto.ProgresoTratamientoResponse;
 import com.rehabiapp.api.domain.entity.Paciente;
 import com.rehabiapp.api.domain.enums.AccionAuditoria;
@@ -101,6 +102,24 @@ public class ProgresoService {
             LOG.error("Error inesperado al obtener markdown (dni={}): {}", dni, e.getMessage(), e);
             String cache = paciente.getArchivoProgresoMd();
             return cache != null ? cache : "";
+        }
+    }
+
+    /**
+     * Devuelve el resumen plano de progreso (totalSessions, averageScore,
+     * improvementRate, lastSessionDate). Tolera fallos del pipeline devolviendo
+     * un resumen vacio (todos los campos a 0/null) para no romper el dashboard.
+     */
+    @Transactional(readOnly = true)
+    public ProgresoResumenResponse obtenerResumen(String dni) {
+        verificarPacienteExiste(dni);
+        auditService.registrar(AccionAuditoria.READ, "Paciente", dni,
+                "Consulta resumen de progreso");
+        try {
+            return dataClient.obtenerResumen(dni);
+        } catch (RestClientException e) {
+            LOG.warn("Pipeline de datos no disponible para resumen (dni={}): {}", dni, e.getMessage());
+            return new ProgresoResumenResponse(0L, null, null, null);
         }
     }
 

@@ -1,6 +1,7 @@
 package com.rehabiapp.api.infrastructure.client;
 
 import com.rehabiapp.api.application.dto.CheckProgresoResponse;
+import com.rehabiapp.api.application.dto.ProgresoResumenResponse;
 import com.rehabiapp.api.application.dto.ProgresoTratamientoResponse;
 import com.rehabiapp.api.application.dto.UltimaSesionDto;
 import org.springframework.beans.factory.annotation.Value;
@@ -90,6 +91,14 @@ public class DataPipelineClient {
                 .uri("/analytics/patient/{dni}/last-session", dni)
                 .retrieve()
                 .body(UltimaSesionDto.class);
+    }
+
+    /** Devuelve el resumen plano de progreso (welcome card movil). */
+    public ProgresoResumenResponse obtenerResumen(String dni) {
+        return restClient.get()
+                .uri("/internal/patient/{dni}/summary", dni)
+                .retrieve()
+                .body(ProgresoResumenResponse.class);
     }
 
     /** Reenvia la telemetria de juego al pipeline. Devuelve el dataId asignado. */

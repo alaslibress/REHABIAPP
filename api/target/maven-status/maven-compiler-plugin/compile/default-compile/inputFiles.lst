@@ -20,6 +20,7 @@
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/PageResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/PdfMetadatosResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/ProgresoEntradaResponse.java
+/home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/ProgresoResumenResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/ProgresoTratamientoResponse.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/RefreshRequest.java
 /home/alaslibres/DAM/RehabiAPP/api/src/main/java/com/rehabiapp/api/application/dto/SanitarioRequest.java

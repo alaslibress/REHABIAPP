@@ -29,6 +29,7 @@ com/rehabiapp/api/application/dto/VideojuegoRequest.class
 com/rehabiapp/api/domain/entity/CitaId.class
 com/rehabiapp/api/domain/repository/TratamientoVideojuegoRepository.class
 com/rehabiapp/api/application/mapper/PacienteMapper.class
+com/rehabiapp/api/application/dto/ProgresoResumenResponse.class
 com/rehabiapp/api/application/dto/DiscapacidadRequest.class
 com/rehabiapp/api/application/event/RegenerarMdEvent.class
 com/rehabiapp/api/application/mapper/SanitarioMapper.class

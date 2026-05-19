@@ -13,9 +13,23 @@ function esDiaLaborable(fechaIso) {
   return config.reglas.workingDays.includes(iso);
 }
 
-// Comprueba si la hora cae en horario [open, close).
+// Normaliza una hora HH:MM o H:MM a forma canonica de 5 chars con zero-pad.
+// Sin esto, comparaciones string fallan: '9:30' < '18:00' es FALSE porque '9' > '1'.
+function normalizarHora(hora) {
+  if (!hora) return null;
+  const m = String(hora).match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const hh = parseInt(m[1], 10);
+  const mm = parseInt(m[2], 10);
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+  return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+}
+
+// Comprueba si la hora cae en horario [open, close). Normaliza antes de comparar.
 function enHorario(horaHHMM) {
-  return horaHHMM >= config.reglas.openTime && horaHHMM < config.reglas.closeTime;
+  const h = normalizarHora(horaHHMM);
+  if (!h) return false;
+  return h >= config.reglas.openTime && h < config.reglas.closeTime;
 }
 
 // Comprueba que la cita es futura y con suficiente antelacion.
@@ -92,7 +106,13 @@ async function manejarMensaje(phoneE164, texto) {
     return intencion.respuesta_usuario;
   }
 
-  // 5) Validar reglas de negocio
+  // 5) Validar reglas de negocio — normaliza hora antes (LLM puede dar '9:30' sin pad)
+  const horaNorm = normalizarHora(intencion.hora);
+  if (!horaNorm) {
+    sessions.anadirTurno(phoneE164, 'assistant', ERROR_REPLIES.FUERA_HORARIO);
+    return ERROR_REPLIES.FUERA_HORARIO;
+  }
+  intencion.hora = horaNorm;
   if (!esDiaLaborable(intencion.fecha) || !enHorario(intencion.hora)) {
     sessions.anadirTurno(phoneE164, 'assistant', ERROR_REPLIES.FUERA_HORARIO);
     return ERROR_REPLIES.FUERA_HORARIO;

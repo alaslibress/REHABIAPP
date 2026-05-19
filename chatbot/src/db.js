@@ -42,7 +42,7 @@ async function buscarPacientePorDni(dni) {
 // Comprueba si el slot (dni_san, fecha, hora) esta libre.
 async function slotDisponible(dniSan, fecha, hora) {
   const { rows } = await pool.query(
-    `SELECT 1 FROM cita WHERE dni_san = $1 AND fecha_cita = $2 AND hora = $3 LIMIT 1`,
+    `SELECT 1 FROM cita WHERE dni_san = $1 AND fecha_cita = $2 AND hora_cita = $3 LIMIT 1`,
     [dniSan, fecha, hora]
   );
   return rows.length === 0;
@@ -52,7 +52,7 @@ async function slotDisponible(dniSan, fecha, hora) {
 async function insertarCita(dniPac, dniSan, fecha, hora) {
   try {
     await pool.query(
-      `INSERT INTO cita (dni_pac, dni_san, fecha_cita, hora) VALUES ($1, $2, $3, $4)`,
+      `INSERT INTO cita (dni_pac, dni_san, fecha_cita, hora_cita) VALUES ($1, $2, $3, $4)`,
       [dniPac, dniSan, fecha, hora]
     );
     return true;
@@ -72,8 +72,8 @@ async function insertarCita(dniPac, dniSan, fecha, hora) {
 async function registrarAudit(actor, dniPac, detalles) {
   try {
     await pool.query(
-      `INSERT INTO audit_log (dni_usuario, nombre_usuario, accion, entidad, id_entidad, detalle)
-       VALUES ($1, $2, 'CREATE', 'cita', $3, $4)`,
+      `INSERT INTO audit_log (id_audit, dni_usuario, nombre_usuario, accion, entidad, id_entidad, detalle)
+       VALUES (gen_random_uuid(), $1, $2, 'CREATE', 'cita', $3, $4)`,
       [actor, 'WhatsApp Chatbot', dniPac, JSON.stringify(detalles)]
     );
   } catch (err) {

@@ -15,11 +15,11 @@
             <Image url="@pregunta.png" />
          </image>
       </ImageView>
-      <Label fx:id="lblPregunta" textAlignment="CENTER" wrapText="true" maxWidth="600.0" />
+      <Label fx:id="lblPregunta" alignment="CENTER" contentDisplay="CENTER" styleClass="modal-texto-centrado" textAlignment="CENTER" wrapText="true" maxWidth="600.0" />
       <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" spacing="20.0">
          <children>
-            <Button fx:id="btnCancelarPregunta" mnemonicParsing="false" onAction="#cerrarVentana" styleClass="button-peligro" text="Cancelar" />
-            <Button fx:id="btnConfirmarPregunta" mnemonicParsing="false" onAction="#confirmarPregunta" styleClass="button-primario" text="Aceptar" />
+            <Button fx:id="btnCancelarPregunta" mnemonicParsing="false" onAction="#cerrarVentana" styleClass="button,ghost" text="Cancelar" />
+            <Button fx:id="btnConfirmarPregunta" mnemonicParsing="false" onAction="#confirmarPregunta" styleClass="button,primary" text="Aceptar" />
          </children>
       </HBox>
    </children>

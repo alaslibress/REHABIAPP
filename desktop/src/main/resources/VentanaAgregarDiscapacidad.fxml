@@ -9,27 +9,32 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox alignment="TOP_CENTER" prefWidth="500.0" spacing="10.0" styleClass="root modal-root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorAgregarDiscapacidad">
     <padding>
         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
     <children>
-        <Label fx:id="lblTituloVentana" styleClass="label-titulo" text="Nueva Discapacidad" />
+        <HBox styleClass="modal-header">
+            <children>
+                <Label fx:id="lblTituloVentana" styleClass="modal-title" text="Nueva Discapacidad" />
+            </children>
+        </HBox>
 
         <Separator />
 
         <HBox alignment="CENTER_LEFT" spacing="10.0">
             <children>
                 <Label prefWidth="140.0" text="Codigo:" />
-                <TextField fx:id="txtCodigo" prefWidth="280.0" promptText="Codigo de la discapacidad" />
+                <TextField fx:id="txtCodigo" prefWidth="280.0" promptText="Codigo de la discapacidad" styleClass="field-required" />
             </children>
         </HBox>
 
         <HBox alignment="CENTER_LEFT" spacing="10.0">
             <children>
                 <Label prefWidth="140.0" text="Nombre:" />
-                <TextField fx:id="txtNombre" prefWidth="280.0" promptText="Nombre de la discapacidad" />
+                <TextField fx:id="txtNombre" prefWidth="280.0" promptText="Nombre de la discapacidad" styleClass="field-required" />
             </children>
         </HBox>
 
@@ -44,10 +49,12 @@
 
         <Separator />
 
-        <HBox alignment="CENTER" spacing="10.0">
+        <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="modal-footer">
             <children>
-                <Button fx:id="btnCancelar" onAction="#cerrarVentana" prefWidth="120.0" styleClass="button-peligro" text="Cancelar" />
-                <Button fx:id="btnGuardar" onAction="#guardarDiscapacidad" prefWidth="120.0" styleClass="button-primario" text="Crear" />
+                <Button fx:id="btnCancelar" onAction="#cerrarVentana" styleClass="button,ghost" text="Cancelar" />
+                <Button fx:id="btnGuardar" onAction="#guardarDiscapacidad" styleClass="button,primary" text="Crear">
+                    <graphic><FontIcon iconLiteral="mdi2c-content-save" iconSize="14" /></graphic>
+                </Button>
             </children>
         </HBox>
     </children>

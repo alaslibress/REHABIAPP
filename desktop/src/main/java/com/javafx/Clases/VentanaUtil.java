@@ -73,12 +73,15 @@ public class VentanaUtil {
     public static void establecerIconoVentana(Stage stage) {
         if (stage == null) return;
         
-        // Lista de posibles nombres del icono de RehabiAPP
+        // Lista de posibles nombres del icono de RehabiAPP — el logotipo
+        // oficial (sin texto) tiene prioridad para que todas las ventanas
+        // emergentes muestren la misma imagen que el taskbar.
         String[] nombresIcono = {
             "/RehabiAPPLogoNoLetras.png",
             "/RehabiAPPLogoNoLetras.jpg",
             "/RehabiAPPLogoNoLetras.jpeg",
             "/rehabiapplogonoletras.png",
+            "/assets/logo.png",
             "/logo.png",
             "/icono.png"
         };
@@ -146,6 +149,8 @@ public class VentanaUtil {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            // Spec §3.8: ancho minimo para que el footer del modal nunca se corte
+            stage.setMinWidth(520);
 
             // Establecer icono info.png para las ventanas informativas
             establecerIconoInfo(stage);
@@ -188,7 +193,9 @@ public class VentanaUtil {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
-            
+            // Spec §3.8: ancho minimo para que el footer del modal nunca se corte
+            stage.setMinWidth(520);
+
             // Establecer icono de la aplicación
             establecerIconoVentana(stage);
             

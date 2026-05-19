@@ -10,16 +10,16 @@ RUN npm ci --only=production
 
 # ---- Stage 2: Runtime ----
 FROM node:20-alpine AS runtime
-# Crear usuario y grupo no-root para cumplir con ENS Alto
-RUN addgroup -g 1000 appgroup && adduser -u 1000 -G appgroup -D -h /app appuser
+# Reutilizamos el usuario 'node' (uid/gid 1000) provisto por la imagen oficial.
+# Cumple ENS Alto: contenedor corre como no-root sin colisiones de UID.
 WORKDIR /app
 # Directorio temporal necesario por readOnlyRootFilesystem
-RUN mkdir -p /app/tmp && chown -R 1000:1000 /app
+RUN mkdir -p /app/tmp && chown -R node:node /app
 # Copiar dependencias y codigo fuente con permisos del usuario de aplicacion
-COPY --from=deps --chown=1000:1000 /app/node_modules ./node_modules
-COPY --chown=1000:1000 package.json .
-COPY --chown=1000:1000 src ./src
-USER 1000:1000
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node package.json .
+COPY --chown=node:node src ./src
+USER node
 EXPOSE 3000
 # Verificacion de salud usando wget (disponible en Alpine sin dependencias adicionales)
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \

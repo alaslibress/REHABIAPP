@@ -13,6 +13,7 @@ import com.javafx.excepcion.ConexionException;
 import com.javafx.excepcion.DuplicadoException;
 import com.javafx.excepcion.RehabiAppException;
 import com.javafx.util.ConstantesApp;
+import com.javafx.util.TableUiUtil;
 
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
@@ -287,6 +288,11 @@ public class controladorVentanaCitas {
         colDNIPaciente.setCellValueFactory(new PropertyValueFactory<>("dniPaciente"));
         colSanitario.setCellValueFactory(new PropertyValueFactory<>("nombreSanitario"));
 
+        // DNI, fecha y hora con tipografia monoespaciada (col-num)
+        colDNIPaciente.setCellFactory(TableUiUtil.monoCell());
+        colFecha.setCellFactory(TableUiUtil.monoCell());
+        colHora.setCellFactory(TableUiUtil.monoCell());
+
         //IMPORTANTE: Vincular la tabla con la lista observable
         tblCitas.setItems(listaCitas);
     }
@@ -294,6 +300,73 @@ public class controladorVentanaCitas {
     private void configurarSpinners() {
         spnHora.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(8, 20, 9));
         spnMinuto.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 45, 0, 15));
+        // Forzar commit del texto al perder foco — sin esto el usuario podia
+        // escribir digitos en el editor pero el valor del Spinner nunca se
+        // actualizaba.
+        configurarCommitSpinner(spnHora);
+        configurarCommitSpinner(spnMinuto);
+    }
+
+    /**
+     * Habilita la edicion por teclado del TextField interno de un Spinner.
+     *
+     * <p>Por defecto un Spinner editable en JavaFX permite que el usuario
+     * teclee, pero el valor no se commitea automaticamente — por eso parecia
+     * que "no se podian escribir numeros". Tampoco usamos TextFormatter
+     * porque conflictea con el converter interno del IntegerSpinnerValueFactory
+     * (bug JDK-8208833 — el formatter sobreescribe el value y bloquea
+     * insertion en algunas combinaciones).</p>
+     *
+     * <p>Estrategia: filtrar la entrada para aceptar solo digitos via un
+     * EventFilter ligero (no TextFormatter), y commitear el valor al perder
+     * foco o al pulsar Enter.</p>
+     */
+    private void configurarCommitSpinner(Spinner<Integer> spinner) {
+        spinner.setEditable(true);
+        javafx.scene.control.TextField editor = spinner.getEditor();
+
+        // El Spinner skin de JavaFX puede sobreescribir el editor durante el
+        // primer layout pass. runLater asegura que nuestro setText quede como
+        // ultimo, ya con el editor enlazado al value del factory.
+        javafx.application.Platform.runLater(() -> {
+            Integer v = spinner.getValue();
+            if (v != null) editor.setText(String.valueOf(v));
+        });
+
+        // Mantener el editor sincronizado cuando el valor cambia por las
+        // flechas o por setValue() externo (ej. al editar una cita existente).
+        spinner.valueProperty().addListener((obs, oldV, newV) -> {
+            if (newV != null) editor.setText(String.valueOf(newV));
+        });
+
+        // Filtra caracteres no-digito (acepta backspace/delete via key code,
+        // que no llega como KEY_TYPED). No afecta a las flechas up/down.
+        editor.addEventFilter(javafx.scene.input.KeyEvent.KEY_TYPED, ev -> {
+            String ch = ev.getCharacter();
+            if (ch == null || ch.isEmpty()) return;
+            char c = ch.charAt(0);
+            if (c >= 32 && !Character.isDigit(c)) {
+                ev.consume();
+            }
+        });
+
+        editor.focusedProperty().addListener((obs, oldF, newF) -> {
+            if (!newF) commitSpinnerEditor(spinner);
+        });
+        editor.setOnAction(e -> commitSpinnerEditor(spinner));
+    }
+
+    private void commitSpinnerEditor(Spinner<Integer> spinner) {
+        String txt = spinner.getEditor().getText();
+        try {
+            int v = Integer.parseInt(txt);
+            javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory factory =
+                (javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory) spinner.getValueFactory();
+            v = Math.max(factory.getMin(), Math.min(factory.getMax(), v));
+            factory.setValue(v);
+        } catch (NumberFormatException ignore) {
+            spinner.getEditor().setText(String.valueOf(spinner.getValue()));
+        }
     }
 
     /**
@@ -679,6 +752,7 @@ public class controladorVentanaCitas {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
             
             stage.setOnShown(e -> AnimacionUtil.animarVentanaModal(stage));
@@ -776,15 +850,24 @@ public class controladorVentanaCitas {
 
         task.setOnFailed(e -> {
             Throwable ex = task.getException();
+            // Stack completo en consola para diagnostico — el popup solo
+            // muestra un resumen al usuario.
+            if (ex != null) {
+                System.err.println("Error al crear cita: " + ex.getClass().getSimpleName()
+                        + " - " + ex.getMessage());
+                ex.printStackTrace();
+            }
             if (ex instanceof DuplicadoException) {
                 VentanaUtil.mostrarVentanaInformativa(
                         "Ya existe una cita en ese horario.", TipoMensaje.ADVERTENCIA);
             } else if (ex instanceof ConexionException) {
                 VentanaUtil.mostrarVentanaInformativa(
-                        "Error de conexion con la base de datos.", TipoMensaje.ERROR);
+                        "Error de conexion con la base de datos.\nDetalle: " + ex.getMessage(),
+                        TipoMensaje.ERROR);
             } else {
                 VentanaUtil.mostrarVentanaInformativa(
-                        "Error: " + ex.getMessage(), TipoMensaje.ERROR);
+                        "Error: " + (ex != null ? ex.getMessage() : "desconocido"),
+                        TipoMensaje.ERROR);
             }
         });
 

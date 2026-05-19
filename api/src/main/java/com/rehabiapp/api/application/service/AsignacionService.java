@@ -160,17 +160,17 @@ public class AsignacionService {
     /**
      * Devuelve todos los tratamientos asignados a un paciente (visibles y ocultos).
      *
+     * <p>Usa la query enriquecida que resuelve codDis, idNivel y tienePdf en una
+     * unica consulta JPQL, evitando N+1 queries.</p>
+     *
      * @param dniPac DNI del paciente.
-     * @return Lista de asignaciones tratamiento-paciente.
+     * @return Lista de asignaciones tratamiento-paciente con campos enriquecidos.
      */
     @Transactional(readOnly = true)
     public List<PacienteTratamientoResponse> listarTratamientos(String dniPac) {
         auditService.registrar(AccionAuditoria.READ, "paciente_tratamiento", dniPac,
                 "Consulta tratamientos del paciente");
-        return pacienteTratamientoRepository.findByIdDniPac(dniPac)
-                .stream()
-                .map(pacienteTratamientoMapper::toResponse)
-                .toList();
+        return pacienteTratamientoRepository.findEnriquecidoByDniPac(dniPac);
     }
 
     /**

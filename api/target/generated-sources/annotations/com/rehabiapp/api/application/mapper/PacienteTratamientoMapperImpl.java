@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-04-24T02:11:22+0200",
+    date = "2026-05-18T08:26:07+0200",
     comments = "version: 1.6.3, compiler: javac, environment: Java 24.0.2 (Oracle Corporation)"
 )
 @Component
@@ -33,8 +33,11 @@ public class PacienteTratamientoMapperImpl implements PacienteTratamientoMapper 
         fechaAsignacion = pt.getFechaAsignacion();
 
         Boolean visible = pt.isVisible();
+        String codDis = null;
+        Integer idNivel = null;
+        Boolean tienePdf = null;
 
-        PacienteTratamientoResponse pacienteTratamientoResponse = new PacienteTratamientoResponse( dniPac, codTrat, nombreTrat, visible, fechaAsignacion );
+        PacienteTratamientoResponse pacienteTratamientoResponse = new PacienteTratamientoResponse( dniPac, codTrat, nombreTrat, visible, fechaAsignacion, codDis, idNivel, tienePdf );
 
         return pacienteTratamientoResponse;
     }

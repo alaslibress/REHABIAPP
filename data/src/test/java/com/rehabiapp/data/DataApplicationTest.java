@@ -1,22 +1,31 @@
 package com.rehabiapp.data;
 
 import com.rehabiapp.data.domain.repository.GameSessionRepository;
-import com.rehabiapp.data.domain.repository.LevelStatisticsRepository;
 import com.rehabiapp.data.domain.repository.PatientProgressRepository;
-import org.springframework.data.mongodb.core.MongoTemplate;
+import com.rehabiapp.data.domain.repository.TreatmentProgressRepository;
+import com.rehabiapp.data.domain.repository.PatientMarkdownRepository;
+import com.rehabiapp.data.ingestion.schema.MetricSchemaRegistry;
+import com.rehabiapp.data.internal.client.ApiInternalClient;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
  * Test de arranque del contexto de Spring Boot.
- * MongoDB excluido via perfil "test"; repositorios mockeados para que
- * GameSessionIngestService pueda instanciarse sin infraestructura real.
+ *
+ * MongoDB se excluye via perfil "test" y se sustituye por mocks de Mockito
+ * para satisfacer las dependencias de beans que requieren MongoTemplate
+ * y los repositorios Spring Data MongoDB.
+ * Los nuevos servicios con dependencias externas tambien se mockean.
  */
 @SpringBootTest
 @ActiveProfiles("test")
 class DataApplicationTest {
+
+    @MockitoBean
+    MongoTemplate mongoTemplate;
 
     @MockitoBean
     GameSessionRepository gameSessionRepository;
@@ -25,11 +34,16 @@ class DataApplicationTest {
     PatientProgressRepository patientProgressRepository;
 
     @MockitoBean
-    LevelStatisticsRepository levelStatisticsRepository;
+    TreatmentProgressRepository treatmentProgressRepository;
 
     @MockitoBean
-    MongoTemplate mongoTemplate;
+    PatientMarkdownRepository patientMarkdownRepository;
 
+    @MockitoBean
+    MetricSchemaRegistry metricSchemaRegistry;
+
+    @MockitoBean
+    ApiInternalClient apiInternalClient;
 
     @Test
     void contextLoads() {

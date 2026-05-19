@@ -237,6 +237,7 @@ public class controladorSesion {
             stage.setScene(scene);
             stage.setMaximized(true);
             stage.setResizable(true);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
 
             stage.setOnCloseRequest(e -> {

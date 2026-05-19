@@ -80,7 +80,54 @@ const ERROR_MESSAGES: Record<ErrorCode, { subtitle: string; message: string }> =
   },
 };
 
+// Extrae el array de errores GraphQL del error lanzado por Apollo Client.
+// Apollo v3 expone `error.graphQLErrors`; Apollo v4 lanza `CombinedGraphQLErrors`
+// con `error.errors`. Esta funcion soporta ambas formas y tambien errores
+// derivados que envuelven el original en `cause`.
+function extraerGraphQLErrors(error: unknown): any[] | null {
+  if (!error || typeof error !== 'object') return null;
+  const e = error as any;
+  if (Array.isArray(e.graphQLErrors) && e.graphQLErrors.length > 0) {
+    return e.graphQLErrors;
+  }
+  if (Array.isArray(e.errors) && e.errors.length > 0) {
+    return e.errors;
+  }
+  // Algunas versiones encadenan el error original en `cause`
+  if (e.cause) {
+    const inner = extraerGraphQLErrors(e.cause);
+    if (inner) return inner;
+  }
+  return null;
+}
+
+// Detecta un error de red (fetch fallido, CORS, statusCode no GraphQL).
+function extraerNetworkError(error: unknown): any | null {
+  if (!error || typeof error !== 'object') return null;
+  const e = error as any;
+  if (e.networkError) return e.networkError;
+  // Apollo v4: errores que no son GraphQL llegan como ServerError con `name`
+  if (e.name === 'ServerError' || e.name === 'ServerParseError') return e;
+  return null;
+}
+
 // Convierte un error GraphQL en un AppError estructurado.
+// Construye un AppError directamente desde un codigo conocido. Util para
+// errores generados localmente en el frontend (ej. permiso de notificaciones
+// rechazado por el SO) que no provienen de una respuesta GraphQL.
+export function buildAppErrorFromCode(code: ErrorCode): AppError {
+  const mapped = ERROR_MESSAGES[code];
+  if (mapped) {
+    return { title: 'Error', subtitle: mapped.subtitle, message: mapped.message, code };
+  }
+  return {
+    title: 'Error',
+    subtitle: ERROR_MESSAGES.INTERNAL_ERROR.subtitle,
+    message: ERROR_MESSAGES.INTERNAL_ERROR.message,
+    code: 'INTERNAL_ERROR',
+  };
+}
+
 // Sigue una cadena de prioridad para extraer la maxima informacion posible:
 // 1. Codigo conocido del BFF en extensions.code -> mensaje del mapa local
 // 2. Estructura del BFF (extensions.subtitulo + extensions.texto) -> usar directamente
@@ -88,55 +135,57 @@ const ERROR_MESSAGES: Record<ErrorCode, { subtitle: string; message: string }> =
 // 4. Error de red (networkError) -> mensaje de error de conexion
 // 5. Caso generico -> INTERNAL_ERROR
 export function parseGraphQLError(error: unknown): AppError {
-  // Registrar el codigo y mensaje en desarrollo (sin JSON.stringify para evitar errores con referencias circulares de Apollo)
+  const gqlErrors = extraerGraphQLErrors(error);
+  const networkError = extraerNetworkError(error);
+
   if (__DEV__) {
-    const code = (error as any)?.graphQLErrors?.[0]?.extensions?.code ?? (error as any)?.networkError?.message ?? 'desconocido';
+    const code =
+      gqlErrors?.[0]?.extensions?.code ??
+      networkError?.message ??
+      (error as any)?.message ??
+      'desconocido';
     console.warn('[parseGraphQLError] Codigo de error recibido:', code);
   }
 
   // Caso 1 y 2: errores GraphQL del BFF
-  if (error && typeof error === 'object' && 'graphQLErrors' in error) {
-    const gqlErrors = (error as any).graphQLErrors;
-    if (Array.isArray(gqlErrors) && gqlErrors.length > 0) {
-      const primerError = gqlErrors[0];
-      const code = primerError?.extensions?.code as string | undefined;
+  if (gqlErrors) {
+    const primerError = gqlErrors[0];
+    const code = primerError?.extensions?.code as string | undefined;
 
-      // Caso 1: codigo conocido en el mapa local del frontend
-      if (code && ERROR_MESSAGES[code as ErrorCode]) {
-        const mapped = ERROR_MESSAGES[code as ErrorCode];
-        return {
-          title: 'Error',
-          subtitle: mapped.subtitle,
-          message: mapped.message,
-          code: code as ErrorCode,
-        };
-      }
+    // Caso 1: codigo conocido en el mapa local del frontend
+    if (code && ERROR_MESSAGES[code as ErrorCode]) {
+      const mapped = ERROR_MESSAGES[code as ErrorCode];
+      return {
+        title: 'Error',
+        subtitle: mapped.subtitle,
+        message: mapped.message,
+        code: code as ErrorCode,
+      };
+    }
 
-      // Caso 2: estructura del BFF con subtitulo y texto (codigo desconocido para el frontend)
-      if (primerError?.extensions?.subtitulo && primerError?.extensions?.texto) {
-        return {
-          title: primerError.extensions.titulo || 'Error',
-          subtitle: primerError.extensions.subtitulo,
-          message: primerError.extensions.texto,
-          code: (code as ErrorCode) || 'INTERNAL_ERROR',
-        };
-      }
+    // Caso 2: estructura del BFF con subtitulo y texto (codigo desconocido para el frontend)
+    if (primerError?.extensions?.subtitulo && primerError?.extensions?.texto) {
+      return {
+        title: primerError.extensions.titulo || 'Error',
+        subtitle: primerError.extensions.subtitulo,
+        message: primerError.extensions.texto,
+        code: (code as ErrorCode) || 'INTERNAL_ERROR',
+      };
+    }
 
-      // Caso 3: error GraphQL sin estructura del BFF — usar el mensaje crudo
-      if (primerError?.message) {
-        return {
-          title: 'Error',
-          subtitle: 'Error del servidor',
-          message: primerError.message,
-          code: 'INTERNAL_ERROR',
-        };
-      }
+    // Caso 3: error GraphQL sin estructura del BFF — usar el mensaje crudo
+    if (primerError?.message) {
+      return {
+        title: 'Error',
+        subtitle: 'Error del servidor',
+        message: primerError.message,
+        code: 'INTERNAL_ERROR',
+      };
     }
   }
 
   // Caso 4: error de red (servidor inalcanzable, timeout, CORS, etc.)
-  if (error && typeof error === 'object' && 'networkError' in error) {
-    const networkError = (error as any).networkError;
+  if (networkError) {
     if (__DEV__) {
       console.warn('[parseGraphQLError] Error de red:', networkError?.message, networkError?.statusCode);
     }

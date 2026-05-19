@@ -83,14 +83,19 @@ public final class ConstantesApp {
     // ==================== RUTAS DE CSS ====================
 
     /**
-     * Ruta al archivo CSS del tema claro
+     * Ruta al archivo CSS de tokens del tema claro (rediseño Claude Design)
      */
-    public static final String CSS_TEMA_CLARO = "/tema_claro.css";
+    public static final String CSS_TEMA_CLARO = "/styles/tokens-light.css";
 
     /**
-     * Ruta al archivo CSS del tema oscuro
+     * Ruta al archivo CSS de tokens del tema oscuro (rediseño Claude Design)
      */
-    public static final String CSS_TEMA_OSCURO = "/tema_oscuro.css";
+    public static final String CSS_TEMA_OSCURO = "/styles/tokens-dark.css";
+
+    /**
+     * Ruta al CSS comun de componentes (siempre cargado junto a un tokens-*.css)
+     */
+    public static final String CSS_REHABIAPP = "/styles/rehabiapp.css";
 
     // ==================== RUTAS DE IMAGENES ====================
 

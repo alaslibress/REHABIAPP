@@ -1,32 +1,29 @@
-// Resolvers para ajustes: registro y eliminacion de tokens de notificacion
+// Resolvers de configuracion del dispositivo movil
+// Stubs de Phase G.7 — solo log estructurado, sin persistencia.
 'use strict';
 
 const { requireAuth } = require('./helpers');
-const notificationService = require('../../services/notificationService');
 
-module.exports = {
+const settingsResolvers = {
   Mutation: {
-    // Registra el token Expo Push del dispositivo del paciente
-    registerDeviceToken: async function (_parent, args, context) {
+    async registerDeviceToken(_parent, { token, platform }, context) {
       const user = requireAuth(context);
-      const { token, platform } = args;
-
-      if (!token || !platform) {
-        const { crearError } = require('../../utils/errors');
-        throw crearError('VALIDATION_ERROR');
-      }
-
-      await notificationService.registrarToken(user.sub, token, platform, context.javaToken);
+      context.logger.info(
+        { dniPac: user.sub.substring(0, 3) + '***', platform, tokenPrefijo: token.substring(0, 8) + '...' },
+        'Token push registrado (stub Phase G.7)'
+      );
       return true;
     },
 
-    // Elimina (desactiva) el token de notificaciones del dispositivo
-    unregisterDeviceToken: async function (_parent, args, context) {
-      requireAuth(context);
-      const { token } = args;
-
-      await notificationService.eliminarToken(token, context.javaToken);
+    async unregisterDeviceToken(_parent, { token }, context) {
+      const user = requireAuth(context);
+      context.logger.info(
+        { dniPac: user.sub.substring(0, 3) + '***', tokenPrefijo: token.substring(0, 8) + '...' },
+        'Token push eliminado (stub Phase G.7)'
+      );
       return true;
     },
   },
 };
+
+module.exports = settingsResolvers;

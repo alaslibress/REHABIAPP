@@ -16,9 +16,11 @@ const patientTypeDefs = gql`
     birthDate: String
     address: String
     active: Boolean!
+    # Numero de la Seguridad Social (12 digitos en Espana). Lectura pacientes.
     numSs: String
-    sexo: String
-    # Foto de perfil como data URI (base64) — null si no hay foto
+    # Sexo registrado en la ficha clinica. Coincide con el enum SexoPaciente del API Java.
+    sexo: SexoPaciente
+    # Avatar codificado en data URI (data:image/png;base64,....). Null si el paciente no ha subido avatar.
     avatarDataUri: String
     # Saludo calculado por el backend segun la hora local del paciente
     greeting: String
@@ -32,7 +34,35 @@ const patientTypeDefs = gql`
     currentLevel: Int!
   }
 
-  # Resumen de progreso terapeutico del paciente
+  # Punto en la serie temporal de una metrica
+  type ProgressEntry {
+    fecha: String!
+    valor: Float!
+  }
+
+  # Progreso del paciente en un tratamiento concreto
+  type TreatmentProgress {
+    codTrat: String!
+    tratamientoNombre: String
+    parteCuerpo: String
+    metricaNombre: String
+    baselineValor: Float
+    baselineFecha: String
+    currentValor: Float
+    currentFecha: String
+    deltaPorcentaje: Float
+    entradas: [ProgressEntry!]!
+  }
+
+  # Vista global del progreso del paciente, lista para alimentar
+  # los graficos de react-native-chart-kit en el movil.
+  type PatientProgress {
+    tratamientos: [TreatmentProgress!]!
+    # Fecha del punto mas reciente entre todos los tratamientos
+    lastUpdate: String
+  }
+
+  # Resumen plano del progreso para tarjetas de bienvenida
   type ProgressSummary {
     totalSessions: Int!
     averageScore: Float
@@ -47,8 +77,13 @@ const patientTypeDefs = gql`
     # Discapacidades asignadas al paciente autenticado
     myDisabilities: [Disability!]!
 
-    # Resumen de progreso terapeutico global del paciente
-    myProgress: ProgressSummary!
+    # Progreso terapeutico del paciente, agrupado por tratamiento
+    myProgress: PatientProgress!
+
+    # Resumen agregado del progreso terapeutico (orientado a tarjetas de bienvenida).
+    # Distinto de myProgress (series por tratamiento) y de
+    # myBodyPartProgress (mapa de cuerpo). Este es el formato plano para el dashboard.
+    myProgressSummary: ProgressSummary
   }
 `;
 

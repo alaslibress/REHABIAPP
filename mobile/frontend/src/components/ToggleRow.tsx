@@ -1,5 +1,6 @@
 import { Switch } from 'react-native';
 import { SettingsRow } from './SettingsRow';
+import { useTheme } from '../utils/theme';
 
 type ToggleRowProps = {
   label: string;
@@ -12,6 +13,7 @@ type ToggleRowProps = {
 // Fila de ajuste con interruptor (Switch) a la derecha
 export function ToggleRow(props: ToggleRowProps) {
   const { label, description, value, onChange, disabled } = props;
+  const { theme } = useTheme();
 
   return (
     <SettingsRow
@@ -22,8 +24,8 @@ export function ToggleRow(props: ToggleRowProps) {
           value={value}
           onValueChange={onChange}
           disabled={disabled}
-          trackColor={{ false: '#E2E8F0', true: '#93C5FD' }}
-          thumbColor={value ? '#2563EB' : '#94A3B8'}
+          trackColor={{ false: theme.border2, true: theme.accent2 }}
+          thumbColor="#FFFFFF"
         />
       }
     />

@@ -14,28 +14,26 @@ const { crearError } = require('../utils/errors');
  * @param {string|null} javaToken
  * @returns {Promise<object>} Patient
  */
-// Limite de tamano de foto: 512 KB en bytes
-const FOTO_MAX_BYTES = 512 * 1024;
-
 async function obtenerPerfil(dniPac, javaToken) {
-  // Llamadas en paralelo: perfil + foto
-  const [data, fotoData] = await Promise.all([
-    apiClient.get(`/api/pacientes/${dniPac}`, javaToken),
-    apiClient.get(`/api/pacientes/${dniPac}/foto`, javaToken).catch(() => null),
-  ]);
+  const data = await apiClient.get(`/api/pacientes/${dniPac}`, javaToken);
 
   if (!data) {
     throw crearError('PATIENT_NOT_FOUND');
   }
 
-  // Construir data URI si hay foto y no supera el limite de tamano
+  // Foto: el API Java expone GET /api/pacientes/{dni}/foto como bytes binarios
+  // (image/png). El movil necesita un data URI base64 para mostrar el avatar
+  // en <Image source={{uri: ...}}>. Convertimos aqui.
+  // Tolerante a 204 No Content (paciente sin foto): devolvemos null.
   let avatarDataUri = null;
-  if (fotoData && fotoData.base64) {
-    const byteLen = Buffer.byteLength(fotoData.base64, 'base64');
-    if (byteLen <= FOTO_MAX_BYTES) {
-      const mime = fotoData.mimeType || 'image/png';
-      avatarDataUri = `data:${mime};base64,${fotoData.base64}`;
+  try {
+    const foto = await apiClient.getBinary(`/api/pacientes/${dniPac}/foto`, javaToken);
+    if (foto && foto.buffer && foto.buffer.length > 0) {
+      const ct = foto.contentType || 'image/png';
+      avatarDataUri = `data:${ct};base64,${foto.buffer.toString('base64')}`;
     }
+  } catch {
+    // Fallo no critico — el avatar no es esencial para mostrar el perfil.
   }
 
   // Mapeo Java PacienteResponse -> GraphQL Patient
@@ -80,22 +78,35 @@ async function obtenerDiscapacidades(dniPac, javaToken) {
 }
 
 /**
- * Obtiene el resumen de progreso terapeutico del paciente.
- * Endpoint pendiente en la API de Java — devuelve datos mock hasta que este disponible.
+ * Obtiene el resumen plano del progreso terapeutico del paciente.
+ * Consume el endpoint `GET /api/pacientes/{dni}/progreso/resumen` del API Java
+ * (que a su vez proxia al pipeline /data y agrega desde MongoDB).
+ *
+ * Tolera fallos del upstream devolviendo un resumen vacio para no romper la
+ * welcome card del movil cuando /data o Mongo no estan disponibles.
  *
  * @param {string} dniPac
  * @param {string|null} javaToken
  * @returns {Promise<object>} ProgressSummary
  */
 async function obtenerProgreso(dniPac, javaToken) {
-  // DEPENDENCIA PENDIENTE: endpoint /api/pacientes/{dniPac}/progreso no existe aun en Java
-  // Cuando se implemente, sustituir este mock por la llamada real
-  return {
-    totalSessions: 0,
-    averageScore: null,
-    improvementRate: null,
-    lastSessionDate: null,
-  };
+  try {
+    const data = await apiClient.get(`/api/pacientes/${dniPac}/progreso/resumen`, javaToken);
+    return {
+      totalSessions: data?.totalSessions ?? 0,
+      averageScore: data?.averageScore ?? null,
+      improvementRate: data?.improvementRate ?? null,
+      lastSessionDate: data?.lastSessionDate ?? null,
+    };
+  } catch (err) {
+    // Fallback defensivo: si el API o /data fallan, no rompemos el dashboard.
+    return {
+      totalSessions: 0,
+      averageScore: null,
+      improvementRate: null,
+      lastSessionDate: null,
+    };
+  }
 }
 
 module.exports = { obtenerPerfil, obtenerDiscapacidades, obtenerProgreso };

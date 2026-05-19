@@ -233,7 +233,9 @@ public class InformeService {
                     "Listado_Sanitarios"
             );
         } catch (Exception e) {
+            // Log con stack completo para diagnosticar fallos del template.
             System.err.println("Error al generar informe de sanitarios: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
@@ -323,16 +325,25 @@ public class InformeService {
     }
 
     private static void abrirPDF(String rutaPDF) {
-        try {
-            if (Desktop.isDesktopSupported()) {
-                File archivoPDF = new File(rutaPDF);
-                if (archivoPDF.exists()) {
-                    Desktop.getDesktop().open(archivoPDF);
+        // Desktop.open() puede bloquear hasta varios segundos (o quedarse
+        // colgado) en Linux/Wayland porque arranca el visor PDF del sistema
+        // de forma sincrona. Si lo invocamos desde el JavaFX Application
+        // Thread la app entera deja de responder. Lo ejecutamos en un thread
+        // daemon separado para no congelar la UI.
+        Thread t = new Thread(() -> {
+            try {
+                if (Desktop.isDesktopSupported()) {
+                    File archivoPDF = new File(rutaPDF);
+                    if (archivoPDF.exists()) {
+                        Desktop.getDesktop().open(archivoPDF);
+                    }
                 }
+            } catch (Exception e) {
+                System.err.println("Error al abrir el PDF: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.err.println("Error al abrir el PDF: " + e.getMessage());
-        }
+        }, "AbrirPDF");
+        t.setDaemon(true);
+        t.start();
     }
 
     private static void mostrarInformeEnWebView(String rutaHTML, String titulo) {

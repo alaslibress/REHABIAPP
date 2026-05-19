@@ -40,6 +40,8 @@ public class VentanaHelper {
         stage.setScene(scene);
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.setResizable(false);
+        // Spec §3.8: ancho minimo para que el footer del modal nunca se corte
+        stage.setMinWidth(520);
 
         VentanaUtil.establecerIconoVentana(stage);
         // Animacion de apertura sobre el nodo raiz (fade + escala suave)

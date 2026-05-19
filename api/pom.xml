@@ -115,6 +115,45 @@
             <version>${logstash-logback-encoder.version}</version>
         </dependency>
 
+        <!-- ======================== DOCUMENTACION OPENAPI ======================== -->
+        <!--
+            springdoc-openapi 2.8.x es la primera linea compatible con Spring Boot 4.0.x
+            (Spring Framework 7, Jakarta EE 11). 2.6.0 fue construido contra Spring 6 y
+            su starter no expone io.swagger.v3.oas.annotations.* en el classpath bajo
+            el BOM de Spring Boot 4.
+        -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.8.13</version>
+        </dependency>
+
+        <!--
+            Cinturon de seguridad: declaramos explicitamente swagger-annotations-jakarta
+            para garantizar que io.swagger.v3.oas.annotations.{Operation,tags.Tag,
+            media.Schema} estan SIEMPRE en el compile classpath aunque el BOM de Spring
+            Boot 4 modifique el grafo transitivo del starter en el futuro.
+        -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+            <version>2.2.30</version>
+        </dependency>
+
+        <!-- ======================== RATE LIMIT ======================== -->
+        <!--
+            Bucket4j 8.x publica el modulo principal como `bucket4j_jdk17-core` (paquete
+            `io.github.bucket4j`). Pinned a 8.14.0 GA. Si tras Reload Maven el paquete
+            `io.github.bucket4j` siguiera ausente, sustituir por `bucket4j-core:8.7.0`
+            (linea legacy publicada en groupId `com.github.vladimir-bukhtoyarov`) — pero
+            primero agotar 11.4 paso 5 (purgar cache local de Maven).
+        -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>8.14.0</version>
+        </dependency>
+
         <!-- ======================== MAPEO ======================== -->
         <!-- MapStruct — generación de mappers entidad-DTO en tiempo de compilación -->
         <dependency>

@@ -7,8 +7,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-04-24T02:16:13+0200",
-    comments = "version: 1.6.3, compiler: javac, environment: Java 26 (Red Hat, Inc.)"
+    date = "2026-05-18T08:26:07+0200",
+    comments = "version: 1.6.3, compiler: javac, environment: Java 24.0.2 (Oracle Corporation)"
 )
 @Component
 public class TratamientoMapperImpl implements TratamientoMapper {
@@ -29,10 +29,8 @@ public class TratamientoMapperImpl implements TratamientoMapper {
 
         Integer idNivel = tratamiento.getNivel() != null ? tratamiento.getNivel().getIdNivel() : null;
         String nombreNivel = tratamiento.getNivel() != null ? tratamiento.getNivel().getNombre() : null;
-        String codJuego = tratamiento.getJuego() != null ? tratamiento.getJuego().getCodJuego() : null;
-        String nombreJuego = tratamiento.getJuego() != null ? tratamiento.getJuego().getNombre() : null;
 
-        TratamientoResponse tratamientoResponse = new TratamientoResponse( codTrat, nombreTrat, definicionTrat, idNivel, nombreNivel, codJuego, nombreJuego );
+        TratamientoResponse tratamientoResponse = new TratamientoResponse( codTrat, nombreTrat, definicionTrat, idNivel, nombreNivel );
 
         return tratamientoResponse;
     }

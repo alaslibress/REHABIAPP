@@ -1,0 +1,134 @@
+diff --git a/infra/aws-academy/Caddyfile b/infra/aws-academy/Caddyfile
+index be79543..e00956e 100644
+--- a/infra/aws-academy/Caddyfile
++++ b/infra/aws-academy/Caddyfile
+@@ -43,14 +43,29 @@
+ 		body "caddy OK"
+ 	}
+ 
++	# Rutas del BFF mobile (GraphQL + health propio).
++	# /graphql -> Apollo Server (mobile/backend).
++	handle /graphql* {
++		reverse_proxy rehabiapp-bff:3000 {
++			header_up X-Real-IP {remote_host}
++			header_up X-Forwarded-Proto {scheme}
++		}
++	}
++	handle /bff-health {
++		rewrite * /health
++		reverse_proxy rehabiapp-bff:3000
++	}
++
+ 	# Todo el resto va a la API. /actuator/health/* sirve para health-checks externos.
+-	reverse_proxy rehabiapp-api:8080 {
+-		header_up X-Real-IP {remote_host}
+-		header_up X-Forwarded-Proto {scheme}
+-		# Timeout generoso para subida de PDFs (10MB).
+-		transport http {
+-			read_timeout 60s
+-			write_timeout 60s
++	handle {
++		reverse_proxy rehabiapp-api:8080 {
++			header_up X-Real-IP {remote_host}
++			header_up X-Forwarded-Proto {scheme}
++			# Timeout generoso para subida de PDFs (10MB).
++			transport http {
++				read_timeout 60s
++				write_timeout 60s
++			}
+ 		}
+ 	}
+ }
+diff --git a/infra/aws-academy/docker-compose.aws.yml b/infra/aws-academy/docker-compose.aws.yml
+index a810e8a..d915f4e 100644
+--- a/infra/aws-academy/docker-compose.aws.yml
++++ b/infra/aws-academy/docker-compose.aws.yml
+@@ -95,6 +95,65 @@ services:
+       rehabiapp-mongodb:
+         condition: service_healthy
+ 
++  rehabiapp-bff:
++    build:
++      context: ../../mobile/backend
++      dockerfile: Dockerfile
++    image: rehabiapp-bff:aws-academy
++    container_name: rehabiapp-bff
++    restart: unless-stopped
++    expose:
++      - "3000"
++    environment:
++      NODE_ENV: production
++      PORT: "3000"
++      LOG_LEVEL: info
++      MOCK_API: "false"
++      API_BASE_URL: http://rehabiapp-api:8080
++      JWT_SECRET: ${JWT_SIGNING_KEY}
++    depends_on:
++      rehabiapp-api:
++        condition: service_healthy
++    networks:
++      - rehabiapp-aws
++    healthcheck:
++      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
++      interval: 15s
++      timeout: 3s
++      retries: 5
++      start_period: 15s
++
++  rehabiapp-chatbot:
++    build:
++      context: ../../chatbot
++      dockerfile: Dockerfile
++    image: rehabiapp-chatbot:aws-academy
++    container_name: rehabiapp-chatbot
++    restart: unless-stopped
++    environment:
++      NODE_ENV: production
++      LOG_LEVEL: info
++      PORT: "4000"
++      # Conexion al mismo RDS Postgres que la API (RGPD: clinica unica fuente de verdad).
++      PGHOST: ${CHATBOT_PGHOST:-rehabiapp-db.c092mtewefo7.us-east-1.rds.amazonaws.com}
++      PGPORT: ${CHATBOT_PGPORT:-5432}
++      PGDATABASE: ${CHATBOT_PGDATABASE:-rehabiapp}
++      PGUSER: ${SPRING_DATASOURCE_USERNAME}
++      PGPASSWORD: ${SPRING_DATASOURCE_PASSWORD}
++      PGSSLMODE: ${CHATBOT_PGSSLMODE:-require}
++      OLLAMA_URL: ${CHATBOT_OLLAMA_URL:-http://host.docker.internal:11434}
++      OLLAMA_MODEL: ${CHATBOT_OLLAMA_MODEL:-qwen2.5:latest}
++      HOSPITAL_PHONE_E164: ${CHATBOT_HOSPITAL_PHONE_E164:-+34600000000}
++      AUDIT_ACTOR: CHATBOT_BOT
++    volumes:
++      - chatbot-wweb-session:/app/.wwebjs_auth
++      - chatbot-wweb-cache:/app/.wwebjs_cache
++    depends_on:
++      rehabiapp-api:
++        condition: service_healthy
++    networks:
++      - rehabiapp-aws
++
+   rehabiapp-mongodb:
+     image: mongo:7
+     container_name: rehabiapp-mongodb
+@@ -116,6 +175,8 @@ volumes:
+   caddy-data:
+   caddy-config:
+   mongo-data:
++  chatbot-wweb-session:
++  chatbot-wweb-cache:
+ 
+ networks:
+   rehabiapp-aws:
+diff --git a/mobile/backend/package.json b/mobile/backend/package.json
+index a5314fc..0c0a23c 100644
+--- a/mobile/backend/package.json
++++ b/mobile/backend/package.json
+@@ -5,7 +5,9 @@
+   "main": "src/index.js",
+   "scripts": {
+     "start": "node src/index.js",
++    "start:aws": "node --env-file=.env src/index.js",
+     "dev": "MOCK_API=true LOG_LEVEL=debug node --watch src/index.js | npx pino-pretty",
++    "dev:aws": "node --env-file=.env --watch src/index.js | npx pino-pretty",
+     "test": "node --test test/bff.test.js && node --test test/graphql.test.js"
+   },
+   "keywords": [],

@@ -37,11 +37,15 @@ public class Main extends Application {
         try {
             // Probar diferentes nombres posibles del icono
             java.io.InputStream iconStream = null;
+            // RehabiAPPLogoNoLetras es el logotipo unico oficial (sin texto),
+            // tanto para la barra superior como para el icono de la app en el
+            // taskbar/dock. /assets/logo.png queda como ultimo fallback historico.
             String[] nombresIcono = {
                 "/RehabiAPPLogoNoLetras.png",
                 "/RehabiAPPLogoNoLetras.jpg",
                 "/rehabiapplogonoletras.png",
-                "/icono.png"
+                "/icono.png",
+                "/assets/logo.png"
             };
             
             for (String nombre : nombresIcono) {

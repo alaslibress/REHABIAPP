@@ -36,8 +36,11 @@ type ErrorPopupProps = {
 type ErrorState = {
   currentError: AppError | null;
   isVisible: boolean;
+  // Cuando es true, showError suprime el popup y solo loguea (usado durante bootstrap)
+  silent: boolean;
   showError: (error: AppError) => void;
   hideError: () => void;
+  setSilent: (value: boolean) => void;
 };
 
 export type { AppError, ErrorCode, ErrorPopupProps, ErrorState };

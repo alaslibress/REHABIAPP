@@ -113,9 +113,9 @@ The mobile frontend NEVER communicates with the central API (/api) directly. All
 | Role | Model | Scope | Responsibility |
 |------|-------|-------|----------------|
 | Thinker | Opus | /desktop | Designs JavaFX three-layer architecture (presentation, service, DAO). Designs NFC integration. Designs AES-256-GCM encryption logic and audit trail structure. |
-| Doer | Sonnet | /desktop | Implements JavaFX controllers, DAOs with PreparedStatement, business services, utilities, SceneBuilder configurations. |
+| Doer | Sonnet | /desktop | Implements JavaFX controllers, DAOs (REST API via ApiClient), business services, utilities, SceneBuilder configurations. |
 
-Has direct JDBC connection to PostgreSQL (legacy ERP). This exception will be removed when /desktop migrates to consume the REST API.
+Consume la REST API central (`/api`) via `ApiClient`. La conexion JDBC legacy directa se elimino en marzo-abril 2026. La URL base se configura en `desktop/src/main/resources/config/api.properties` o via la variable de entorno `REHABIAPP_API_URL`.
 
 ### AGENT 4: Games (external, AWS Cloud)
 
@@ -176,7 +176,7 @@ No frontend module communicates directly with another frontend module or with a 
 ```
 VALID:    /mobile/frontend --> /mobile/backend --> /api --> PostgreSQL
 VALID:    Unity Games (external) --> /api --> /data --> MongoDB
-VALID:    /desktop --> PostgreSQL (direct legacy connection, will migrate to /api)
+VALID:    /desktop --> /api --> PostgreSQL
 INVALID:  /mobile/frontend --> /api (bypassing mobile backend)
 INVALID:  /mobile/frontend --> /desktop (direct frontend-to-frontend)
 INVALID:  Unity Games --> MongoDB (direct access bypassing /api)
@@ -235,7 +235,6 @@ Before performing any task, the agent MUST check and read the installed skills r
 - Patient data retained minimum 5 years after deactivation (Ley 41/2002).
 - Database communication in production over SSL/TLS.
 - Encryption keys and certificates never committed to the Git repository.
-- Nueva columna `paciente.progreso_md TEXT` + `paciente.ultima_sync_progreso TIMESTAMP` (V15) para materializar el resumen de progreso clinico consumido por la futura IA.
 
 ---
 
@@ -243,7 +242,7 @@ Before performing any task, the agent MUST check and read the installed skills r
 
 | Domain | Directory | Language | Framework | Database | Build |
 |--------|-----------|----------|-----------|----------|-------|
-| Desktop ERP | /desktop | Java | JavaFX, FXML, CSS, ControlsFX, CalendarFX, JasperReports | PostgreSQL (direct JDBC) | Gradle |
+| Desktop ERP | /desktop | Java | JavaFX, FXML, CSS, ControlsFX, CalendarFX, JasperReports | None (calls central API) | Gradle |
 | Central API | /api | Java | Spring Boot 3, Flyway, Spring Security, Spring Data JPA | PostgreSQL | Maven |
 | Mobile Frontend | /mobile/frontend | TypeScript | React Native, Expo | None (calls mobile backend) | npm / Expo CLI |
 | Mobile Backend (BFF) | /mobile/backend | JavaScript | Node.js, Express | None (calls central API) | npm |
@@ -274,11 +273,12 @@ Before performing any task, the agent MUST check and read the installed skills r
 
 ## 6. INTER-SERVICE COMMUNICATION CONTRACTS
 
-### /desktop --> PostgreSQL (legacy direct)
+### /desktop --> /api (REST)
 
-- Protocol: JDBC with PreparedStatement
-- Encryption: AES-256-GCM on clinical fields, BCrypt on passwords
-- Audit: Every operation recorded in audit_log via AuditService
+- Protocol: HTTPS, JSON, JWT bearer (sanitario login: rol SPECIALIST o NURSE)
+- Cliente: `desktop/src/main/java/com/javafx/Clases/ApiClient.java` (HttpClient Java 11+)
+- URL configurable: `desktop/src/main/resources/config/api.properties` (default `https://rehabiapp-api.duckdns.org`) o env `REHABIAPP_API_URL`
+- Encryption/Audit/BCrypt: delegado al API central (cifrado AES-256-GCM, audit_log, BCrypt cost-12 viven en /api)
 
 ### /mobile/frontend --> /mobile/backend --> /api (BFF pattern)
 
@@ -303,11 +303,14 @@ Before performing any task, the agent MUST check and read the installed skills r
 - API delegates game data operations to /data pipeline
 - MongoDB stores high-volume semi-structured session documents
 - Data processed with aggregation pipelines for analytics
+- /data also generates per-patient Markdown progress files (cache for future AI analysis)
+- /api proxies progress queries (`/api/pacientes/{dni}/progreso/*`) to /data and caches MD in `paciente.archivo_progreso_md`
 
-### Desktop <--> /api (NEW - Sprint Progreso 2026-04-27)
+### /desktop --> /api (NEW polling flow for progress)
 
-- Polling de progreso: el escritorio consulta `GET /api/pacientes/{dni}/progreso/check?desde=ISO_TS` y, si hay nuevos registros de juego, ejecuta `POST /api/pacientes/{dni}/progreso/sync` para regenerar `paciente.progreso_md` y actualizar `ultima_sync_progreso`.
-- Subida de PDF de tratamiento: el escritorio sube el documento clinico vía `POST /api/catalogo/tratamientos/{cod}/documentos` (multipart). La app mobile descarga ese mismo binario reutilizando el endpoint existente `GET /api/pacientes/{dni}/tratamientos/{cod}/documento`.
+- Desktop polls `GET /api/pacientes/{dni}/progreso/check` every 30s while progress tab open
+- If `hasNewData=true`, desktop fetches `/api/pacientes/{dni}/progreso` and re-renders charts
+- Desktop never queries MongoDB directly — all goes through API
 
 ---
 

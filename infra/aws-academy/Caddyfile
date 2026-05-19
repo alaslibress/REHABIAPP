@@ -1,0 +1,71 @@
+# Caddy v2 — TLS automatico via Let's Encrypt para AWS Academy.
+#
+# Requisitos previos:
+#   1. Subdominio DuckDNS apuntando a la Elastic IP del EC2 (ver scripts/duckdns-update.sh).
+#   2. Puerto 80 abierto al mundo (Security Group EC2) — Let's Encrypt HTTP-01 challenge.
+#   3. Puerto 443 abierto al mundo — trafico TLS.
+#
+# Caddy hace HTTP -> HTTPS redirect, ACME challenge, renovacion automatica de certificado y reverse proxy a la API.
+# /api/data y mongodb NO se exponen al host — solo Caddy publica puertos.
+
+{
+	# Email para notificaciones de expiracion de Let's Encrypt.
+	# Se inyecta via ENV en docker-compose (ACME_EMAIL).
+	email {$ACME_EMAIL:rehabiapp-deploy@duck.com}
+}
+
+# Reemplazar por el subdominio real (ej. rehabiapp-api.duckdns.org).
+# DUCKDNS_DOMAIN debe estar exportado en .env.aws-academy.
+{$DUCKDNS_DOMAIN:rehabiapp-api.duckdns.org} {
+
+	# Compresion gzip/zstd para reducir trafico.
+	encode gzip zstd
+
+	# Cabeceras de seguridad recomendadas.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Permite ser embebido por la pagina del juego en S3 (frame del WebView mobile/desktop).
+		# Retirar si no se necesita iframe — restringir a origenes concretos en produccion.
+		-Server
+	}
+
+	# Logging acceso a stdout — capturado por docker logs caddy.
+	log {
+		output stdout
+		format console
+		level INFO
+	}
+
+	# Health endpoint local de Caddy (sin proxy).
+	respond /caddy-health 200 {
+		body "caddy OK"
+	}
+
+	# Rutas del BFF mobile (GraphQL + health propio).
+	# /graphql -> Apollo Server (mobile/backend).
+	handle /graphql* {
+		reverse_proxy rehabiapp-bff:3000 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+	handle /bff-health {
+		rewrite * /health
+		reverse_proxy rehabiapp-bff:3000
+	}
+
+	# Todo el resto va a la API. /actuator/health/* sirve para health-checks externos.
+	handle {
+		reverse_proxy rehabiapp-api:8080 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			# Timeout generoso para subida de PDFs (10MB).
+			transport http {
+				read_timeout 60s
+				write_timeout 60s
+			}
+		}
+	}
+}

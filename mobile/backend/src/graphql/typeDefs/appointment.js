@@ -15,10 +15,21 @@ const appointmentTypeDefs = gql`
     notes: String
   }
 
-  # Estado de una solicitud de cita enviada por el paciente
-  enum AppointmentRequestStatus { PENDING CONFIRMED REJECTED }
+  extend type Query {
+    # Citas del paciente, filtrable por estado y por proximas
+    myAppointments(status: AppointmentStatus, upcoming: Boolean): [Appointment!]!
+  }
 
-  # Solicitud de cita enviada por el paciente al centro
+  # Estado de una solicitud de cita en revision por la clinica
+  enum AppointmentRequestStatus {
+    PENDING
+    APPROVED
+    REJECTED
+    CANCELLED
+  }
+
+  # Solicitud de cita enviada por el paciente desde el formulario libre.
+  # NO es una cita confirmada — la clinica la revisa antes de crear el Appointment.
   type AppointmentRequest {
     id: ID!
     fechaPreferida: String!
@@ -28,11 +39,6 @@ const appointmentTypeDefs = gql`
     createdAt: String!
   }
 
-  extend type Query {
-    # Citas del paciente, filtrable por estado y por proximas
-    myAppointments(status: AppointmentStatus, upcoming: Boolean): [Appointment!]!
-  }
-
   extend type Mutation {
     # Reservar una nueva cita medica
     bookAppointment(date: String!, time: String!, practitionerId: ID!): Appointment!
@@ -40,7 +46,9 @@ const appointmentTypeDefs = gql`
     # Cancelar una cita existente por su ID
     cancelAppointment(appointmentId: ID!): Appointment!
 
-    # Solicitar una cita nueva (el sanitario la confirmara posteriormente)
+    # Solicita una cita al equipo clinico (no es una reserva confirmada).
+    # La clinica recibe la solicitud por canal interno y, si la aprueba, llama a
+    # bookAppointment internamente. Devuelve el registro de la solicitud.
     requestAppointment(
       fechaPreferida: String!
       horaPreferida: String!

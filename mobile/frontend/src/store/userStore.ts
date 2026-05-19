@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { UserState } from '../types/user';
 import { client } from '../services/graphql/client';
 import { GET_MY_PROFILE, GET_MY_DISABILITIES } from '../services/graphql/queries/user';
@@ -9,35 +11,44 @@ type UserStateExtended = UserState & {
   disabilities: Disability[];
 };
 
-export const useUserStore = create<UserStateExtended>(function (set) {
-  return {
-    patient: null,
-    disabilities: [],
-    isLoading: false,
+export const useUserStore = create<UserStateExtended>()(
+  persist(
+    function (set) {
+      return {
+        patient: null,
+        disabilities: [],
+        isLoading: false,
 
-    fetchProfile: async function (): Promise<void> {
-      set({ isLoading: true });
-      try {
-        const [profileRes, disRes] = await Promise.all([
-          client.query({ query: GET_MY_PROFILE, fetchPolicy: 'network-only' }),
-          client.query({ query: GET_MY_DISABILITIES, fetchPolicy: 'network-only' }),
-        ]);
+        fetchProfile: async function (): Promise<void> {
+          set({ isLoading: true });
+          try {
+            const [profileRes, disRes] = await Promise.all([
+              client.query({ query: GET_MY_PROFILE, fetchPolicy: 'network-only' }),
+              client.query({ query: GET_MY_DISABILITIES, fetchPolicy: 'network-only' }),
+            ]);
 
-        const rawDisabilities: Disability[] = (disRes.data.myDisabilities ?? []).map(
-          function (d: { id: string; name: string; description: string | null; currentLevel: number }) {
-            return { ...d, codDis: d.id };
+            const rawDisabilities: Disability[] = (disRes.data.myDisabilities ?? []).map(
+              function (d: { id: string; name: string; description: string | null; currentLevel: number }) {
+                return { ...d, codDis: d.id };
+              }
+            );
+
+            set({ patient: profileRes.data.me, disabilities: rawDisabilities, isLoading: false });
+          } catch (err) {
+            set({ isLoading: false });
+            throw parseGraphQLError(err);
           }
-        );
+        },
 
-        set({ patient: profileRes.data.me, disabilities: rawDisabilities, isLoading: false });
-      } catch (err) {
-        set({ isLoading: false });
-        throw parseGraphQLError(err);
-      }
+        clearProfile: function (): void {
+          set({ patient: null, disabilities: [] });
+        },
+      };
     },
-
-    clearProfile: function (): void {
-      set({ patient: null, disabilities: [] });
-    },
-  };
-});
+    {
+      name: '@rehabiapp/user-store',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ patient: state.patient, disabilities: state.disabilities }),
+    }
+  )
+);

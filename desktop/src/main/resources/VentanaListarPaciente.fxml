@@ -14,6 +14,8 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.FlowPane?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <ScrollPane fitToWidth="true" prefHeight="750.0" prefWidth="720.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaPacienteListar">
 <content>
@@ -108,15 +110,25 @@
                             </columns>
                         </TableView>
 
-                        <HBox fx:id="hboxBotonesDiscapacidad" alignment="CENTER_LEFT" spacing="8.0">
+                        <FlowPane fx:id="hboxBotonesDiscapacidad" alignment="CENTER_RIGHT" hgap="10.0" vgap="10.0">
                             <children>
-                                <Button fx:id="btnAsignarDiscapacidad" mnemonicParsing="false" onAction="#asignarDiscapacidad" prefWidth="100.0" text="Asignar" />
-                                <Button fx:id="btnDesasignarDiscapacidad" mnemonicParsing="false" onAction="#desasignarDiscapacidad" prefWidth="110.0" text="Desasignar" />
-                                <Button fx:id="btnSubirNivel" mnemonicParsing="false" onAction="#subirNivel" prefWidth="90.0" text="Subir nivel" />
-                                <Button fx:id="btnBajarNivel" mnemonicParsing="false" onAction="#bajarNivel" prefWidth="90.0" text="Bajar nivel" />
-                                <Button fx:id="btnEditarNotas" mnemonicParsing="false" onAction="#editarNotas" prefWidth="100.0" text="Editar notas" />
+                                <Button fx:id="btnAsignarDiscapacidad" mnemonicParsing="false" onAction="#asignarDiscapacidad" styleClass="button,secondary" text="Asignar">
+                                    <graphic><FontIcon iconLiteral="mdi2p-plus" iconSize="14" /></graphic>
+                                </Button>
+                                <Button fx:id="btnDesasignarDiscapacidad" mnemonicParsing="false" onAction="#desasignarDiscapacidad" styleClass="button,ghost" text="Desasignar">
+                                    <graphic><FontIcon iconLiteral="mdi2t-trash-can-outline" iconSize="14" /></graphic>
+                                </Button>
+                                <Button fx:id="btnSubirNivel" mnemonicParsing="false" onAction="#subirNivel" styleClass="button,primary" text="Subir nivel">
+                                    <graphic><FontIcon iconLiteral="mdi2c-chart-line" iconSize="14" /></graphic>
+                                </Button>
+                                <Button fx:id="btnBajarNivel" mnemonicParsing="false" onAction="#bajarNivel" styleClass="button,ghost" text="Bajar nivel">
+                                    <graphic><FontIcon iconLiteral="mdi2p-pulse" iconSize="14" /></graphic>
+                                </Button>
+                                <Button fx:id="btnEditarNotas" mnemonicParsing="false" onAction="#editarNotas" styleClass="button,secondary" text="Editar notas">
+                                    <graphic><FontIcon iconLiteral="mdi2p-pencil" iconSize="14" /></graphic>
+                                </Button>
                             </children>
-                        </HBox>
+                        </FlowPane>
 
                         <Label style="-fx-font-weight: bold;" text="Tratamientos del paciente" >
                             <VBox.margin>
@@ -138,13 +150,19 @@
                             </columns>
                         </TableView>
 
-                        <HBox fx:id="hboxBotonesTratamiento" alignment="CENTER_LEFT" spacing="8.0">
+                        <FlowPane fx:id="hboxBotonesTratamiento" alignment="CENTER_RIGHT" hgap="10.0" vgap="10.0">
                             <children>
-                                <Button fx:id="btnAsignarTratamiento" mnemonicParsing="false" onAction="#asignarTratamiento" prefWidth="100.0" text="Asignar" />
-                                <Button fx:id="btnDesasignarTratamiento" mnemonicParsing="false" onAction="#desasignarTratamiento" prefWidth="110.0" text="Desasignar" />
-                                <Button fx:id="btnToggleVisibilidad" mnemonicParsing="false" onAction="#toggleVisibilidad" prefWidth="140.0" text="Cambiar visibilidad" />
+                                <Button fx:id="btnAsignarTratamiento" mnemonicParsing="false" onAction="#asignarTratamiento" styleClass="button,secondary" text="Asignar">
+                                    <graphic><FontIcon iconLiteral="mdi2p-plus" iconSize="14" /></graphic>
+                                </Button>
+                                <Button fx:id="btnDesasignarTratamiento" mnemonicParsing="false" onAction="#desasignarTratamiento" styleClass="button,ghost" text="Desasignar">
+                                    <graphic><FontIcon iconLiteral="mdi2t-trash-can-outline" iconSize="14" /></graphic>
+                                </Button>
+                                <Button fx:id="btnToggleVisibilidad" mnemonicParsing="false" onAction="#toggleVisibilidad" styleClass="button,primary" text="Cambiar visibilidad">
+                                    <graphic><FontIcon iconLiteral="mdi2e-eye" iconSize="14" /></graphic>
+                                </Button>
                             </children>
-                        </HBox>
+                        </FlowPane>
 
                         <Separator />
                         <Label style="-fx-font-weight: bold;" text="Datos Clinicos" />
@@ -196,7 +214,9 @@
                         <HBox alignment="CENTER_LEFT" spacing="10.0">
                             <children>
                                 <Label prefWidth="180.0" text="Informe:" />
-                                <Button fx:id="btnDescargarInforme" onAction="#descargarInformePDF" prefWidth="150.0" text="Descargar PDF" />
+                                <Button fx:id="btnDescargarInforme" onAction="#descargarInformePDF" styleClass="button,ghost" text="Descargar PDF">
+                                    <graphic><FontIcon iconLiteral="mdi2f-file-pdf-box" iconSize="14" /></graphic>
+                                </Button>
                             </children>
                         </HBox>
                     </children>
@@ -214,10 +234,17 @@
         <Separator />
 
 
-        <HBox alignment="CENTER" spacing="10.0">
+        <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="modal-footer">
             <children>
-                <Button fx:id="btnEditar" onAction="#abrirVentanaEditar" prefWidth="120.0" text="Editar" />
-                <Button fx:id="btnAceptar" onAction="#cerrarVentana" prefWidth="120.0" styleClass="button-primario" text="Aceptar" />
+                <Button fx:id="btnProgreso" onAction="#abrirProgreso" styleClass="button,secondary" text="Progreso">
+                    <graphic><FontIcon iconLiteral="mdi2c-chart-line" iconSize="14" /></graphic>
+                </Button>
+                <Button fx:id="btnEditar" onAction="#abrirVentanaEditar" styleClass="button,ghost" text="Editar">
+                    <graphic><FontIcon iconLiteral="mdi2p-pencil" iconSize="14" /></graphic>
+                </Button>
+                <Button fx:id="btnAceptar" onAction="#cerrarVentana" styleClass="button,primary" text="Aceptar">
+                    <graphic><FontIcon iconLiteral="mdi2c-content-save" iconSize="14" /></graphic>
+                </Button>
             </children>
         </HBox>
     </children>

@@ -51,38 +51,64 @@ const MOCK_DISCAPACIDADES_ADMIN = [
 
 const MOCK_TRATAMIENTOS_ADMIN = [
   {
-    dniPac: '12345678Z', codTrat: 'TRT001', nombreTrat: 'Movilizacion activa de cadera',
-    descripcion: null, tipo: 'EXERCISE', visible: true,
-    idNivel: 2, nivelNombre: 'Subagudo', codDis: 'M16',
-    resumen: 'Ejercicios suaves de rango articular para recuperar movilidad en la cadera derecha.',
-    materiales: ['Banda elastica ligera', 'Esterilla de yoga'],
-    medicacion: ['Paracetamol 500mg si dolor agudo'],
-    tieneDocumento: true, urlDocumento: null,
-  },
-  {
-    dniPac: '12345678Z', codTrat: 'TRT002', nombreTrat: 'Electroterapia de baja frecuencia',
-    descripcion: null, tipo: 'TEXT_INSTRUCTION', visible: true,
-    idNivel: 2, nivelNombre: 'Subagudo', codDis: 'M16',
-    resumen: 'Aplicacion de corriente TENS para aliviar el dolor cronico en la zona de la cadera.',
-    materiales: ['Electrodos adhesivos', 'Aparato TENS (proporcionado en clinica)'],
+    dniPac: '12345678Z',
+    codTrat: 'TRT001',
+    nombreTrat: 'Ejercicios de movilidad de cadera',
+    descripcionTrat: 'Serie de ejercicios para recuperar el rango articular de la cadera operada.',
+    visible: true,
+    fechaAsignacion: '2024-03-15T09:00:00',
+    idNivel: 2,
+    codDis: 'M16',
+    resumen: 'Tres series de 10 repeticiones, dos veces al dia.',
+    materiales: ['Esterilla', 'Cinta elastica baja resistencia'],
     medicacion: [],
-    tieneDocumento: false, urlDocumento: null,
+    urlDocumento: 'https://api.rehabiapp.local/tratamientos/TRT001/pdf',
+    tienePdf: true,
   },
   {
-    dniPac: '12345678Z', codTrat: 'TRT003', nombreTrat: 'Fortalecimiento lumbar',
-    descripcion: null, tipo: 'EXERCISE', visible: true,
-    idNivel: 1, nivelNombre: 'Inicial', codDis: 'M54',
-    resumen: 'Serie de ejercicios isometricos para fortalecer la musculatura paravertebral.',
-    materiales: ['Pelota de fitball', 'Esterilla'],
-    medicacion: ['Ibuprofeno 400mg con comida si necesario'],
-    tieneDocumento: true, urlDocumento: null,
+    dniPac: '12345678Z',
+    codTrat: 'TRT002',
+    nombreTrat: 'Electroterapia de baja frecuencia',
+    descripcionTrat: 'Sesiones de TENS para alivio del dolor lumbar.',
+    visible: true,
+    fechaAsignacion: '2024-03-15T09:00:00',
+    idNivel: 1,
+    codDis: 'M54',
+    resumen: 'Sesion de 20 minutos en clinica, 2 veces por semana.',
+    materiales: ['Equipo TENS clinico'],
+    medicacion: ['Paracetamol 1g si dolor irruptivo'],
+    urlDocumento: null,
+    tienePdf: false,
   },
   {
-    dniPac: '12345678Z', codTrat: 'TRT004', nombreTrat: 'Hidroterapia terapeutica',
-    descripcion: null, tipo: 'EXERCISE', visible: false,
-    idNivel: 1, nivelNombre: 'Inicial', codDis: 'M54',
-    resumen: null, materiales: [], medicacion: [],
-    tieneDocumento: false, urlDocumento: null,
+    dniPac: '12345678Z',
+    codTrat: 'TRT003',
+    nombreTrat: 'Ejercicios de fortalecimiento lumbar',
+    descripcionTrat: 'Plan de fortalecimiento progresivo del core.',
+    visible: true,
+    fechaAsignacion: '2024-06-05T11:00:00',
+    idNivel: 1,
+    codDis: 'M54',
+    resumen: 'Ejercicios isometricos diarios. Aumentar carga semanalmente.',
+    materiales: ['Esterilla', 'Pelota suiza'],
+    medicacion: [],
+    urlDocumento: 'https://api.rehabiapp.local/tratamientos/TRT003/pdf',
+    tienePdf: true,
+  },
+  {
+    dniPac: '12345678Z',
+    codTrat: 'TRT004',
+    nombreTrat: 'Hidroterapia terapeutica',
+    descripcionTrat: 'Sesiones de piscina (oculto al paciente — pendiente de aprobacion).',
+    visible: false,
+    fechaAsignacion: '2024-06-05T11:00:00',
+    idNivel: 0,
+    codDis: 'M16',
+    resumen: null,
+    materiales: [],
+    medicacion: [],
+    urlDocumento: null,
+    tienePdf: false,
   },
 ];
 
@@ -105,6 +131,58 @@ const MOCK_TRATAMIENTOS = {
 // Las citas se filtran por dniPac en appointmentService — aqui van todas juntas
 const MOCK_TODAS_CITAS = [...MOCK_CITAS_ADMIN];
 
+// ---- Dashboard mock — refleja la estructura de DashboardResponse del API Java ----
+const MOCK_DASHBOARD = {
+  '12345678Z': {
+    paciente: {
+      dniPac: '12345678Z',
+      nombrePac: 'Admin',
+      apellido1Pac: 'RehabiAPP',
+      apellido2Pac: null,
+      edadPac: 36,
+    },
+    discapacidadesActivas: [
+      { codDis: 'M16', nombreDis: 'Coxartrosis', idNivelActual: 2, nombreNivelActual: 'Intermedio', ordenNivelActual: 2 },
+    ],
+    tratamientosVisibles: [
+      { codTrat: 'TRT001', nombreTrat: 'Ejercicios de movilidad de cadera', idNivel: 2, ordenNivel: 2 },
+    ],
+    juegosDesbloqueados: [
+      {
+        idVideojuego: 1,
+        codigo: 'GAME-HIP-01',
+        nombre: 'Mover la cadera',
+        urlUnity: 'https://games.rehabiapp.com/hip-01',
+        parteCuerpo: 'CADERA',
+        desbloqueado: true,
+      },
+    ],
+    ultimaSesionJuego: null,
+    proximaCita: { dniSanitario: '87654321B', fecha: '2026-04-10', hora: '10:00:00' },
+  },
+};
+
+// ---- Progreso mock — refleja List<ProgresoTratamientoResponse> ----
+const MOCK_PROGRESO = {
+  '12345678Z': [
+    {
+      codTrat: 'TRT001',
+      tratamientoNombre: 'Ejercicios de movilidad de cadera',
+      parteCuerpo: 'CADERA',
+      metricaNombre: 'angulo_flexion',
+      baselineValor: 60.0,
+      baselineFecha: '2024-03-15T09:00:00Z',
+      currentValor: 90.0,
+      currentFecha: '2026-04-01T09:00:00Z',
+      deltaPorcentaje: 50.0,
+      entradas: [
+        { fecha: '2024-03-15T09:00:00Z', valor: 60.0 },
+        { fecha: '2026-04-01T09:00:00Z', valor: 90.0 },
+      ],
+    },
+  ],
+};
+
 /**
  * Resuelve la respuesta mock para una peticion dada.
  * Soporta rutas dinamicas con DNI (ej: /api/pacientes/{dni}/discapacidades).
@@ -114,12 +192,14 @@ const MOCK_TODAS_CITAS = [...MOCK_CITAS_ADMIN];
  * @returns {any} Datos mock o null
  */
 function resolverMock(method, path) {
-  // POST /api/auth/login y /api/auth/refresh -> siempre exito (la validacion de credenciales
-  // se hace en authService antes de llegar aqui en modo mock)
-  if (method === 'POST' && path === '/api/auth/login') {
+  // POST /api/auth/login (sanitarios) y /api/auth/login-paciente (pacientes):
+  // siempre exito en mock — la validacion de credenciales se hace en authService
+  // antes de llegar aqui. Ambos endpoints devuelven la misma estructura LoginResponse.
+  if (method === 'POST' && (path === '/api/auth/login' || path === '/api/auth/login-paciente')) {
     return { accessToken: 'mock-java-access-token', refreshToken: 'mock-java-refresh-token', rol: 'PATIENT' };
   }
-  if (method === 'POST' && path === '/api/auth/refresh') {
+  // /api/auth/refresh (sanitarios) y /api/auth/refresh-paciente (pacientes — H.3)
+  if (method === 'POST' && (path === '/api/auth/refresh' || path === '/api/auth/refresh-paciente')) {
     return { accessToken: 'mock-java-access-token-nuevo', refreshToken: 'mock-java-refresh-token-nuevo', rol: 'PATIENT' };
   }
 
@@ -146,6 +226,18 @@ function resolverMock(method, path) {
     return MOCK_TODAS_CITAS;
   }
 
+  // GET /api/pacientes/{dni}/dashboard
+  const matchDash = path.match(/^\/api\/pacientes\/([^/]+)\/dashboard$/);
+  if (matchDash && method === 'GET') {
+    return MOCK_DASHBOARD[matchDash[1]] || null;
+  }
+
+  // GET /api/pacientes/{dni}/progreso
+  const matchProg = path.match(/^\/api\/pacientes\/([^/]+)\/progreso$/);
+  if (matchProg && method === 'GET') {
+    return MOCK_PROGRESO[matchProg[1]] || [];
+  }
+
   // POST /api/citas
   if (method === 'POST' && path === '/api/citas') {
     return MOCK_CITAS_ADMIN[0]; // Devolver primera cita como ejemplo de creacion
@@ -154,107 +246,6 @@ function resolverMock(method, path) {
   // DELETE /api/citas
   if (method === 'DELETE' && path === '/api/citas') {
     return null; // 204 simulado
-  }
-
-  // POST /api/pacientes/{dni}/device-tokens (registro de token push)
-  const matchDeviceToken = path.match(/^\/api\/pacientes\/([^/]+)\/device-tokens$/);
-  if (matchDeviceToken && method === 'POST') {
-    return { ok: true }; // Mock — tabla token_dispositivo pendiente en el API Java
-  }
-
-  // DELETE /api/device-tokens (eliminacion de token push)
-  if (method === 'DELETE' && path === '/api/device-tokens') {
-    return null; // 204 simulado
-  }
-
-  // GET /api/pacientes/{dni}/tratamientos/{codTrat}/documento (documento PDF del tratamiento)
-  const matchDocumento = path.match(/^\/api\/pacientes\/([^/]+)\/tratamientos\/([^/]+)\/documento$/);
-  if (matchDocumento && method === 'GET') {
-    // PDF minimo "Hola Mundo" — suficiente para probar el flujo de descarga
-    const MOCK_PDF_BASE64 = Buffer.from(
-      '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
-      '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
-      '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj\n' +
-      'xref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n' +
-      '0000000058 00000 n\n0000000115 00000 n\n' +
-      'trailer<</Size 4/Root 1 0 R>>\nstartxref\n190\n%%EOF'
-    ).toString('base64');
-    return {
-      fileName: `tratamiento-${matchDocumento[2]}.pdf`,
-      mimeType: 'application/pdf',
-      base64: MOCK_PDF_BASE64,
-      url: null,
-    };
-  }
-
-  // GET /api/pacientes/{dni}/juegos (juegos terapeuticos asignados)
-  const matchJuegos = path.match(/^\/api\/pacientes\/([^/]+)\/juegos$/);
-  if (matchJuegos && method === 'GET') {
-    return [
-      { idJuego: 'j1', nombreJuego: 'Alcanza la estrella', descripcion: 'Ejercicio de alcance del brazo derecho.', urlThumbnail: null, urlWebgl: 'https://games.rehabiapp.com/star-reach', dificultad: 'EASY', fechaAsignacion: '2026-04-10' },
-      { idJuego: 'j2', nombreJuego: 'Ritmo de pasos', descripcion: 'Coordinacion de piernas siguiendo el compas.', urlThumbnail: null, urlWebgl: 'https://games.rehabiapp.com/step-rhythm', dificultad: 'MEDIUM', fechaAsignacion: '2026-04-12' },
-    ];
-  }
-
-  // POST /api/pacientes/{dni}/solicitudes-cita (solicitud de cita del paciente)
-  const matchSolicitud = path.match(/^\/api\/pacientes\/([^/]+)\/solicitudes-cita$/);
-  if (matchSolicitud && method === 'POST') {
-    return {
-      id: `req-${Date.now()}`,
-      fechaPreferida: null,
-      horaPreferida: null,
-      motivo: null,
-      estado: 'PENDING',
-      createdAt: new Date().toISOString(),
-    };
-  }
-
-  // GET /api/pacientes/{dni}/foto (foto de perfil como base64)
-  const matchFoto = path.match(/^\/api\/pacientes\/([^/]+)\/foto$/);
-  if (matchFoto && method === 'GET') {
-    // PNG 8x8 solido azul primario (#2563EB) — suficiente para probar el flujo de avatar
-    return {
-      base64: 'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAJElEQVQI12P4z8BQz0AEYBjVMKphVMOohlENoxpGNYxqIBkAALsAAQFaxqIAAAAASUVORK5CYII=',
-      mimeType: 'image/png',
-    };
-  }
-
-  // GET /api/pacientes/{dni}/progreso/partes-cuerpo
-  const matchProgreso = path.match(/^\/api\/pacientes\/([^/]+)\/progreso\/partes-cuerpo$/);
-  if (matchProgreso && method === 'GET') {
-    return [
-      { id: 'HEAD', name: 'Cabeza', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-      { id: 'NECK', name: 'Cuello', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-      { id: 'TORSO', name: 'Torso', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-      { id: 'LEFT_SHOULDER', name: 'Hombro izquierdo', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-      { id: 'RIGHT_SHOULDER', name: 'Hombro derecho', hasTreatment: true, progressPct: 62, improvementPct: 18, periodLabel: '4 semanas' },
-      { id: 'LEFT_ARM', name: 'Brazo izquierdo', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-      { id: 'RIGHT_ARM', name: 'Brazo derecho', hasTreatment: true, progressPct: 75, improvementPct: 25, periodLabel: '4 semanas' },
-      { id: 'LEFT_HAND', name: 'Mano izquierda', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-      { id: 'RIGHT_HAND', name: 'Mano derecha', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-      { id: 'LEFT_HIP', name: 'Cadera izquierda', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-      { id: 'RIGHT_HIP', name: 'Cadera derecha', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-      { id: 'LEFT_LEG', name: 'Pierna izquierda', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-      { id: 'RIGHT_LEG', name: 'Pierna derecha', hasTreatment: true, progressPct: 45, improvementPct: 10, periodLabel: '4 semanas' },
-      { id: 'LEFT_FOOT', name: 'Pie izquierdo', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-      { id: 'RIGHT_FOOT', name: 'Pie derecho', hasTreatment: false, progressPct: 0, improvementPct: 0, periodLabel: '4 semanas' },
-    ];
-  }
-
-  // GET /api/pacientes/{dni}/progreso/partes-cuerpo/{bodyPartId}/metricas
-  const matchMetricas = path.match(/^\/api\/pacientes\/([^/]+)\/progreso\/partes-cuerpo\/([^/]+)\/metricas/);
-  if (matchMetricas && method === 'GET') {
-    // 8 puntos de datos semanales ascendentes — simula mejora progresiva
-    const hoy = new Date();
-    return Array.from({ length: 8 }, function (_, i) {
-      const fecha = new Date(hoy);
-      fecha.setDate(hoy.getDate() - (7 - i) * 7);
-      return {
-        date: fecha.toISOString().split('T')[0],
-        score: 40 + Math.round((38 / 7) * i),
-        metricType: 'ACCURACY',
-      };
-    });
   }
 
   return null;
@@ -437,11 +428,79 @@ async function peticion(method, path, body, javaToken, params) {
   }
 }
 
+/**
+ * Ejecuta GET y devuelve la respuesta como Buffer (binario).
+ * Pensada para descarga de PDF u otros recursos no JSON.
+ * Aplica el mismo timeout y mapeo de errores HTTP que la peticion JSON.
+ *
+ * @param {string} path - Ruta relativa
+ * @param {string|null} javaToken
+ * @returns {Promise<{ buffer: Buffer, filename: string|null, contentType: string }>}
+ */
+async function getBinary(path, javaToken) {
+  // Modo mock: PDF de prueba (cabecera %PDF- valida) para desarrollo local
+  if (config.mockApi) {
+    const matchPdf = path.match(/^\/api\/tratamientos\/([^/]+)\/pdf$/);
+    if (matchPdf) {
+      // Cuerpo PDF minimo valido (cabecera mas algun byte) para pruebas
+      const bytes = Buffer.from('%PDF-1.4\n%mock\n', 'utf8');
+      return {
+        buffer: bytes,
+        filename: `${matchPdf[1]}.pdf`,
+        contentType: 'application/pdf',
+      };
+    }
+    return { buffer: Buffer.alloc(0), filename: null, contentType: 'application/octet-stream' };
+  }
+
+  const url = `${config.apiBaseUrl}${path}`;
+  const headers = { 'Accept': 'application/pdf,application/octet-stream' };
+  if (javaToken) {
+    headers['Authorization'] = `Bearer ${javaToken}`;
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const inicioMs = Date.now();
+
+  try {
+    logger.debug({ method: 'GET', url, binario: true }, 'Peticion binaria saliente a la API de Java');
+    const res = await fetch(url, { method: 'GET', headers, signal: controller.signal });
+    clearTimeout(timer);
+    const tiempoMs = Date.now() - inicioMs;
+
+    if (!res.ok) {
+      logger.error({ url, status: res.status, tiempoMs }, 'Error HTTP en descarga binaria');
+      throw crearError(mapearErrorHttp(res.status, path));
+    }
+
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Extraer filename del Content-Disposition si llega; si no, usar el ultimo segmento
+    const contentDisposition = res.headers.get('content-disposition') || '';
+    const matchFilename = contentDisposition.match(/filename="?([^";]+)"?/i);
+    const filename = matchFilename ? matchFilename[1] : null;
+    const contentType = res.headers.get('content-type') || 'application/octet-stream';
+
+    logger.info({ url, status: res.status, tiempoMs, sizeBytes: buffer.length }, 'Descarga binaria OK');
+    return { buffer, filename, contentType };
+  } catch (err) {
+    clearTimeout(timer);
+    if (err.extensions && err.extensions.code) throw err;
+    if (err.name === 'AbortError') {
+      throw crearError('NETWORK_ERROR', 'La API no respondio en el tiempo esperado.');
+    }
+    logger.error({ url, errorMensaje: err.message }, 'Error de conexion en descarga binaria');
+    throw crearError('NETWORK_ERROR');
+  }
+}
+
 const apiClient = {
   get: (path, javaToken) => peticion('GET', path, null, javaToken, null),
   post: (path, body, javaToken) => peticion('POST', path, body, javaToken, null),
   put: (path, body, javaToken) => peticion('PUT', path, body, javaToken, null),
   delete: (path, params, javaToken) => peticion('DELETE', path, null, javaToken, params),
+  getBinary,
 };
 
 module.exports = apiClient;

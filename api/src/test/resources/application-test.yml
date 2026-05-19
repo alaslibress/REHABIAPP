@@ -27,3 +27,11 @@ rehabiapp:
     jwt-expiration-ms: 900000
     jwt-refresh-expiration-ms: 604800000
     encryption-key: "test-encryption-key-32-chars!!!!"
+
+# Origenes CORS para los tests de integracion — incluye el bucket S3 del juego
+# para validar preflight desde el origen real de produccion.
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:9000
+      - http://s3-bucket-rehabiapp-piano-640681720314.s3-website-us-east-1.amazonaws.com

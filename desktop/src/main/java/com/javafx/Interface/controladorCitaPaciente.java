@@ -104,6 +104,12 @@ public class controladorCitaPaciente {
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 45, 0, 15);
         spnMinuto.setValueFactory(factoryMinuto);
 
+        // Permitir editar el TextField del spinner por teclado: el valor se
+        // commitea al perder el foco. Sin esto los digitos tecleados se
+        // ignoraban y el spinner solo respondia a los botones de flecha.
+        configurarCommitSpinner(spnHora);
+        configurarCommitSpinner(spnMinuto);
+
         //Configurar DatePicker para no permitir fechas pasadas
         dpFechaCita.setDayCellFactory(picker -> new DateCell() {
             @Override
@@ -112,6 +118,50 @@ public class controladorCitaPaciente {
                 setDisable(empty || date.isBefore(LocalDate.now()));
             }
         });
+    }
+
+    /**
+     * Habilita la edicion por teclado del Spinner. Sin esto el TextField
+     * interno aceptaba el foco pero no commiteaba el valor (bug clasico de
+     * Spinner editable en JavaFX). No usamos TextFormatter por conflicto con
+     * el converter interno (JDK-8208833).
+     */
+    private void configurarCommitSpinner(Spinner<Integer> spinner) {
+        spinner.setEditable(true);
+        javafx.scene.control.TextField editor = spinner.getEditor();
+        // Pinta el valor inicial tras el primer layout pass del Spinner skin
+        // (de lo contrario, el editor queda vacio aunque getValue() devuelva 9).
+        javafx.application.Platform.runLater(() -> {
+            Integer v = spinner.getValue();
+            if (v != null) editor.setText(String.valueOf(v));
+        });
+        spinner.valueProperty().addListener((obs, oldV, newV) -> {
+            if (newV != null) editor.setText(String.valueOf(newV));
+        });
+        editor.addEventFilter(javafx.scene.input.KeyEvent.KEY_TYPED, ev -> {
+            String ch = ev.getCharacter();
+            if (ch == null || ch.isEmpty()) return;
+            char c = ch.charAt(0);
+            if (c >= 32 && !Character.isDigit(c)) {
+                ev.consume();
+            }
+        });
+        editor.focusedProperty().addListener((obs, oldF, newF) -> {
+            if (!newF) commitSpinnerEditor(spinner);
+        });
+        editor.setOnAction(e -> commitSpinnerEditor(spinner));
+    }
+
+    private void commitSpinnerEditor(Spinner<Integer> spinner) {
+        try {
+            int v = Integer.parseInt(spinner.getEditor().getText());
+            javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory factory =
+                (javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory) spinner.getValueFactory();
+            v = Math.max(factory.getMin(), Math.min(factory.getMax(), v));
+            factory.setValue(v);
+        } catch (NumberFormatException ignore) {
+            spinner.getEditor().setText(String.valueOf(spinner.getValue()));
+        }
     }
 
     /**

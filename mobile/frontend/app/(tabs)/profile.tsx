@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
+import { IdentificationCard, ShieldCheck, Cake, MapPin, Phone, Envelope } from 'phosphor-react-native';
 import { useUserStore } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { useBootstrapStore } from '../../src/store/bootstrapStore';
@@ -11,6 +12,7 @@ import { LogoutButton } from '../../src/components/LogoutButton';
 import { ConfirmModal } from '../../src/components/ConfirmModal';
 import { AppText } from '../../src/components/AppText';
 import { useTheme } from '../../src/utils/theme';
+import { useRefreshOnFocus } from '../../src/utils/useRefreshOnFocus';
 import { maskDni, maskSsn } from '../../src/utils/mask';
 import { parseGraphQLError } from '../../src/utils/errorHandler';
 
@@ -18,11 +20,16 @@ export default function ProfileScreen() {
   const { scheme } = useTheme();
   const patient = useUserStore(function (s) { return s.patient; });
   const disabilities = useUserStore(function (s) { return s.disabilities; });
+  const fetchProfile = useUserStore(function (s) { return s.fetchProfile; });
   const logout = useAuthStore(function (s) { return s.logout; });
   const showError = useErrorStore(function (s) { return s.showError; });
 
   const refrescando = useBootstrapStore(function (s) { return s.refreshing; });
   const refrescar = useBootstrapStore(function (s) { return s.hydrate; });
+
+  // Refresca avatar + datos del perfil al enfocar / volver del background.
+  // Asi una foto subida desde desktop aparece sin necesidad de relogin.
+  useRefreshOnFocus(fetchProfile);
 
   const [confirmVisible, setConfirmVisible] = useState(false);
 
@@ -66,12 +73,12 @@ export default function ProfileScreen() {
 
         {/* Datos personales */}
         <View className={`rounded-2xl px-4 ${cardClass}`}>
-          <InfoRow label="DNI" value={maskDni(patient.dni)} icon="card-outline" />
-          <InfoRow label="N. Seguridad Social" value={maskSsn(patient.numSs)} icon="shield-checkmark-outline" />
-          <InfoRow label="Fecha de nacimiento" value={patient.birthDate} icon="calendar-outline" />
-          <InfoRow label="Direccion" value={patient.address} icon="location-outline" />
-          <InfoRow label="Telefono" value={patient.phone} icon="call-outline" />
-          <InfoRow label="Email" value={patient.email} icon="mail-outline" />
+          <InfoRow label="DNI" value={maskDni(patient.dni)} Icon={IdentificationCard} />
+          <InfoRow label="N. Seguridad Social" value={maskSsn(patient.numSs)} Icon={ShieldCheck} />
+          <InfoRow label="Fecha de nacimiento" value={patient.birthDate} Icon={Cake} />
+          <InfoRow label="Direccion" value={patient.address} Icon={MapPin} />
+          <InfoRow label="Telefono" value={patient.phone} Icon={Phone} />
+          <InfoRow label="Email" value={patient.email} Icon={Envelope} />
         </View>
 
         {/* Patologias */}

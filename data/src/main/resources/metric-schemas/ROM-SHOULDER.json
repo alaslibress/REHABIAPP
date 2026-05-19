@@ -1,0 +1,9 @@
+{
+  "gameId": "ROM-SHOULDER",
+  "requiredKeys": ["rangeOfMotionDegrees"],
+  "fields": {
+    "rangeOfMotionDegrees": { "type": "number", "min": 0, "max": 180, "unit": "deg" },
+    "averageSpeed":         { "type": "number", "min": 0, "max": 500, "unit": "deg/s" },
+    "maxSpeed":             { "type": "number", "min": 0, "max": 800, "unit": "deg/s" }
+  }
+}

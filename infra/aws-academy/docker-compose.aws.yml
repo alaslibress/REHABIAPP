@@ -1,0 +1,188 @@
+# RehabiAPP — stack EC2 para AWS Academy Learner Lab.
+#
+# Servicios en una sola EC2 (t3.small recomendado):
+#   - caddy            Reverse proxy TLS via DuckDNS + Let's Encrypt (puertos 443/80 expuestos al host).
+#   - rehabiapp-api    Spring Boot, profile aws-academy. Conecta a RDS Postgres (externo) y rehabiapp-data por red interna.
+#   - rehabiapp-data   Spring Boot, profile aws-academy. Conecta a rehabiapp-mongodb por red interna.
+#   - rehabiapp-mongodb Mongo 7 con volumen persistente.
+#
+# PostgreSQL NO esta aqui — corre en RDS gestionado. Las credenciales se inyectan via .env.aws-academy.
+#
+# Activacion:
+#   cd /home/alaslibres/DAM/RehabiAPP
+#   docker compose --env-file infra/aws-academy/.env.aws-academy \
+#                  -f infra/aws-academy/docker-compose.aws.yml up -d
+#
+# Solo Caddy publica puertos al host. /api, /data y Mongo viven en la red interna `rehabiapp-aws`.
+
+services:
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: rehabiapp-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      rehabiapp-api:
+        condition: service_healthy
+    networks:
+      - rehabiapp-aws
+    environment:
+      ACME_AGREE: "true"
+
+  rehabiapp-api:
+    build:
+      context: ../../api
+      dockerfile: Dockerfile
+    image: rehabiapp-api:aws-academy
+    container_name: rehabiapp-api
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: aws-academy
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      RH_INTERNAL_KEY: ${RH_INTERNAL_KEY}
+      REHABIAPP_DATA_SERVICE_URL: http://rehabiapp-data:8081
+      APP_CORS_ALLOWED_ORIGIN_0: ${APP_CORS_ALLOWED_ORIGIN_0:-http://s3-bucket-rehabiapp-piano-640681720314.s3-website-us-east-1.amazonaws.com}
+      APP_CORS_EXTRA_ORIGIN: ${APP_CORS_EXTRA_ORIGIN:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 60s
+    networks:
+      - rehabiapp-aws
+    depends_on:
+      rehabiapp-data:
+        condition: service_healthy
+
+  rehabiapp-data:
+    build:
+      context: ../../data
+      dockerfile: Dockerfile
+    image: rehabiapp-data:aws-academy
+    container_name: rehabiapp-data
+    restart: unless-stopped
+    expose:
+      - "8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: aws-academy
+      SPRING_DATA_MONGODB_URI: mongodb://rehabiapp-mongodb:27017/rehabiapp_telemetry
+      SPRING_DATA_MONGODB_DATABASE: rehabiapp_telemetry
+      RH_INTERNAL_KEY: ${RH_INTERNAL_KEY}
+      RH_API_BASE_URL: http://rehabiapp-api:8080
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 60s
+    networks:
+      - rehabiapp-aws
+    depends_on:
+      rehabiapp-mongodb:
+        condition: service_healthy
+
+  rehabiapp-bff:
+    build:
+      context: ../../mobile/backend
+      dockerfile: Dockerfile
+    image: rehabiapp-bff:aws-academy
+    container_name: rehabiapp-bff
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      LOG_LEVEL: info
+      MOCK_API: "false"
+      API_BASE_URL: http://rehabiapp-api:8080
+      JWT_SECRET: ${JWT_SIGNING_KEY}
+    depends_on:
+      rehabiapp-api:
+        condition: service_healthy
+    networks:
+      - rehabiapp-aws
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+  rehabiapp-chatbot:
+    build:
+      context: ../../chatbot
+      dockerfile: Dockerfile
+    image: rehabiapp-chatbot:aws-academy
+    container_name: rehabiapp-chatbot
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      PORT: "4000"
+      # Conexion al mismo RDS Postgres que la API (RGPD: clinica unica fuente de verdad).
+      PGHOST: ${CHATBOT_PGHOST:-rehabiapp-db.c092mtewefo7.us-east-1.rds.amazonaws.com}
+      PGPORT: ${CHATBOT_PGPORT:-5432}
+      PGDATABASE: ${CHATBOT_PGDATABASE:-rehabiapp}
+      PGUSER: ${SPRING_DATASOURCE_USERNAME}
+      PGPASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      PGSSLMODE: ${CHATBOT_PGSSLMODE:-require}
+      OLLAMA_URL: ${CHATBOT_OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${CHATBOT_OLLAMA_MODEL:-qwen2.5:latest}
+      HOSPITAL_PHONE_E164: ${CHATBOT_HOSPITAL_PHONE_E164:-+34600000000}
+      AUDIT_ACTOR: CHATBOT_BOT
+    volumes:
+      - chatbot-wweb-session:/app/.wwebjs_auth
+      - chatbot-wweb-cache:/app/.wwebjs_cache
+    # extra_hosts permite que el container resuelva `host.docker.internal` al
+    # host EC2. Se usa para llegar al Ollama del developer via tunnel SSH inverso
+    # (puerto 11434 expuesto en EC2 -> reenviado al laptop del dev).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      rehabiapp-api:
+        condition: service_healthy
+    networks:
+      - rehabiapp-aws
+
+  rehabiapp-mongodb:
+    image: mongo:7
+    container_name: rehabiapp-mongodb
+    restart: unless-stopped
+    expose:
+      - "27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    networks:
+      - rehabiapp-aws
+
+volumes:
+  caddy-data:
+  caddy-config:
+  mongo-data:
+  chatbot-wweb-session:
+  chatbot-wweb-cache:
+
+networks:
+  rehabiapp-aws:
+    driver: bridge

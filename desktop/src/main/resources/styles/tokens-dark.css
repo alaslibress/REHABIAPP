@@ -1,0 +1,81 @@
+/* Tokens del tema oscuro (rediseño Claude Design - mayo 2026).
+   Comparte la paleta de marca con el tema claro; cambia superficies,
+   bordes y semanticos a versiones atenuadas para alto contraste. */
+.root {
+    /* Marca - identicos al light */
+    -brand-50:  #EEF3FF;
+    -brand-100: #DCE5FF;
+    -brand-200: #B8C9FF;
+    -brand-300: #8BA5FF;
+    -brand-400: #5B7FFF;
+    -brand-500: #3D63F2;
+    -brand-600: #2952E8;
+    -brand-700: #1E3FBE;
+    -brand-800: #18348F;
+    -brand-900: #11225C;
+
+    /* Semanticos - version dark con tonos atenuados */
+    -danger-50:  rgba(224,72,72,0.18);
+    -danger-500: #E04848;
+    -danger-600: #C93838;
+    -danger-700: #F49494;
+    -warn-50:    rgba(232,163,61,0.18);
+    -warn-500:   #E8A33D;
+    -warn-700:   #F2C470;
+    -ok-50:      rgba(46,166,106,0.18);
+    -ok-500:     #2EA66A;
+    -ok-700:     #5DD49C;
+    -info-50:    rgba(45,139,224,0.18);
+    -info-500:   #6DB8F0;
+
+    -bg:            #0E141F;
+    -bg-elev-1:     #161E2C;
+    -bg-elev-2:     #1C2536;
+    -bg-sunken:     #0A0F18;
+    -bg-hover:      #1F2A3F;
+
+    -sidebar-bg:    #121925;
+    -sidebar-border:#1F2A3D;
+    -topbar-bg:     #121925;
+    -topbar-border: #1F2A3D;
+
+    -border:        #243149;
+    -border-strong: #2E3D58;
+    -divider:       #1B2434;
+
+    -text:          #E8ECF3;
+    -text-2:        #A8B3C7;
+    -text-3:        #7B8AA3;
+    -text-muted:    #5C6A82;
+    -text-on-brand: #FFFFFF;
+
+    -accent:        #5B7FFF;
+    -accent-hover:  #7493FF;
+    -accent-soft:   #1F2A4A;
+
+    -cal-cell-bg:       #161E2C;
+    -cal-cell-border:   #243149;
+    -cal-weekend:       #5A2024;
+    -cal-weekend-muted: #3B181B;
+    -cal-other:         #4A5876;
+
+    -table-header-bg: #1A2336;
+    -table-row-alt:   #182135;
+    -table-row-hover: #1F2B43;
+
+    -terminal-bg:   #06090F;
+    -terminal-text: #C5E0FF;
+
+    -fx-font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-base: -bg;
+    -fx-background: -bg;
+    -fx-control-inner-background: -bg-elev-1;
+    -fx-text-fill: -text;
+}
+
+/* Tema oscuro: los iconos mdi2 sueltos se pintan en BLANCO para contraste
+   sobre fondos oscuros. Variantes semanticas (.primary/.danger/etc.)
+   mantienen su color propio definido en rehabiapp.css. */
+.ikonli-font-icon {
+    -fx-icon-color: white;
+}

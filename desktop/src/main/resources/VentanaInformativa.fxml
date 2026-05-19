@@ -14,12 +14,12 @@
             <Insets top="20.0" />
          </VBox.margin>
       </ImageView>
-      <Label fx:id="lblInformacion" textAlignment="CENTER" wrapText="true" maxWidth="600.0">
+      <Label fx:id="lblInformacion" styleClass="modal-texto-centrado" textAlignment="CENTER" wrapText="true" maxWidth="600.0">
          <VBox.margin>
             <Insets bottom="30.0" left="50.0" right="50.0" top="30.0" />
          </VBox.margin>
       </Label>
-      <Button fx:id="btnInformacion" mnemonicParsing="false" styleClass="button-primario" text="Aceptar">
+      <Button fx:id="btnInformacion" mnemonicParsing="false" styleClass="button,primary" text="Aceptar">
          <VBox.margin>
             <Insets bottom="20.0" />
          </VBox.margin>

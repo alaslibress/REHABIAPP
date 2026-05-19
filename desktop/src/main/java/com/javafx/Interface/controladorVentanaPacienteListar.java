@@ -11,9 +11,12 @@ import com.javafx.Clases.VentanaUtil;
 import com.javafx.Clases.VentanaUtil.TipoMensaje;
 import com.javafx.DAO.PacienteDAO;
 import com.javafx.excepcion.ConexionException;
+import com.javafx.excepcion.PermisoException;
+import com.javafx.excepcion.RehabiAppException;
 import com.javafx.excepcion.ValidacionException;
 import com.javafx.service.CatalogoService;
 import com.javafx.service.PacienteClinicoService;
+import com.javafx.util.TableUiUtil;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
@@ -36,6 +39,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.util.Duration;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -88,7 +92,7 @@ public class controladorVentanaPacienteListar {
     @FXML private TableColumn<PacienteDiscapacidad, String> colDisNombre;
     @FXML private TableColumn<PacienteDiscapacidad, String> colDisNivel;
     @FXML private TableColumn<PacienteDiscapacidad, String> colDisNotas;
-    @FXML private HBox hboxBotonesDiscapacidad;
+    @FXML private FlowPane hboxBotonesDiscapacidad;
     @FXML private Button btnAsignarDiscapacidad;
     @FXML private Button btnDesasignarDiscapacidad;
     @FXML private Button btnSubirNivel;
@@ -103,7 +107,7 @@ public class controladorVentanaPacienteListar {
     @FXML private TableColumn<PacienteTratamiento, Boolean> colTratVisible;
     @FXML private Label lblNivelActual;
     @FXML private CheckBox chkFiltrarPorNivel;
-    @FXML private HBox hboxBotonesTratamiento;
+    @FXML private FlowPane hboxBotonesTratamiento;
     @FXML private Button btnAsignarTratamiento;
     @FXML private Button btnDesasignarTratamiento;
     @FXML private Button btnToggleVisibilidad;
@@ -150,9 +154,13 @@ public class controladorVentanaPacienteListar {
             for (NivelProgresion nivel : niveles) {
                 mapaNiveles.put(nivel.getNombreCorto(), nivel);
             }
-        } catch (ConexionException e) {
-            //Si falla la carga, los tooltips simplemente no se mostraran
-            System.err.println("No se pudieron cargar los niveles para tooltips: " + e.getMessage());
+        } catch (RehabiAppException e) {
+            // Los tooltips son opcionales — cualquier fallo del API no puede romper initialize()
+            System.err.println("No se pudieron cargar los niveles para tooltips ("
+                    + e.getClass().getSimpleName() + "): " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error inesperado cargando niveles: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -160,6 +168,7 @@ public class controladorVentanaPacienteListar {
 
     private void configurarColumnasDiscapacidades() {
         colDisCodigo.setCellValueFactory(new PropertyValueFactory<>("codDis"));
+        colDisCodigo.setCellFactory(TableUiUtil.monoCell()); // codigo monoespaciado
         colDisNotas.setCellValueFactory(new PropertyValueFactory<>("notas"));
 
         //Columna de nombre con indicador de protesis
@@ -188,7 +197,7 @@ public class controladorVentanaPacienteListar {
             }
         });
 
-        //Columna de nivel con tooltip informativo
+        //Columna de nivel — badge semantico + tooltip informativo
         colDisNivel.setCellValueFactory(new PropertyValueFactory<>("nombreNivel"));
         colDisNivel.setCellFactory(columna -> new TableCell<>() {
             @Override
@@ -197,11 +206,18 @@ public class controladorVentanaPacienteListar {
 
                 if (vacia || nombreNivel == null) {
                     setText(null);
+                    setGraphic(null);
                     setTooltip(null);
                     return;
                 }
 
-                setText(nombreNivel);
+                // Reemplaza el texto plano por un badge segun el nivel clinico
+                javafx.scene.control.Label badge = new javafx.scene.control.Label(nombreNivel);
+                badge.getStyleClass().add("badge");
+                String modificador = TableUiUtil.estiloNivel(nombreNivel);
+                if (!modificador.isEmpty()) badge.getStyleClass().add(modificador);
+                setText(null);
+                setGraphic(badge);
 
                 //Buscar datos completos del nivel para el tooltip
                 NivelProgresion nivel = mapaNiveles.get(nombreNivel);
@@ -232,6 +248,14 @@ public class controladorVentanaPacienteListar {
             return new SimpleStringProperty(nombreNivel);
         });
         colTratVisible.setCellValueFactory(new PropertyValueFactory<>("visible"));
+        // Nivel del tratamiento como badge semantico
+        colTratNivel.setCellFactory(TableUiUtil.badgeCell(
+                n -> n,
+                TableUiUtil::estiloNivel));
+        // Visible (true → "Si" ok, false → "No" neutro)
+        colTratVisible.setCellFactory(TableUiUtil.badgeCell(
+                v -> Boolean.TRUE.equals(v) ? "Si" : "No",
+                v -> Boolean.TRUE.equals(v) ? "ok" : ""));
     }
 
     /**
@@ -315,30 +339,57 @@ public class controladorVentanaPacienteListar {
     public void cargarDatosPaciente(String dni) {
         this.dniPacienteActual = dni;
 
-        //Cargar catalogo de tratamientos una sola vez para usarlo en el filtrado
+        // Catalogo de tratamientos: opcional (solo para filtrado por nivel)
         try {
             List<Tratamiento> catalogo = catalogoService.listarTratamientos();
             mapaTratamientos.clear();
             for (Tratamiento t : catalogo) {
                 mapaTratamientos.put(t.getCodTrat(), t);
             }
-        } catch (ConexionException e) {
-            System.err.println("No se pudo cargar el catalogo de tratamientos: " + e.getMessage());
+        } catch (RehabiAppException e) {
+            System.err.println("No se pudo cargar el catalogo de tratamientos ("
+                    + e.getClass().getSimpleName() + "): " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error inesperado al cargar catalogo: " + e.getMessage());
         }
 
-        pacienteActual = pacienteDAO.obtenerPorDNI(dni);
+        // Obtener paciente — bloqueante, sin paciente no hay ficha
+        boolean errorYaMostrado = false;
+        try {
+            pacienteActual = pacienteDAO.obtenerPorDNI(dni);
+        } catch (PermisoException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "No tienes permisos para ver este paciente.\nDetalle: " + e.getMessage(),
+                    TipoMensaje.ERROR);
+            pacienteActual = null;
+            errorYaMostrado = true;
+        } catch (ConexionException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Sin conexion con la API: " + e.getMessage(), TipoMensaje.ERROR);
+            pacienteActual = null;
+            errorYaMostrado = true;
+        } catch (RehabiAppException e) {
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error al cargar el paciente: " + e.getMessage(), TipoMensaje.ERROR);
+            pacienteActual = null;
+            errorYaMostrado = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                    "Error inesperado al cargar el paciente.", TipoMensaje.ERROR);
+            pacienteActual = null;
+            errorYaMostrado = true;
+        }
 
         if (pacienteActual != null) {
             mostrarDatosEnLabels();
             cargarFotoPaciente();
             cargarDiscapacidadesPaciente();
-
             // La API registra automaticamente el acceso a datos clinicos (AuditReadInterceptor)
-        } else {
+        } else if (!errorYaMostrado) {
             VentanaUtil.mostrarVentanaInformativa(
                     "No se encontro el paciente con DNI: " + dni,
-                    TipoMensaje.ERROR
-            );
+                    TipoMensaje.ERROR);
         }
     }
 
@@ -773,6 +824,7 @@ public class controladorVentanaPacienteListar {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -863,6 +915,38 @@ public class controladorVentanaPacienteListar {
     void cerrarVentana(ActionEvent event) {
         Stage stage = (Stage) btnAceptar.getScene().getWindow();
         stage.close();
+    }
+
+    /** Abre la ventana de progreso del paciente actualmente cargado. */
+    @FXML
+    void abrirProgreso(ActionEvent event) {
+        if (pacienteActual == null) return;
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
+                getClass().getResource("/VentanaProgresoPaciente.fxml"));
+            javafx.scene.Parent root = loader.load();
+            controladorVentanaProgresoPaciente ctrl = loader.getController();
+
+            javafx.scene.Scene scene = new javafx.scene.Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
+            Stage stage = new Stage();
+            stage.setTitle("Progreso — " + pacienteActual.getDni());
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setResizable(true);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            com.javafx.Clases.VentanaUtil.establecerIconoVentana(stage);
+
+            ctrl.inicializarConDni(pacienteActual.getDni());
+            stage.showAndWait();
+        } catch (Exception e) {
+            System.err.println("Error al abrir ventana de progreso: " + e.getMessage());
+            e.printStackTrace();
+            com.javafx.Clases.VentanaUtil.mostrarVentanaInformativa(
+                "Error al abrir la ventana de progreso.",
+                com.javafx.Clases.VentanaUtil.TipoMensaje.ERROR);
+        }
     }
 
     public boolean hayCambiosRealizados() {

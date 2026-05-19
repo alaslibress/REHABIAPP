@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<VBox alignment="TOP_CENTER" prefWidth="520.0" spacing="10.0" styleClass="root modal-root"
+      xmlns="http://javafx.com/javafx/23.0.1"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.javafx.Interface.controladorAgregarVideojuego">
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+    <children>
+        <HBox styleClass="modal-header">
+            <children>
+                <Label fx:id="lblTituloVentana" styleClass="modal-title" text="Nuevo Videojuego" />
+            </children>
+        </HBox>
+
+        <Separator />
+
+        <HBox alignment="CENTER_LEFT" spacing="10.0">
+            <children>
+                <Label prefWidth="140.0" text="Codigo:" />
+                <TextField fx:id="txtCodigo" prefWidth="310.0" promptText="Ej: VJ-MANO-001" styleClass="field-required" />
+            </children>
+        </HBox>
+
+        <HBox alignment="CENTER_LEFT" spacing="10.0">
+            <children>
+                <Label prefWidth="140.0" text="Nombre:" />
+                <TextField fx:id="txtNombre" prefWidth="310.0" promptText="Nombre del videojuego" styleClass="field-required" />
+            </children>
+        </HBox>
+
+        <HBox alignment="CENTER_LEFT" spacing="10.0">
+            <children>
+                <Label prefWidth="140.0" text="Discapacidad:" />
+                <ComboBox fx:id="cmbDiscapacidad" prefWidth="310.0" promptText="Seleccione una discapacidad" styleClass="field-required" />
+            </children>
+        </HBox>
+
+        <HBox alignment="CENTER_LEFT" spacing="10.0">
+            <children>
+                <Label prefWidth="140.0" text="Parte del cuerpo:" />
+                <TextField fx:id="txtParteCuerpo" prefWidth="310.0" promptText="Ej: Mano derecha" styleClass="field-required" />
+            </children>
+        </HBox>
+
+        <VBox spacing="3.0">
+            <children>
+                <Label text="Descripcion:" />
+                <TextArea fx:id="txtAreaDescripcion" prefHeight="70.0" prefWidth="480.0"
+                          promptText="Descripcion clinica del videojuego (opcional)" wrapText="true" />
+            </children>
+        </VBox>
+
+        <HBox alignment="CENTER_LEFT" spacing="10.0">
+            <children>
+                <Label prefWidth="140.0" text="URL Unity (opcional):" />
+                <TextField fx:id="txtUrlUnity" prefWidth="310.0" promptText="https://..." />
+            </children>
+        </HBox>
+
+        <Separator />
+
+        <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="modal-footer">
+            <children>
+                <Button fx:id="btnCancelar" onAction="#cerrarVentana"
+                        styleClass="button,ghost" text="Cancelar" />
+                <Button fx:id="btnGuardar" onAction="#guardarVideojuego"
+                        styleClass="button,primary" text="Crear">
+                    <graphic><FontIcon iconLiteral="mdi2c-content-save" iconSize="14" /></graphic>
+                </Button>
+            </children>
+        </HBox>
+    </children>
+</VBox>

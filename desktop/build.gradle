@@ -37,6 +37,13 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:2.0.9'
     implementation 'org.slf4j:slf4j-simple:2.0.9'
 
+    // Ikonli + Material Design 2: iconos vectoriales para el rebranded UI.
+    // Nota: el pack Phosphor no esta disponible en Maven Central para Ikonli;
+    // se usa Material Design 2 como sustituto visual equivalente. Los nombres
+    // de iconos en FXML usan el prefijo mdi2-* mapeado desde la guia Phosphor.
+    implementation 'org.kordamp.ikonli:ikonli-javafx:12.3.1'
+    implementation 'org.kordamp.ikonli:ikonli-materialdesign2-pack:12.3.1'
+
     // Tests
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testImplementation 'org.mockito:mockito-core:5.14.2'

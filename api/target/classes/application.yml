@@ -10,11 +10,11 @@ spring:
   application:
     name: rehabiapp-api
 
-  # Multipart — limite de tamaño para subida de fotos de pacientes (max 5 MB por archivo)
+  # Multipart — limites para subida de fotos de paciente y PDFs de tratamiento (10 MB max).
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 6MB
+      max-file-size: 10MB
+      max-request-size: 12MB
 
   # JPA — configuración base; perfiles específicos añaden propiedades adicionales
   jpa:
@@ -99,7 +99,7 @@ rehabiapp:
   data-service:
     # URL del servicio de datos (Node.js + MongoDB) para enrutar telemetría de juegos.
     # K8s establece: REHABIAPP_DATA_SERVICE_URL=http://rehabiapp-data.rehabiapp-data.svc.cluster.local:8081
-    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8081}
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8082}
   security:
     # Clave HMAC-SHA para firma JWT — mínimo 32 bytes.
     # PRODUCCIÓN: inyectada como secreto K8s vía JWT_SIGNING_KEY.
@@ -111,3 +111,30 @@ rehabiapp:
     # Clave AES-256-GCM para cifrado de campos clínicos — exactamente 32 bytes.
     # PRODUCCIÓN: inyectada como secreto K8s vía ENCRYPTION_KEY.
     encryption-key: ${ENCRYPTION_KEY:dev-encryption-key-placeholder-change-in-production-32c}
+
+  # Compatibilidad con DataPipelineClient — alias corto para la URL del pipeline /data.
+  data:
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8082}
+  # Clave de autenticacion entre servicios internos (/data -> /api/internal/*).
+  # Produccion: inyectar como secreto K8s via RH_INTERNAL_KEY.
+  internal-key: ${RH_INTERNAL_KEY:changeme}
+
+# ======================== DOCUMENTACION OPENAPI ========================
+# ======================== CORS ========================
+# Origenes permitidos para peticiones cross-origin (Unity WebGL en S3, dev local, etc.).
+# Los perfiles especificos sobreescriben esta lista con los origenes reales.
+app:
+  cors:
+    allowed-origins:
+      - ${APP_CORS_ALLOWED_ORIGIN_0:http://localhost:9000}
+      - ${APP_CORS_ALLOWED_ORIGIN_1:http://localhost:5173}
+      - ${APP_CORS_ALLOWED_ORIGIN_2:http://localhost:8081}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+  packages-to-scan: com.rehabiapp.api.presentation
+  paths-to-exclude: /internal/**

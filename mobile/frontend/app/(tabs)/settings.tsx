@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View, Platform } from 'react-native';
 import * as Application from 'expo-application';
-import * as Notifications from 'expo-notifications';
-import { Ionicons } from '@expo/vector-icons';
+import { CaretRight } from 'phosphor-react-native';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { useAppointmentsStore } from '../../src/store/appointmentsStore';
 import { useErrorStore } from '../../src/store/errorStore';
@@ -13,30 +12,27 @@ import { FontScaleSlider } from '../../src/components/FontScaleSlider';
 import { LegalTextModal } from '../../src/components/LegalTextModal';
 import { AppText } from '../../src/components/AppText';
 import { useTheme } from '../../src/utils/theme';
-import { parseGraphQLError } from '../../src/utils/errorHandler';
+import { buildAppErrorFromCode } from '../../src/utils/errorHandler';
 import {
   requestPermission,
   getExpoPushToken,
   scheduleAppointmentReminder,
   scheduleTestNotification,
+  isPermissionGranted,
 } from '../../src/utils/notifications';
 import { client } from '../../src/services/graphql/client';
 import {
   REGISTER_DEVICE_TOKEN,
   UNREGISTER_DEVICE_TOKEN,
 } from '../../src/services/graphql/mutations/settings';
-import type { ThemeMode } from '../../src/utils/theme';
-import type { FontScale } from '../../src/utils/fontScale';
 
 export default function SettingsScreen() {
-  const { scheme } = useTheme();
+  const { scheme, mode, setMode } = useTheme();
   const isDark = scheme === 'dark';
 
-  const themeMode = useSettingsStore(function (s) { return s.themeMode; });
   const fontScale = useSettingsStore(function (s) { return s.fontScale; });
   const notifAppointments = useSettingsStore(function (s) { return s.notifAppointments; });
   const notifDoctorUpdates = useSettingsStore(function (s) { return s.notifDoctorUpdates; });
-  const setThemeMode = useSettingsStore(function (s) { return s.setThemeMode; });
   const setFontScale = useSettingsStore(function (s) { return s.setFontScale; });
   const setNotifAppointments = useSettingsStore(function (s) { return s.setNotifAppointments; });
   const setNotifDoctorUpdates = useSettingsStore(function (s) { return s.setNotifDoctorUpdates; });
@@ -51,9 +47,7 @@ export default function SettingsScreen() {
 
   // Comprobar permiso de notificaciones al montar
   useEffect(function () {
-    Notifications.getPermissionsAsync().then(function (status) {
-      setPermissionGranted(status.status === 'granted');
-    });
+    isPermissionGranted().then(setPermissionGranted);
   }, []);
 
   const bgClass = isDark ? 'bg-background-dark' : 'bg-background';
@@ -62,7 +56,7 @@ export default function SettingsScreen() {
     if (newValue) {
       const granted = await requestPermission();
       if (!granted) {
-        showError(parseGraphQLError({ extensions: { code: 'NOTIFICATION_PERMISSION_DENIED' } }));
+        showError(buildAppErrorFromCode('NOTIFICATION_PERMISSION_DENIED'));
         return;
       }
       setPermissionGranted(true);
@@ -79,7 +73,7 @@ export default function SettingsScreen() {
     if (newValue) {
       const granted = await requestPermission();
       if (!granted) {
-        showError(parseGraphQLError({ extensions: { code: 'NOTIFICATION_PERMISSION_DENIED' } }));
+        showError(buildAppErrorFromCode('NOTIFICATION_PERMISSION_DENIED'));
         return;
       }
       setPermissionGranted(true);
@@ -122,8 +116,8 @@ export default function SettingsScreen() {
       <SettingsSection title="Apariencia">
         <ToggleRow
           label="Tema oscuro"
-          value={themeMode === 'dark'}
-          onChange={function (v) { setThemeMode(v ? 'dark' : 'light'); }}
+          value={mode === 'dark' || (mode === 'system' && scheme === 'dark')}
+          onChange={function (v) { setMode(v ? 'dark' : 'light'); }}
         />
         <View className="px-4 py-4">
           <AppText
@@ -179,7 +173,7 @@ export default function SettingsScreen() {
           )}
           {testSent && (
             <AppText variant="caption" weight="medium" className="text-success text-center">
-              Notificacion programada para 5 s.
+              Notificacion programada para 3 s.
             </AppText>
           )}
         </View>
@@ -198,12 +192,12 @@ export default function SettingsScreen() {
         <SettingsRow
           label="Politica de privacidad"
           onPress={function () { setPrivacyOpen(true); }}
-          right={<Ionicons name="chevron-forward" size={16} color={isDark ? '#94A3B8' : '#64748B'} />}
+          right={<CaretRight size={16} color={isDark ? '#A8B3C7' : '#6C7A91'} weight="regular" />}
         />
         <SettingsRow
           label="Terminos y condiciones"
           onPress={function () { setTermsOpen(true); }}
-          right={<Ionicons name="chevron-forward" size={16} color={isDark ? '#94A3B8' : '#64748B'} />}
+          right={<CaretRight size={16} color={isDark ? '#A8B3C7' : '#6C7A91'} weight="regular" />}
         />
       </SettingsSection>
       <LegalTextModal

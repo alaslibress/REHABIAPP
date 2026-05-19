@@ -11,6 +11,7 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox fx:id="vboxContenedorPrinPacientes" maxHeight="Infinity" maxWidth="Infinity" spacing="15.0" styleClass="panel-card" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.javafx.Interface.controladorVentanaPacientes">
     <padding>
@@ -22,7 +23,7 @@
                 <Label fx:id="lblTituloPestaniaPacientes" prefHeight="18.0" prefWidth="200.0" styleClass="label-titulo" text="Pacientes" />
                 <VBox prefHeight="100.0" prefWidth="802.0" HBox.hgrow="ALWAYS">
                     <children>
-                        <Button fx:id="btnSeleccionarTodoPacientes" mnemonicParsing="false" onAction="#seleccionarTodosPacientes" text="Seleccionar todo">
+                        <Button fx:id="btnSeleccionarTodoPacientes" mnemonicParsing="false" onAction="#seleccionarTodosPacientes" text="Seleccionar todo" styleClass="button,ghost">
                             <VBox.margin>
                                 <Insets bottom="20.0" left="150.0" />
                             </VBox.margin>
@@ -34,13 +35,9 @@
                                         <Insets right="10.0" />
                                     </HBox.margin>
                                 </Label>
-                                <Button fx:id="btnBuscarPacientes" mnemonicParsing="false" onAction="#buscarPacientes" prefHeight="30.0" prefWidth="30.0" styleClass="button-primario-icon">
+                                <Button fx:id="btnBuscarPacientes" mnemonicParsing="false" onAction="#buscarPacientes" styleClass="button,icon-only">
                                     <graphic>
-                                        <ImageView fitHeight="18.0" fitWidth="25.0" pickOnBounds="true" preserveRatio="true">
-                                            <image>
-                                                <Image url="@buscar.png" />
-                                            </image>
-                                        </ImageView>
+                                        <FontIcon iconLiteral="mdi2m-magnify" iconSize="16" />
                                     </graphic>
                                     <tooltip>
                                         <Tooltip text="Buscar" />
@@ -54,13 +51,9 @@
                                         <Insets right="50.0" />
                                     </HBox.margin>
                                 </TextField>
-                                <Button fx:id="btnAnadirPaciente" mnemonicParsing="false" onAction="#abrirFormularioNuevoPaciente" prefHeight="40.0" prefWidth="40.0" styleClass="button-primario">
+                                <Button fx:id="btnAnadirPaciente" mnemonicParsing="false" onAction="#abrirFormularioNuevoPaciente" styleClass="button,icon-only,accent">
                                     <graphic>
-                                        <ImageView fitHeight="18.0" fitWidth="74.0" pickOnBounds="true" preserveRatio="true">
-                                            <image>
-                                                <Image url="@iconoAgregar.png" />
-                                            </image>
-                                        </ImageView>
+                                        <FontIcon iconLiteral="mdi2p-plus" iconSize="16" />
                                     </graphic>
                                     <tooltip>
                                         <Tooltip text="Añadir nuevo paciente" />
@@ -69,13 +62,9 @@
                                         <Insets right="20.0" />
                                     </HBox.margin>
                                 </Button>
-                                <Button fx:id="btnFiltrarPacientes" mnemonicParsing="false" onAction="#abrirFiltrosPacientes" prefHeight="40.0" prefWidth="40.0" styleClass="button-icono">
+                                <Button fx:id="btnFiltrarPacientes" mnemonicParsing="false" onAction="#abrirFiltrosPacientes" styleClass="button,icon-only">
                                     <graphic>
-                                        <ImageView fitHeight="18.0" fitWidth="113.0" pickOnBounds="true" preserveRatio="true">
-                                            <image>
-                                                <Image url="@iconoFiltrar.png" />
-                                            </image>
-                                        </ImageView>
+                                        <FontIcon iconLiteral="mdi2f-filter-variant" iconSize="16" />
                                     </graphic>
                                     <tooltip>
                                         <Tooltip text="Filtrar resultados" />
@@ -106,13 +95,24 @@
         </HBox>
         <HBox alignment="CENTER_RIGHT" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
             <children>
-                <Button fx:id="btnGenerarPDFPaciente" mnemonicParsing="false" onAction="#generarInformePaciente" prefHeight="26.0" prefWidth="180.0" styleClass="button-secundario" text="Generar listado PDF">
+                <Button fx:id="btnGenerarPDFPaciente" mnemonicParsing="false" onAction="#generarInformePaciente" styleClass="button,ghost" text="Generar listado PDF">
+                    <graphic><FontIcon iconLiteral="mdi2f-file-pdf-box" iconSize="14" /></graphic>
                     <tooltip>
                         <Tooltip text="Generar informe PDF del paciente seleccionado" />
                     </tooltip>
                 </Button>
-                <Button fx:id="btnEliminarPaciente" mnemonicParsing="false" onAction="#eliminarPacienteSeleccionado" prefHeight="26.0" prefWidth="126.0" styleClass="button-peligro" text="Eliminar" textAlignment="CENTER" />
-                <Button fx:id="btnAbrirPaciente" mnemonicParsing="false" onAction="#abrirFichaPaciente" prefHeight="26.0" prefWidth="126.0" styleClass="button-primario" text="Abrir" />
+                <Button fx:id="btnProgresoPaciente" mnemonicParsing="false" onAction="#abrirProgresoSeleccionado" styleClass="button,secondary" text="Progreso">
+                    <graphic><FontIcon iconLiteral="mdi2c-chart-line" iconSize="14" /></graphic>
+                    <tooltip>
+                        <Tooltip text="Ver progreso clinico del paciente seleccionado" />
+                    </tooltip>
+                </Button>
+                <Button fx:id="btnEliminarPaciente" mnemonicParsing="false" onAction="#eliminarPacienteSeleccionado" styleClass="button,danger" text="Eliminar" textAlignment="CENTER">
+                    <graphic><FontIcon iconLiteral="mdi2t-trash-can-outline" iconSize="14" /></graphic>
+                </Button>
+                <Button fx:id="btnAbrirPaciente" mnemonicParsing="false" onAction="#abrirFichaPaciente" styleClass="button,primary" text="Abrir">
+                    <graphic><FontIcon iconLiteral="mdi2o-open-in-new" iconSize="14" /></graphic>
+                </Button>
             </children>
         </HBox>
     </children>

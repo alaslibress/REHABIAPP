@@ -1,0 +1,49 @@
+# Perfil AWS ACADEMY — despliegue en EC2 (Learner Lab) sin EKS ni Secrets Manager CSI.
+# Activa con: SPRING_PROFILES_ACTIVE=aws-academy
+#
+# Diferencias respecto al perfil 'aws':
+#   - NO usa configtree:file:/mnt/secrets/ (no hay CSI Driver fuera de EKS).
+#   - Todos los secretos vienen de variables de entorno planas inyectadas por docker-compose.
+#   - Sin Hikari tuning agresivo (RDS db.t3.micro tiene pool de conexiones limitado).
+#   - Sin show-sql (evita ruido en logs y posibles fugas de datos clinicos).
+
+spring:
+  datasource:
+    # Endpoint RDS Postgres (db.t3.micro) — todas las credenciales por env.
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # Pool moderado — RDS db.t3.micro soporta hasta ~85 conexiones; reservamos margen.
+      maximum-pool-size: 8
+      minimum-idle: 1
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    show-sql: false
+
+# Bind al wildcard 0.0.0.0 para que el contenedor sea alcanzable desde Caddy.
+server:
+  address: 0.0.0.0
+
+# Origen CORS — el bucket S3 del juego PIANO WebGL es el cliente cross-origin en este deploy.
+# APP_CORS_EXTRA_ORIGIN permite anadir un origen adicional sin tocar este fichero.
+app:
+  cors:
+    allowed-origins:
+      - ${APP_CORS_ALLOWED_ORIGIN_0:http://s3-bucket-rehabiapp-piano-640681720314.s3-website-us-east-1.amazonaws.com}
+      - ${APP_CORS_EXTRA_ORIGIN:http://localhost:9000}
+
+# El pipeline /data corre como otro contenedor docker en la misma red interna.
+rehabiapp:
+  data-service:
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://rehabiapp-data:8081}
+  data:
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://rehabiapp-data:8081}
+
+logging:
+  level:
+    root: INFO
+    com.rehabiapp: INFO

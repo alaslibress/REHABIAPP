@@ -11,6 +11,7 @@ import com.javafx.excepcion.DuplicadoException;
 import com.javafx.excepcion.RehabiAppException;
 import com.javafx.service.CatalogoService;
 import com.javafx.util.PaginacionUtil;
+import com.javafx.util.TableUiUtil;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -53,6 +54,9 @@ public class controladorVentanaTratamientos {
 
     @FXML
     private Button btnFiltrarTratamientos;
+
+    @FXML
+    private Button btnVerTratamiento;
 
     @FXML
     private TableColumn<Tratamiento, String> colCodigo;
@@ -132,6 +136,13 @@ public class controladorVentanaTratamientos {
         colDefinicion.setCellValueFactory(new PropertyValueFactory<>("definicionTrat"));
         colDiscapacidad.setCellValueFactory(new PropertyValueFactory<>("discapacidadesAsociadas"));
         colNivel.setCellValueFactory(new PropertyValueFactory<>("nombreNivel"));
+
+        // Codigo del tratamiento → tipografia monoespaciada
+        colCodigo.setCellFactory(TableUiUtil.monoCell());
+        // Nivel clinico de progresion → badge (agudo/subagudo/fortalecimiento/funcional)
+        colNivel.setCellFactory(TableUiUtil.badgeCell(
+                n -> n,
+                TableUiUtil::estiloNivel));
 
         tblTratamientos.setItems(listaTratamientos);
     }
@@ -261,6 +272,8 @@ public class controladorVentanaTratamientos {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            stage.setMinHeight(640); // Botones del footer siempre visibles
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -312,6 +325,11 @@ public class controladorVentanaTratamientos {
         } else {
             System.out.println("Permisos completos aplicados para tratamientos: " + sesion.getCargo());
         }
+        // El boton "Ver" esta siempre disponible para todos los roles que accedan a esta pestana
+        if (btnVerTratamiento != null) {
+            btnVerTratamiento.setDisable(false);
+            btnVerTratamiento.setOpacity(1.0);
+        }
     }
 
     /**
@@ -323,8 +341,6 @@ public class controladorVentanaTratamientos {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaAgregarTratamiento.fxml"));
             Parent root = loader.load();
 
-            controladorAgregarTratamiento controlador = loader.getController();
-
             Scene scene = new Scene(root);
             controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
 
@@ -333,17 +349,16 @@ public class controladorVentanaTratamientos {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            stage.setMinHeight(640); // Botones del footer siempre visibles
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
-            // Solo recargar si el usuario guardo algo; evita popup de error al cancelar
-            if (controlador.isGuardadoExitoso()) {
-                try {
-                    cargarTratamientos();
-                    aplicarFiltros();
-                } catch (Exception e) {
-                    System.err.println("Error al recargar datos: " + e.getMessage());
-                }
+            try {
+                cargarTratamientos();
+                aplicarFiltros();
+            } catch (Exception e) {
+                System.err.println("Error al recargar datos: " + e.getMessage());
             }
 
         } catch (Exception e) {
@@ -386,17 +401,16 @@ public class controladorVentanaTratamientos {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            stage.setMinHeight(640); // Botones del footer siempre visibles
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
-            // Solo recargar si el usuario guardo algo; evita popup de error al cancelar
-            if (controlador.isGuardadoExitoso()) {
-                try {
-                    cargarTratamientos();
-                    aplicarFiltros();
-                } catch (Exception e) {
-                    System.err.println("Error al recargar datos: " + e.getMessage());
-                }
+            try {
+                cargarTratamientos();
+                aplicarFiltros();
+            } catch (Exception e) {
+                System.err.println("Error al recargar datos: " + e.getMessage());
             }
 
         } catch (Exception e) {
@@ -442,9 +456,14 @@ public class controladorVentanaTratamientos {
                 aplicarFiltros();
 
             } catch (DuplicadoException e) {
-                // 409: hay pacientes asignados a este tratamiento
+                // 409: el API ha rechazado el borrado. Casi siempre es porque el
+                // tratamiento esta vinculado a pacientes, discapacidades o
+                // videojuegos (foreign key constraint). Damos un mensaje claro
+                // para que el usuario sepa que necesita reasignar primero.
                 VentanaUtil.mostrarVentanaInformativa(
-                        "No se puede eliminar: " + e.getMessage(),
+                        "No se puede eliminar este tratamiento: tiene pacientes, "
+                        + "discapacidades o videojuegos vinculados. Reasignelos o "
+                        + "desvinculelos primero antes de eliminarlo.",
                         TipoMensaje.ADVERTENCIA
                 );
             } catch (ConexionException e) {
@@ -471,14 +490,53 @@ public class controladorVentanaTratamientos {
 
     /**
      * Maneja el evento de doble clic en la tabla.
-     * Si es doble clic, abre el formulario de edicion.
+     * El doble clic abre la vista de solo lectura del tratamiento.
      */
     private void manejarDobleClicTabla(MouseEvent event) {
         if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
             Tratamiento seleccionado = tblTratamientos.getSelectionModel().getSelectedItem();
             if (seleccionado != null) {
-                editarTratamientoSeleccionado(null);
+                verTratamientoSeleccionado(null);
             }
+        }
+    }
+
+    /**
+     * Abre el formulario en modo solo lectura para el tratamiento seleccionado.
+     * Reutiliza VentanaAgregarTratamiento.fxml con el nuevo modo VER.
+     */
+    @FXML
+    void verTratamientoSeleccionado(ActionEvent event) {
+        Tratamiento seleccionado = tblTratamientos.getSelectionModel().getSelectedItem();
+        if (seleccionado == null) {
+            VentanaUtil.mostrarVentanaInformativa(
+                "Debe seleccionar un tratamiento de la lista.",
+                TipoMensaje.ADVERTENCIA);
+            return;
+        }
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/VentanaAgregarTratamiento.fxml"));
+            Parent root = loader.load();
+            controladorAgregarTratamiento controlador = loader.getController();
+            controlador.cargarDatosParaVer(seleccionado);
+
+            Scene scene = new Scene(root);
+            controladorVentanaOpciones.aplicarConfiguracionAScene(scene);
+
+            Stage stage = new Stage();
+            stage.setTitle("Ver Tratamiento");
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            stage.setMinHeight(640); // Botones del footer siempre visibles
+            VentanaUtil.establecerIconoVentana(stage);
+            stage.showAndWait();
+        } catch (Exception e) {
+            System.err.println("Error al abrir vista de tratamiento: " + e.getMessage());
+            e.printStackTrace();
+            VentanaUtil.mostrarVentanaInformativa(
+                "Error al abrir la vista del tratamiento.", TipoMensaje.ERROR);
         }
     }
 }

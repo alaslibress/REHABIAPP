@@ -43,13 +43,23 @@ public class Tratamiento {
     private NivelProgresion nivel;
 
     /**
-     * Juego terapeutico Unity asociado a este tratamiento (opcional).
-     * Nullable — tratamientos sin juego asociado conservan null.
-     * Anadido en V13__juego_articulacion.sql.
+     * Contenido del PDF del protocolo del tratamiento (max 10 MB).
+     * Anadido en V13. Nullable cuando aun no se ha subido un PDF.
      */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cod_juego")
-    private Juego juego;
+    @Column(name = "archivo_pdf")
+    private byte[] archivoPdf;
+
+    /**
+     * Nombre original del fichero PDF subido.
+     */
+    @Column(name = "nombre_archivo_pdf", length = 255)
+    private String nombreArchivoPdf;
+
+    /**
+     * Tamano del PDF en bytes. CHECK constraint en BD limita a 10 MB.
+     */
+    @Column(name = "tamano_pdf_bytes")
+    private Long tamanoPdfBytes;
 
     // --- Getters y setters ---
 
@@ -85,11 +95,27 @@ public class Tratamiento {
         this.nivel = nivel;
     }
 
-    public Juego getJuego() {
-        return juego;
+    public byte[] getArchivoPdf() {
+        return archivoPdf;
     }
 
-    public void setJuego(Juego juego) {
-        this.juego = juego;
+    public void setArchivoPdf(byte[] archivoPdf) {
+        this.archivoPdf = archivoPdf;
+    }
+
+    public String getNombreArchivoPdf() {
+        return nombreArchivoPdf;
+    }
+
+    public void setNombreArchivoPdf(String nombreArchivoPdf) {
+        this.nombreArchivoPdf = nombreArchivoPdf;
+    }
+
+    public Long getTamanoPdfBytes() {
+        return tamanoPdfBytes;
+    }
+
+    public void setTamanoPdfBytes(Long tamanoPdfBytes) {
+        this.tamanoPdfBytes = tamanoPdfBytes;
     }
 }

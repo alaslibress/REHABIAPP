@@ -8,39 +8,33 @@
 
 ## 1. PROJECT DEFINITION
 
-This directory contains the core RESTful API that connects the entire RehabiAPP ecosystem. It is the central communication hub consumed by the mobile app (/mobile), the rehabilitation games (/games), and eventually the desktop ERP (/desktop) once its legacy JDBC connection is migrated.
+Core RESTful API que conecta el ecosistema RehabiAPP. Hub central consumido por `/mobile` (via BFF), `/games` (Unity WebGL externos) y `/desktop`. Expone operaciones de datos, gestiona JWT + RBAC, y rutea telemetria de juegos al pipeline de datos `/data` (MongoDB).
 
-The API exposes all data operations, handles JWT authentication, role-based authorization, and routes game telemetry data to the data pipeline (/data) for MongoDB storage.
-
-Architecture: Clean Architecture with four layers (Domain, Application, Infrastructure, Presentation). No business logic in controllers.
+**Arquitectura:** Clean Architecture en cuatro capas (Domain, Application, Infrastructure, Presentation). Sin logica de negocio en controladores.
 
 ---
 
 ## 2. OPERATING RULES
 
-1. **Global context:** Read and respect the root `/CLAUDE.md` before any cross-domain decision. This local file takes precedence for API-specific decisions only.
-
-2. **Skills are mandatory:** Before any architectural change or implementation, read and follow the manuals in `.claude/skills/` of this directory. Skills override default behavior.
-
-3. **Maintain this file:** When you complete a task, change `[ ]` to `[x]`. Remove resolved items that no longer provide useful context to keep this file short and token-efficient.
-
-4. **Testing requirement:** Any new endpoint, service, or repository must include integration tests (Spring Boot Test) or unit tests (JUnit 5 + Mockito). Run `./mvnw test` before marking any task complete.
-
-5. **No God Classes:** Controllers handle HTTP mapping only. All business logic lives in the Application layer (services/use cases). Never return `@Entity` directly from controllers; use DTOs mapped with MapStruct.
-
-6. **Security by default:** All passwords hashed with BCrypt. Clinical data fields (allergies, medical history, current medication) encrypted with AES-256-GCM before database insertion. JWT tokens for all authenticated endpoints.
+1. **Global context:** Leer raiz `/CLAUDE.md` antes de cualquier decision cross-domain. Local file precedente para decisiones API-especificas.
+2. **Skills are mandatory:** Leer `.claude/skills/springboot4-postgresql/SKILL.md` antes de tocar JPA, Envers, encryption, o queries.
+3. **Maintain this file:** Marcar `[x]` al completar. Eliminar items resueltos que no aporten contexto.
+4. **Testing requirement:** Cada nuevo endpoint, servicio o repository requiere integration tests (Spring Boot Test) o unit tests (JUnit 5 + Mockito). Ejecutar `./mvnw test` antes de marcar `[x]`.
+5. **No God Classes:** Controladores solo HTTP mapping. Logica en Application layer. NUNCA devolver `@Entity` directamente — usar DTOs MapStruct.
+6. **Security by default:** BCrypt para passwords, AES-256-GCM para campos clinicos, JWT en endpoints autenticados, audit_log en CRUD + READ de pacientes.
+7. **Arranque local:** Para arrancar el API en local **siempre** usar `./scripts/api-dev.sh`. NO ejecutar `./mvnw spring-boot:run` directo — deja procesos huerfanos que bloquean el puerto 8080 e impiden arrancar IntelliJ. Si IntelliJ falla con `BindException`, ejecutar `./scripts/api-stop.sh` antes de reintentar.
 
 ---
 
 ## 3. LOCAL STACK
 
-- Java 24, Spring Boot 3, Spring Data JPA, Spring Security (JWT).
-- PostgreSQL 15+ (relational data).
-- Flyway (database migrations, versioned SQL scripts).
-- MapStruct (entity-to-DTO mapping).
-- Maven (build system).
-
-### Build commands
+- Spring Boot 4.0.5, Java 24, Maven.
+- Spring Data JPA + Hibernate 7 + Envers (auditoria).
+- PostgreSQL 18 (driver 42.7.2).
+- Flyway (migraciones versionadas).
+- MapStruct 1.6 (entity-to-DTO mapping, `componentModel = "spring"`).
+- Spring Security + jjwt 0.12 (JWT).
+- Spring Boot Actuator + Micrometer Prometheus.
 
 ```
 ./mvnw spring-boot:run    # Run
@@ -62,101 +56,179 @@ src/main/java/com/rehabiapp/api/
     |-- presentation/      REST controllers, exception handlers, request/response models
 ```
 
-No circular dependencies between layers. Domain has zero framework imports.
+Sin dependencias circulares entre capas. Domain con cero imports de framework.
 
 ---
 
 ## 5. IMPLEMENTATION CHECKLIST
 
-### Phase 1: Project setup
+> Phases 1-3 (project setup, security, core CRUD) y bugfixes Envers/protesis YA completados. Eliminados de este checklist.
 
-- [x] Initialize Spring Boot 3 skeleton with Maven.
-- [x] Configure PostgreSQL connection (application.yml).
-- [x] Configure Flyway and create initial migration scripts mirroring the existing desktop DB schema.
-- [x] Set up project layer structure (domain, application, infrastructure, presentation).
-- [ ] Configure MapStruct for DTO mapping.
+### Phase 4 — H2 test compatibility (current iteration)
 
-### Phase 2: Security
+- [x] 4.1 Resolver fallo de tests con H2: `V11__fix_protesis_boolean.sql` usa PL/pgSQL `DO $$ ... $$` no soportado por H2. Crear `src/test/resources/db/migration/` con override H2-compatible (PostgreSQL Compatibility Mode + script H2-friendly) O configurar Flyway con `locations` distintos por perfil para excluir V11/V12 en tests y usar versiones H2-friendly.
+- [x] 4.2 Restablecer suite verde: `./mvnw test` debe pasar sin errores en `ApiApplicationTests` y `AuthControllerIT`.
 
-- [x] Implement JWT authentication (login endpoint, token generation, token validation filter).
-- [x] Implement BCrypt password hashing utility (compatible with desktop legacy hashes).
-- [x] Implement AES-256-GCM encryption utility for clinical fields (compatible with desktop CifradoService).
-- [x] Configure role-based authorization (SPECIALIST full access, NURSE restricted).
-- [x] Implement audit logging interceptor for all data operations.
+### Phase 5 — Patient progress integration (current iteration)
 
-### Phase 3: Core CRUD endpoints
+> Endpoints consumidos por `/desktop` (visualizacion de progreso). Detalles en `api/PLAN.md` Phase 5.
 
-- [x] Patient endpoints (GET list, GET by DNI, POST create, PUT update, DELETE soft-delete).
-- [x] Practitioner endpoints (GET list, GET by DNI, POST create, PUT update, DELETE soft-delete).
-- [x] Appointment endpoints (GET by date, GET by practitioner, POST create, PUT update, DELETE).
-- [x] Disability catalog endpoints (GET list, GET by code).
-- [x] Treatment catalog endpoints (GET list, GET by code, GET by disability and progression level).
-- [x] Progression level endpoints (GET list).
-- [x] Patient-disability assignment endpoints (GET, POST assign, PUT update level).
-- [x] Patient-treatment visibility endpoints (GET, PUT toggle visibility).
+- [x] 5.1 Crear `ProgresoController` (presentation) con endpoints:
+  - `GET /api/pacientes/{dni}/progreso/check?since=<Instant>` → `{ hasNewData: boolean, lastSessionAt: Instant, count: int }`. Llama a `/data` via `DataPipelineClient`.
+  - `GET /api/pacientes/{dni}/progreso` → `List<ProgresoTratamientoResponse>`. Proxy a `/data` `GET /analytics/patient/{dni}/treatment-progress`.
+  - `GET /api/pacientes/{dni}/progreso/markdown` (Content-Type: `text/markdown`). Proxy a `/data` + cache en `paciente.archivo_progreso_md`.
+  - `POST /api/pacientes/{dni}/progreso/markdown/regenerar` → fuerza regeneracion en `/data`.
+- [x] 5.2 Crear `DataPipelineClient` (infrastructure) — `RestClient` configurado con URL `${rehabiapp.data.url:http://localhost:8081}` y timeout 5s.
+- [x] 5.3 RBAC: solo SPECIALIST y NURSE pueden leer progreso del paciente. NURSE no puede regenerar.
+- [x] 5.4 Audit: cada GET de progreso/markdown registra READ en audit_log (paciente, sanitario, timestamp).
+- [x] 5.5 Tests: `ProgresoControllerIT` con MockRestServiceServer simulando respuestas de `/data`.
 
-### Bugfix: Envers audit tables not found (cita_aud does not exist)
+### Phase 6 — Treatment-Game association (current iteration)
 
-**Diagnostico:** `application.yml` lineas 27-35 declaran propiedades Envers bajo `properties.hibernate.envers.*`, que genera claves como `hibernate.envers.audit_table_suffix`. Pero Hibernate Envers requiere namespace completo `org.hibernate.envers.*`. Al ignorarse la config, Envers usa defaults (`_aud` suffix, `revtype` columna) y no encuentra las tablas V9 creadas con `_audit` suffix y `rev_type` columna.
+> Detalles en `api/PLAN.md` Phase 6.
 
-**Fix prescriptivo (1 archivo, 1 cambio):**
+- [x] 6.1 Migracion Flyway `V13__videojuego_y_tratamiento_pdf.sql`:
+  - Tabla `videojuego` (id_videojuego BIGSERIAL PK, codigo VARCHAR(50) UNIQUE, nombre, descripcion, cod_dis FK discapacidad, parte_cuerpo, url_unity, activo BOOLEAN DEFAULT TRUE, fecha_creacion).
+  - Tabla `tratamiento_videojuego` (cod_trat FK, id_videojuego FK — composite PK).
+  - Anadir columnas a tratamiento: `archivo_pdf BYTEA`, `nombre_archivo_pdf VARCHAR(255)`, `tamano_pdf_bytes BIGINT`.
+  - Anadir columnas a paciente: `archivo_progreso_md TEXT`, `progreso_md_actualizado_en TIMESTAMP`.
+- [x] 6.2 Entidades JPA: `Videojuego` (`@Audited`), `TratamientoVideojuego` (composite key, `@Audited`).
+- [x] 6.3 Repositorios: `VideojuegoRepository.findByCodDis(String)`, `findByActivoTrue()`. `TratamientoVideojuegoRepository`.
+- [x] 6.4 DTOs y mappers (MapStruct): `VideojuegoRequest`, `VideojuegoResponse`.
+- [x] 6.5 `VideojuegoController`:
+  - `GET /api/videojuegos` (lista todos los activos, paginado).
+  - `GET /api/videojuegos/{id}`.
+  - `GET /api/videojuegos/discapacidad/{codDis}`.
+  - `POST /api/videojuegos` (crear, solo SPECIALIST).
+  - `PUT /api/videojuegos/{id}`.
+  - `DELETE /api/videojuegos/{id}` (soft delete: `activo=false`).
+- [x] 6.6 Endpoints en `CatalogoController` (asociacion):
+  - `GET /api/tratamientos/{cod}/videojuegos`.
+  - `POST /api/tratamientos/{cod}/videojuegos/{id}` (vincular).
+  - `DELETE /api/tratamientos/{cod}/videojuegos/{id}` (desvincular).
+- [x] 6.7 Tests integration por endpoint.
 
-En `application.yml`, cambiar el bloque bajo `spring.jpa.properties`:
+### Phase 7 — Treatment PDF (current iteration)
 
-```yaml
-# ANTES (INCORRECTO — Envers ignora estas propiedades):
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        envers:
-          audit_table_suffix: _audit
-          revision_field_name: rev
-          revision_type_field_name: rev_type
-          store_data_at_delete: true
+- [x] 7.1 Endpoints en `CatalogoController`:
+  - `POST /api/tratamientos/{cod}/pdf` (multipart `file`, max 10MB, valida MIME). Verifica magic bytes `%PDF-`.
+  - `GET /api/tratamientos/{cod}/pdf` (Content-Type: `application/pdf`, Content-Disposition: attachment).
+  - `GET /api/tratamientos/{cod}/pdf/metadatos` → `{ nombre, tamano }`.
+  - `DELETE /api/tratamientos/{cod}/pdf` (solo SPECIALIST).
+- [x] 7.2 Validacion: si `file.size > 10 * 1024 * 1024` → 413 Payload Too Large.
+- [x] 7.3 Audit: cada upload registra accion `UPDATE` en audit_log con detalle `"PDF: {nombre} ({tamano} bytes)"`.
+- [x] 7.4 Tests integration con `MockMultipartFile`.
 
-# DESPUES (CORRECTO — namespace completo org.hibernate.envers):
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-      org.hibernate.envers:
-        audit_table_suffix: _audit
-        revision_field_name: rev
-        revision_type_field_name: rev_type
-        store_data_at_delete: true
-```
+### Phase 8 — Game telemetry routing (current iteration)
 
-- [x] Fix namespace Envers en `application.yml` (`hibernate.envers.*` → `org.hibernate.envers.*`)
-- [x] Verificar E2E: POST/PUT paciente y POST sanitario → audit rows creadas sin error
+> Endpoint consumido por Unity WebGL (juegos externos en AWS).
 
-### Phase 4: Ecosystem integration
+- [x] 8.1 `TelemetriaController`:
+  - `POST /api/telemetria/sesion-juego` — recibe payload de Unity, valida JWT, enriquece con `disabilityId` desde la asignacion del paciente, reenvia a `/data` `POST /ingest/game-session`.
+- [x] 8.2 `TelemetriaService` con logica de enriquecimiento (lookup en `paciente_discapacidad` para inferir `disabilityId` si Unity no lo manda).
+- [x] 8.3 RBAC: tokens JWT con scope `GAMES_TELEMETRY` (un nuevo rol/scope).
+- [x] 8.4 Tras ingestion exitosa, disparar `RegenerarMdEvent` (Spring `ApplicationEvent`) que invoca `POST /data/analytics/patient/{dni}/markdown/regenerar` en background.
+- [x] 8.5 Tests con MockMvc + MockRestServiceServer.
 
-- [ ] API documentation with Swagger/OpenAPI.
-- [ ] Rate limiting and request validation.
+### Phase 9 — Mobile dashboard endpoint (current iteration)
 
-### Phase 8 — Patient progress + treatment PDF persistence (2026-04-27)
+> Consumido por el BFF mobile (`/mobile/backend`).
 
-- [ ] V14 migration `tratamiento_documento`.
-- [ ] V15 migration `paciente.progreso_md` + `ultima_sync_progreso`.
-- [ ] Multipart config (`spring.servlet.multipart.max-file-size: 10MB`).
-- [ ] `TratamientoDocumento` entity + DTOs + add `progresoMd`/`ultimaSyncProgreso` to `Paciente`.
-- [ ] POST `/api/catalogo/tratamientos/{cod}/documentos` (multipart upload PDF).
-- [ ] DELETE `/api/catalogo/tratamientos/{cod}/documentos`.
-- [ ] GET `/api/pacientes/{dni}/tratamientos/{cod}/documento` (binary stream).
-- [ ] GET `/api/pacientes/{dni}/progreso/check?desde=ISO_TS`.
-- [ ] GET `/api/pacientes/{dni}/progreso/series`.
-- [ ] POST `/api/pacientes/{dni}/progreso/sync` (regenera markdown + actualiza ultima_sync_progreso).
-- [ ] `@WebMvcTest` + `@SpringBootTest` con Testcontainers + TestSprite backend_test_plan.
-- [ ] Encriptar `paciente.progreso_md` con AES-256-GCM (`@ColumnTransformer` o `AttributeConverter`).
+- [x] 9.1 `DashboardController`:
+  - `GET /api/pacientes/{dni}/dashboard` — agregado: paciente + discapacidades con nivel actual + tratamientos visibles + juegos desbloqueados (basado en niveles + asociaciones tratamiento-juego) + ultima sesion de juego + proxima cita.
+- [x] 9.2 Respuesta unificada con DTO `DashboardResponse` (record con sub-records).
+- [x] 9.3 Audit: registrar READ del paciente.
+- [x] 9.4 Tests integration.
+
+### Phase 10 — API documentation + rate limit (current iteration)
+
+- [x] 10.1 Anadir `springdoc-openapi-starter-webmvc-ui` a pom.xml. Verificar que `/swagger-ui.html` y `/v3/api-docs` se exponen correctamente.
+- [x] 10.2 Anotar todos los controllers con `@Tag` y endpoints con `@Operation`. DTOs con `@Schema`.
+- [x] 10.3 Excluir endpoints internos (`/internal/*`) de la documentacion publica.
+- [x] 10.4 Rate limit a nivel aplicacion: anadir Bucket4j (`com.bucket4j:bucket4j-core` + `bucket4j-spring-boot-starter`). Configurar limits:
+  - `/api/auth/login`: 10 req/min por IP.
+  - `/api/telemetria/*`: 60 req/min por JWT.
+  - Resto: 300 req/min por JWT.
+- [x] 10.5 Filtro de validacion de tamano de payload — rechazar bodies > 1 MB excepto multipart upload de PDF.
+- [x] 10.6 Tests: 11 logins consecutivos en menos de 60s → respuestas 11 = 429 Too Many Requests.
+
+### Phase 11 — Build dependency resolution fix
+
+- [x] 11.1 Resueltos 79 errores de compilacion causados por springdoc-openapi 2.6.0 incompatible con Spring Boot 4.0.5 + bucket4j classpath stale. Fix: springdoc → 2.8.13, añadido `io.swagger.core.v3:swagger-annotations-jakarta:2.2.30` explicito. `./mvnw test` — 33/33 verde.
+
+### Phase 13 — Patient token refresh (2026-05-06)
+
+- [x] 13.1 `PacienteAuthApplicationService.refresh(RefreshRequest)` — extrae DNI del refresh token Java via `JwtService.extraerDni`, verifica que el paciente sigue activo, emite nuevo par con `Rol.PATIENT`, registra en audit_log.
+- [x] 13.2 Nuevo endpoint `POST /api/auth/refresh-paciente` en `AuthController` — publico (permitido en `/api/auth/**`). Token invalido → JwtException → GlobalExceptionHandler → 401. Paciente inactivo → AccesoNoPermitidoException → 403.
+- [x] 13.3 Tests IT en `AuthControllerIT`: `refreshPaciente_conRefreshTokenInvalido_retorna401` + `refreshPaciente_conBodyVacio_retorna400`. `./mvnw test` — 37/37 verde.
+- [x] 13.4 BFF `authService.js` llama a `/api/auth/refresh-paciente` (en lugar de `/api/auth/refresh` que solo sirve sanitarios). `apiClient.js` mock handler unificado para ambos paths de refresh.
+
+### Phase 12 — Mobile integration readiness (2026-05-05)
+
+- [x] 12.1 Añadido `PATIENT` al enum `Rol`. El `JwtAuthenticationFilter` ya mapea `rol=PATIENT` a `ROLE_PATIENT` automaticamente (sin cambio en el filtro).
+- [x] 12.2 `ProgresoController` GET `/check`, GET `/` y GET `/markdown` amplian `@PreAuthorize` a `hasAnyRole('SPECIALIST','NURSE','PATIENT')` para que los pacientes puedan leer su propio progreso via BFF movil.
+- [x] 12.3 `PacienteTratamientoResponse` enriquecido con `codDis`, `idNivel` y `tienePdf`. Nueva query JPQL `findEnriquecidoByDniPac` en `PacienteTratamientoRepository` que resuelve la discapacidad del paciente via subquery sobre `discapacidad_tratamiento`. `AsignacionService.listarTratamientos` usa la query enriquecida. Mapper actualizado con `@Mapping(ignore=true)` para los nuevos campos.
+- [x] 12.4 Migracion `V14__datos_prueba_desarrollo.sql` con datos seed idempotentes: sanitario 87654321B (SPECIALIST), paciente 12345678Z (Admin RehabiAPP), discapacidades M16+M54, tratamientos TRT001-TRT004, videojuego GAME-HIP-01, 3 citas.
+- [x] 12.5 Autenticacion de pacientes via app movil: columna `contrasena_pac TEXT` en `paciente` (V15). `PacienteAuthApplicationService` busca por DNI o email, verifica BCrypt, emite JWT `rol=PATIENT`. Nuevo endpoint `POST /api/auth/login-paciente`. Cubierto por 2 tests IT en `AuthControllerIT`. `./mvnw test` — 35/35 verde.
+
+### Phase 14 — Flyway checksum mismatch recovery (BLOCKING, 2026-05-07)
+
+> Detalles prescriptivos en `api/PLAN.md` Phase 14. La app revento al arrancar con `FlywayValidateException` por mismatch de checksum en V13 (renombrado de `V13__videojuego_y_tratamiento_pdf.sql` → `V13__videojuego_pdf_md.sql` despues de aplicarse a la BD).
+
+- [x] 14.1 Editar `infrastructure/config/FlywayConfig.java`: reemplazar bean (eliminar `initMethod="migrate"`), inyectar property `rehabiapp.flyway.repair-on-startup` (default false), invocar `flyway.repair()` cuando true ANTES de `flyway.migrate()`.
+- [x] 14.2 Build + run one-shot con la flag activa: `./mvnw spring-boot:run -Dspring-boot.run.arguments=--rehabiapp.flyway.repair-on-startup=true`. Confirmar log `Successfully repaired schema history table`.
+- [x] 14.3 Apagar la app, volver a arrancar SIN la flag. Verificar arranque limpio + `actuator/health` 200.
+- [x] 14.4 `./mvnw test` → 37/37 verde.
+- [x] 14.5 PROHIBIDO: borrar volumen Postgres, desactivar `validate-on-migrate`, renombrar/editar V13, crear V16+ para compensar, modificar `baseline-version`. Cumplido.
 
 ---
 
 ## 6. DATABASE REFERENCE
 
-This API shares the same PostgreSQL database as the desktop ERP. The schema is defined and migrated via Flyway. Refer to `/desktop/CLAUDE.md` section 8 for the current schema. All Flyway migration scripts in this project must be compatible with the existing desktop schema.
+> El schema lo define este modulo via Flyway. Las migraciones V8-V15 aplicadas.
+
+```
+sanitario, sanitario_agrega_sanitario, telefono_sanitario,
+localidad, cp, direccion,
+discapacidad, tratamiento (+ archivo_pdf, nombre_archivo_pdf, tamano_pdf_bytes en V13),
+discapacidad_tratamiento,
+videojuego (V13), tratamiento_videojuego (V13),
+paciente (+ archivo_progreso_md, progreso_md_actualizado_en en V13),
+telefono_paciente, cita,
+audit_log,
+nivel_progresion, paciente_discapacidad, paciente_tratamiento,
+[entidades]_audit (Envers).
+```
 
 ---
 
-*This file is the single source of truth for the API domain. Update it as tasks are completed.*
+## 7. RUNBOOK
+
+```bash
+# Local stack (BD + pipeline de datos)
+docker compose -f infra/docker-compose.yml up postgresql mongodb data-pipeline
+
+# API — usar SIEMPRE los scripts (gestionan conflicto de puerto)
+cd api
+./scripts/api-dev.sh              # foreground (Ctrl+C para parar)
+./scripts/api-dev.sh --background # background con PID file en /tmp/rehabiapp-api.pid
+./scripts/api-stop.sh             # parar (funciona con PID file o buscando por puerto)
+./scripts/api-dev.sh --force      # mata instancia existente sin preguntar y rearranca
+
+# Si IntelliJ falla con BindException: ejecutar api-stop.sh y reintentar desde IntelliJ
+
+# Health
+curl http://localhost:8080/actuator/health     # API
+curl http://localhost:8082/actuator/health     # Data pipeline (8082 en dev local)
+
+# Swagger
+open http://localhost:8080/swagger-ui.html
+
+# Tests
+./mvnw test
+```
+
+---
 
 ## Memory
 

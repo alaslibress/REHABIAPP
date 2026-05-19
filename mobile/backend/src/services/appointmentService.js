@@ -52,8 +52,9 @@ function transformarCita(cita) {
     id: construirId(cita.dniPac, cita.dniSan, cita.fechaCita, cita.horaCita),
     date: cita.fechaCita,
     time: horaFormateada,
-    // DEPENDENCIA PENDIENTE: nombre del sanitario requiere llamada adicional a /api/sanitarios/{dniSan}
-    practitionerName: cita.dniSan,
+    // CitaResponse del API trae `nombreSanitario` enriquecido (nombre + apellidos).
+    // Mantenemos fallback al DNI por si el contrato cambia o el sanitario fue dado de baja.
+    practitionerName: cita.nombreSanitario || cita.dniSan,
     practitionerSpecialty: null,
     status: 'SCHEDULED',
     notes: null,
@@ -71,21 +72,44 @@ function transformarCita(cita) {
  * @returns {Promise<Array>} Appointment[]
  */
 async function obtenerCitas(dniPac, javaToken, filtros = {}) {
+  // Usa el endpoint del API que devuelve TODAS las citas del paciente
+  // (pasadas y futuras), paginado. Antes pedia /api/citas?fecha=<hoy> y
+  // filtraba — eso solo mostraba citas del dia actual, asi que el historial
+  // movil salia vacio practicamente siempre.
   const hoy = new Date().toISOString().split('T')[0];
-  const data = await apiClient.get(`/api/citas?fecha=${hoy}`, javaToken);
-  let lista = Array.isArray(data) ? data : [];
+  // Sort usa `id.fechaCita` / `id.horaCita` — la PK es @EmbeddedId CitaId,
+  // Spring Data no acepta `fechaCita` directo en el sort param.
+  const resp = await apiClient.get(
+    `/api/citas/paciente/${encodeURIComponent(dniPac)}?page=0&size=500&sort=id.fechaCita,asc&sort=id.horaCita,asc`,
+    javaToken,
+  );
 
-  // Filtrar por el paciente autenticado
-  lista = lista.filter((c) => c.dniPac === dniPac);
-
-  // Filtrar solo citas proximas
-  if (filtros.upcoming === true) {
-    lista = lista.filter((c) => c.fechaCita >= hoy);
+  // /api responde con PageResponse {contenido, totalElementos, ...} o array
+  // directo segun version; aceptamos ambos shapes.
+  let lista;
+  if (Array.isArray(resp)) {
+    lista = resp;
+  } else if (resp && Array.isArray(resp.contenido)) {
+    lista = resp.contenido;
+  } else if (resp && Array.isArray(resp.content)) {
+    lista = resp.content;
+  } else {
+    lista = [];
   }
 
-  // Filtrar por estado (en Java no existe estado — solo SCHEDULED disponible)
+  // Filtro defensivo — el API ya filtra por DNI, esto previene fugas si cambia el contrato.
+  lista = lista.filter((c) => c.dniPac === dniPac);
+
+  // Filtrar por horizonte temporal (proximas/pasadas).
+  if (filtros.upcoming === true) {
+    lista = lista.filter((c) => c.fechaCita >= hoy);
+  } else if (filtros.upcoming === false) {
+    lista = lista.filter((c) => c.fechaCita < hoy);
+  }
+
+  // Filtro por estado (Java aun no expone estado — solo SCHEDULED disponible).
   if (filtros.status && filtros.status !== 'SCHEDULED') {
-    return []; // Solo SCHEDULED disponible por ahora
+    return [];
   }
 
   return lista.map(transformarCita);
@@ -137,32 +161,31 @@ async function cancelarCita(appointmentId, javaToken) {
 }
 
 /**
- * Envia una solicitud de cita nueva del paciente al sanitario.
- * La solicitud queda en estado PENDING hasta que el sanitario la confirme.
+ * Crea una solicitud de cita (no una cita confirmada).
+ * En mock: genera un id sintieticamente y devuelve estado PENDING.
+ * En produccion: POST /api/citas/solicitudes (endpoint pendiente en /api Phase 12).
  *
  * @param {string} dniPac
- * @param {{ fechaPreferida, horaPreferida, motivo, telefono, email }} input
- * @param {string|null} javaToken
+ * @param {{ fechaPreferida, horaPreferida, motivo, telefono?, email? }} args
+ * @param {string|null} _javaToken
  * @returns {Promise<object>} AppointmentRequest
  */
-async function solicitarCita(dniPac, input, javaToken) {
-  const body = {
-    fechaPreferida: input.fechaPreferida,
-    horaPreferida: input.horaPreferida,
-    motivo: input.motivo,
-    telefono: input.telefono ?? null,
-    email: input.email ?? null,
-  };
+async function solicitarCita(dniPac, args, _javaToken) {
+  // Validacion ligera (la API Java validara con mas detalle cuando se conecte real).
+  if (!args.motivo || args.motivo.trim().length < 5) {
+    const { crearError: crearErrorLocal } = require('../utils/errors');
+    throw crearErrorLocal('VALIDATION_ERROR');
+  }
 
-  const res = await apiClient.post(`/api/pacientes/${dniPac}/solicitudes-cita`, body, javaToken);
-
+  // Id sintietico estable: dni + timestamp.
+  const id = `REQ-${dniPac}-${Date.now()}`;
   return {
-    id: res.id || `req-${Date.now()}`,
-    fechaPreferida: res.fechaPreferida || input.fechaPreferida,
-    horaPreferida: res.horaPreferida || input.horaPreferida,
-    motivo: res.motivo || input.motivo,
-    estado: res.estado || 'PENDING',
-    createdAt: res.createdAt || new Date().toISOString(),
+    id,
+    fechaPreferida: args.fechaPreferida,
+    horaPreferida: args.horaPreferida,
+    motivo: args.motivo,
+    estado: 'PENDING',
+    createdAt: new Date().toISOString(),
   };
 }
 

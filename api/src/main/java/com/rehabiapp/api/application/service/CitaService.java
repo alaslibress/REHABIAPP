@@ -87,6 +87,18 @@ public class CitaService {
     }
 
     /**
+     * Devuelve todas las citas de un paciente concreto paginadas (pasadas y futuras).
+     * Usado por la app movil para mostrar el historial completo del paciente.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<CitaResponse> listarPorPaciente(String dniPac, Pageable pageable) {
+        auditService.registrar(AccionAuditoria.READ, "cita", dniPac, "Historial de citas del paciente");
+        return PageResponse.de(
+                citaRepository.findByIdDniPac(dniPac, pageable).map(citaMapper::toResponse)
+        );
+    }
+
+    /**
      * Crea una nueva cita médica en el sistema.
      *
      * <p>Verifica que tanto el paciente como el sanitario existen y están activos

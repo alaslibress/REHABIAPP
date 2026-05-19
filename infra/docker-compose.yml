@@ -26,6 +26,62 @@ services:
       retries: 5
       start_period: 30s
 
+  # Base de datos documental para telemetria de juegos y analytics (data pipeline)
+  mongodb:
+    image: mongo:7
+    container_name: rehabiapp-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: rehabiapp_telemetry
+    volumes:
+      - rehabiapp-mongo-data:/data/db
+    networks:
+      - rehabiapp-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Pipeline de datos: ingesta de telemetria Unity → MongoDB + MD → PostgreSQL
+  data-pipeline:
+    build:
+      context: ../data
+      dockerfile: Dockerfile
+    image: rehabiapp-data:dev
+    container_name: rehabiapp-data
+    restart: unless-stopped
+    ports:
+      # 8081 ocupado por lvp_phpmyadmin en esta maquina — mapeamos al 8082 del host
+      - "8082:8081"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://rehabiapp-mongodb:27017/rehabiapp_telemetry
+      SPRING_DATA_MONGODB_DATABASE: rehabiapp_telemetry
+      SPRING_DATASOURCE_URL: jdbc:postgresql://rehabiapp-db:5432/rehabiapp
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+      RH_INTERNAL_KEY: changeme
+      # API se ejecuta en el host (no en docker-compose) — usar host.docker.internal
+      RH_API_BASE_URL: http://host.docker.internal:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - rehabiapp-net
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health/liveness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
   # Interfaz web de administracion de PostgreSQL
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -48,6 +104,7 @@ services:
 volumes:
   rehabiapp-pg-data:
   rehabiapp-pgadmin-data:
+  rehabiapp-mongo-data:
 
 # Red interna del proyecto
 networks:

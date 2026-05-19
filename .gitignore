@@ -1,2 +1,22 @@
 data/credenciales.txt
-api/.env.local
+
+# ---------- Secretos: cualquier .env del repo ----------
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# ---------- Documentos de planificacion (PLAN.md y derivados) ----------
+# Los PLAN.md viven solo en local — no pertenecen al historial publico.
+PLAN.md
+**/PLAN.md
+PLAN-*.md
+**/PLAN-*.md
+plan-*.md
+**/plan-*.md
+
+# ---------- Documentacion local del desktop ----------
+desktop/DOCUMENTACION/
+
+# ---------- Salida de informes generados localmente ----------
+desktop/informes/

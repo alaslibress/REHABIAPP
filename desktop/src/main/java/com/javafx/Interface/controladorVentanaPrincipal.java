@@ -63,6 +63,9 @@ public class controladorVentanaPrincipal {
     private Button btnPestaniaTratamientos;
 
     @FXML
+    private Button btnPestaniaVideojuegos;
+
+    @FXML
     private Button btnSalir;
 
     @FXML
@@ -129,7 +132,7 @@ public class controladorVentanaPrincipal {
     private void marcarPestaniaSeleccionada(Button botonSeleccionado) {
         // Quitar estilo de selección del botón anterior
         if (botonPestaniaActual != null) {
-            botonPestaniaActual.getStyleClass().remove("pestania-seleccionada");
+            botonPestaniaActual.getStyleClass().remove("active");
             // Animación de deselección
             ScaleTransition scaleOut = new ScaleTransition(Duration.millis(150), botonPestaniaActual);
             scaleOut.setToX(1.0);
@@ -139,7 +142,9 @@ public class controladorVentanaPrincipal {
         
         // Aplicar estilo al nuevo botón seleccionado
         if (botonSeleccionado != null) {
-            botonSeleccionado.getStyleClass().add("pestania-seleccionada");
+            if (!botonSeleccionado.getStyleClass().contains("active")) {
+                botonSeleccionado.getStyleClass().add("active");
+            }
             
             // Animación de selección
             ScaleTransition scaleIn = new ScaleTransition(Duration.millis(200), botonSeleccionado);
@@ -219,6 +224,8 @@ public class controladorVentanaPrincipal {
                 btnPestaniaDiscapacidades.setManaged(false);
                 btnPestaniaTratamientos.setVisible(false);
                 btnPestaniaTratamientos.setManaged(false);
+                btnPestaniaVideojuegos.setVisible(false);
+                btnPestaniaVideojuegos.setManaged(false);
             }
         }
     }
@@ -265,6 +272,8 @@ public class controladorVentanaPrincipal {
                 ((controladorVentanaDiscapacidades) controlador).configurarPermisos();
             } else if (controlador instanceof controladorVentanaTratamientos) {
                 ((controladorVentanaTratamientos) controlador).configurarPermisos();
+            } else if (controlador instanceof controladorVentanaVideojuegos) {
+                ((controladorVentanaVideojuegos) controlador).configurarPermisos();
             }
 
             // Cargar contenido en el centro del BorderPane
@@ -279,6 +288,22 @@ public class controladorVentanaPrincipal {
         } catch (Exception e) {
             System.err.println("Error al cargar pestaña " + nombrePestania + ": " + e.getMessage());
             e.printStackTrace();
+            // Limpiar cache corrupto para que el proximo intento recargue desde FXML
+            cachePestanias.remove(nombrePestania);
+            cacheControladores.remove(nombrePestania);
+            // Mostrar placeholder en el centro para que la app no quede en blanco
+            Label errorLabel = new Label(
+                "No se pudo abrir la pestana \"" + nombrePestania + "\".\n"
+                + "Revise la conexion con el servidor o reinicie la aplicacion.");
+            errorLabel.getStyleClass().add("label-error-pestania");
+            VBox placeholder = new VBox(errorLabel);
+            placeholder.setAlignment(javafx.geometry.Pos.CENTER);
+            placeholder.getStyleClass().add("panel-card");
+            bdpPrincipal.setCenter(placeholder);
+            pestaniaActual = nombrePestania;
+            VentanaUtil.mostrarVentanaInformativa(
+                "Error al abrir la pestana de " + nombrePestania + ": " + e.getMessage(),
+                TipoMensaje.ERROR);
         }
     }
 
@@ -460,6 +485,16 @@ public class controladorVentanaPrincipal {
     }
 
     /**
+     * Abre la pestana de videojuegos terapeuticos del catalogo clinico.
+     * Solo accesible para SPECIALIST.
+     */
+    @FXML
+    void abrirPestaniaVideojuegos(ActionEvent event) {
+        cargarPestania("Videojuegos");
+        marcarPestaniaSeleccionada(btnPestaniaVideojuegos);
+    }
+
+    /**
      * Realiza una búsqueda rápida de citas
      * Busca por fecha (dd/MM/yyyy), nombre de paciente o DNI de paciente
      * Si encuentra resultados, lleva automáticamente a la pestaña de Citas con el filtro aplicado
@@ -502,6 +537,7 @@ public class controladorVentanaPrincipal {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             
             // Establecer icono
             VentanaUtil.establecerIconoVentana(stage);
@@ -541,6 +577,7 @@ public class controladorVentanaPrincipal {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
             
             // Establecer icono
             VentanaUtil.establecerIconoVentana(stage);
@@ -584,6 +621,7 @@ public class controladorVentanaPrincipal {
                 stage.setTitle("RehabiAPP - Inicio de Sesión");
                 stage.setScene(scene);
                 stage.setResizable(false);
+                stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
                 
                 // Establecer icono
                 VentanaUtil.establecerIconoVentana(stage);

@@ -1,16 +1,15 @@
 package com.rehabiapp.data.domain.repository;
 
-import com.rehabiapp.data.domain.model.PatientProgress;
-import java.util.List;
-import java.util.Optional;
+import com.rehabiapp.data.domain.document.PatientProgress;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
+@Repository
 public interface PatientProgressRepository extends MongoRepository<PatientProgress, String> {
 
-    Optional<PatientProgress> findByPatientDniAndGameIdAndProgressionLevelAndPeriod(
-            String patientDni, String gameId, Integer progressionLevel, String period);
-
-    List<PatientProgress> findByPatientDniOrderByPeriodAsc(String patientDni);
-
     List<PatientProgress> findByPatientDni(String patientDni);
+
+    void deleteByPatientDniAndGameIdAndPeriod(String patientDni, String gameId, String period);
 }

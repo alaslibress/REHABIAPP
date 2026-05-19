@@ -8,16 +8,16 @@
 
 ## 1. PROJECT DEFINITION
 
-This directory contains the complete mobile domain for RehabiAPP, split into two strictly isolated subdirectories:
+Dominio mobile de RehabiAPP. Dos subdirectorios estrictamente aislados:
 
-| Subdirectory | Description | Stack | Local CLAUDE.md |
-|-------------|-------------|-------|-----------------|
-| `/mobile/frontend` | Patient-facing React Native app | TypeScript, Expo, Apollo Client, Zustand | `/mobile/frontend/CLAUDE.md` (if exists) |
-| `/mobile/backend` | Backend-For-Frontend (BFF) | Node.js 20, Express 5, Apollo Server 4 | `/mobile/backend/CLAUDE.md` |
+| Subdirectory | Description | Stack |
+|-------------|-------------|-------|
+| `/mobile/frontend` | App paciente React Native | TypeScript, Expo, Apollo Client, Zustand |
+| `/mobile/backend` | BFF Backend-For-Frontend | Node.js 20, Express 5, Apollo Server 4 |
 
-Patients use the mobile app to view their clinical profile, assigned treatments filtered by progression level, game session history, and to schedule appointments. The app also integrates an AI-powered WhatsApp chatbot for automated appointment booking.
+Pacientes usan la app para ver perfil clinico, tratamientos por nivel de progresion, descargar PDFs de tratamientos, lanzar videojuegos terapeuticos desbloqueados, ver historial de sesiones, agendar citas, e interactuar con un chatbot IA via WhatsApp.
 
-The UI must be highly accessible for all age groups, including elderly patients with reduced mobility or vision.
+UI altamente accesible (mayores con movilidad/vision reducida).
 
 ---
 
@@ -25,144 +25,151 @@ The UI must be highly accessible for all age groups, including elderly patients 
 
 ```
 /mobile/
-|
-|-- CLAUDE.md                   <-- THIS FILE (domain-level context)
-|
-|-- /frontend                   <-- Patient mobile app (React Native + Expo)
-|   |-- app/                    # Expo Router pages (auth, tabs)
+|-- CLAUDE.md
+|-- /frontend
+|   |-- app/                    # Expo Router (auth, tabs)
 |   |-- src/
-|   |   |-- components/         # Reusable UI components
-|   |   |-- services/graphql/   # Apollo Client queries and mutations
-|   |   |-- store/              # Zustand stores (auth, user, error)
-|   |   |-- types/              # TypeScript type definitions
-|   |   |-- utils/              # Helpers (error handler, greeting)
-|   |-- PLAN.md                 # Frontend implementation plan
-|
-|-- /backend                    <-- BFF (Node.js + Express + Apollo Server)
+|   |   |-- components/
+|   |   |-- services/graphql/
+|   |   |-- store/              # Zustand
+|   |   |-- types/
+|   |   |-- utils/
+|   |-- PLAN.md
+|-- /backend
 |   |-- src/
 |   |   |-- graphql/            # TypeDefs + Resolvers
-|   |   |-- services/           # API client + domain services
-|   |   |-- middleware/         # Auth, greeting, error formatter
-|   |   |-- utils/              # Error codes, timezone utilities
-|   |   |-- index.js            # Entry point
-|   |   |-- config.js           # Configuration + secrets
-|   |-- test/                   # Tests
-|   |-- CLAUDE.md               # Backend-specific context
-|   |-- PLAN.md                 # Backend implementation plan
-|   |-- Dockerfile              # Multi-stage container image
+|   |   |-- services/           # apiClient + dominio
+|   |   |-- middleware/
+|   |   |-- utils/
+|   |-- test/
+|   |-- CLAUDE.md
+|   |-- PLAN.md
+|   |-- Dockerfile
 ```
 
 ### Communication Flow (BFF Pattern)
 
 ```
 Mobile App (frontend)
-    |
     | GraphQL (Apollo Client -> Apollo Server)
-    | Port 3000 (BFF)
-    | JWT BFF token in Authorization header
-    | X-Timezone header for greeting context
+    | Port 3000 (BFF) | JWT BFF en Authorization | X-Timezone
     v
 BFF Node.js (backend)
-    |
-    | REST / HTTP (fetch native)
-    | Internal K8s network
-    | JWT Java token in Authorization header
+    | REST / HTTP (fetch native) | JWT Java en Authorization
     v
 Java API (Spring Boot, /api)
-    |
     v
 PostgreSQL / MongoDB (via /data)
 ```
 
-**CRITICAL RULE:** The frontend NEVER communicates with the Java API (`/api`) directly. ALL traffic routes through the BFF (`/mobile/backend`). This is enforced by K8s NetworkPolicy.
+**REGLA CRITICA:** Frontend NUNCA habla con `/api` directo. SIEMPRE via BFF. K8s NetworkPolicy lo enfuerza.
 
 ---
 
 ## 3. OPERATING RULES
 
-1. **Global context:** Read and respect the root `/CLAUDE.md` before any cross-domain decision. This file takes precedence for mobile-domain decisions. Subdirectory CLAUDE.md files take precedence for their specific scope.
-
-2. **Read local CLAUDE.md first:** Before working in `/mobile/frontend` or `/mobile/backend`, read the corresponding local CLAUDE.md and PLAN.md.
-
-3. **Maintain this file:** When you complete a task, change `[ ]` to `[x]`. Remove resolved items that no longer provide useful context.
-
-4. **No direct database access:** Neither the frontend nor the backend connects to PostgreSQL or MongoDB directly. All data flows through the Java API.
-
-5. **Strict directory isolation:** Frontend code NEVER imports from backend. Backend code NEVER imports from frontend. They communicate exclusively through the GraphQL API.
-
-6. **Accessibility first:** Large touch targets (minimum 48x48dp), clear color contrast (WCAG AA minimum), readable font sizes, simple navigation. The interface must be usable by patients of all ages without training.
+1. **Global context:** Leer raiz `/CLAUDE.md` antes de decisiones cross-domain. Local files precedente para mobile.
+2. **Subdir CLAUDE.md primero:** Antes de tocar `/frontend` o `/backend`, leer su CLAUDE.md y PLAN.md locales.
+3. **Maintain this file:** `[x]` al completar. Eliminar resueltos.
+4. **No DB direct:** Ni frontend ni backend acceden a PostgreSQL/MongoDB. Todo via API.
+5. **Strict isolation:** Frontend NUNCA importa de backend ni viceversa. Solo GraphQL.
+6. **Accessibility first:** Touch targets >=48dp, contraste WCAG AA, fuentes legibles, navegacion simple.
 
 ---
 
 ## 4. SUBDOMAIN STACKS
 
-### Frontend (`/mobile/frontend`)
+### Frontend
 
 - React Native, Expo, TypeScript
-- Apollo Client (GraphQL communication with BFF)
-- Zustand (state management)
-- Expo Router (navigation)
+- Apollo Client (GraphQL <- BFF)
+- Zustand (state)
+- Expo Router (navegacion)
 - NativeWind (styling)
+- expo-file-system + expo-sharing (descarga PDFs de tratamientos)
+- WebView de Expo (lanzar Unity WebGL games)
 
 ```
-npx expo start            # Start development server
-npx expo start --android  # Start on Android
-npx expo start --ios      # Start on iOS
-npm test                  # Run tests
+npx expo start
+npx expo start --android | --ios
+npm test
 ```
 
-### Backend (`/mobile/backend`)
+### Backend (BFF)
 
 - Node.js 20, Express 5, JavaScript (CommonJS)
-- Apollo Server 4 (GraphQL API)
-- jsonwebtoken (JWT generation/validation)
-- fetch native (HTTP client for Java API)
-- pino (structured JSON logging)
+- Apollo Server 4
+- jsonwebtoken
+- fetch native
+- pino (logs JSON)
 
 ```
-npm start                 # Start production server
-npm run dev               # Start with watch mode
-npm test                  # Run tests
+npm start
+npm run dev
+npm test
 ```
 
 ---
 
 ## 5. IMPLEMENTATION CHECKLIST
 
-### Phase 1: Frontend project setup
+> Phase 1-3 (project setup, auth, navigation shell) y Phase debug-login (2026-04-05) YA completados o trackeados en PLAN locales. Items de bug login ya cerrados eliminados de aqui.
 
-- [x] Initialize Expo project with TypeScript — `expo@^54.0.0`, `typescript@~5.9.2`, `tsconfig.json`, `expo-env.d.ts`, `expo-router/entry` main.
-- [x] Define folder structure — `src/components`, `src/services/graphql`, `src/store`, `src/types`, `src/utils`, `src/hooks` populated.
-- [x] Configure navigation — Expo Router file-based; `app/(auth)/_layout.tsx` + `app/(tabs)/_layout.tsx` with bottom-tab `Tabs` (7 tabs: Inicio, Citas, Juegos, Cura, Progreso, Perfil, Ajustes).
-- [x] Theming light/dark + accessible palette — `tailwind.config.js` (NativeWind preset, `darkMode: 'class'`, full `primary` ramp + `surface`/`background`/`text-*`/`border` light+dark + `error`/`success`); `src/utils/theme.ts` exposes `ThemeContext` + `useTheme()`; `settings.tsx` toggles light/dark; Inter font family with regular/medium/semibold weights.
+### Phase 4 — Patient features (current iteration)
 
+- [x] 4.1 Patient profile screen (`me` query — datos personales).
+- [x] 4.2 Discapacidades asignadas con nivel actual.
+- [x] 4.3 Lista de tratamientos filtrada por discapacidad y nivel.
+- [x] 4.4 **NUEVO** Boton "Descargar PDF" por tratamiento — descarga el PDF asociado al tratamiento desde el BFF (cache local con expo-file-system, share via expo-sharing).
+- [x] 4.5 **NUEVO** Tab "Juegos" con lista de videojuegos desbloqueados (filtrados por tratamientos asignados + nivel del paciente). Por cada juego, boton "Jugar" que abre WebView con `url_unity` + JWT inyectado.
+- [x] 4.6 Historial de sesiones con grafico de progreso (consume el endpoint `/api/pacientes/{dni}/progreso` via BFF).
+- [x] 4.7 Lista de citas (proximas y pasadas).
 
-### Phase 3: Authentication and shell
+### Phase 5 — Advanced features (current iteration)
 
-- [x] Login screen (DNI/email + password via GraphQL mutation) — `app/(auth)/login.tsx` + `LOGIN_MUTATION` in `src/services/graphql/mutations/auth.ts`.
-- [x] Secure token storage (Expo SecureStore) — `expo-secure-store@15.0.8`; `authStore.ts` persists token under `auth_token`.
-- [x] Auto-logout on token expiration — `errorLink` en `client.ts` detecta `UNAUTHENTICATED`/`TOKEN_EXPIRED`/`TOKEN_INVALID` y llama `cerrarSesionPorExpiracion()`.
-- [x] Main navigation shell — `app/(tabs)/_layout.tsx` with 7 tabs (Inicio, Citas, Juegos, Cura, Progreso, Perfil, Ajustes).
-- [x] Pull-to-refresh & loading states across all screens — `bootstrapStore.refreshing` + `RefreshControl` añadidos a `index.tsx` y `profile.tsx`; `profile.tsx` muestra `ActivityIndicator` mientras `patient == null`.
+- [x] 5.1 Agenda de citas — AppointmentRequestForm (date/time picker + motivo + contacto), historial de citas pasadas con EstadoBadge, pull-to-refresh, modal de confirmacion de cancelacion.
+- [ ] 5.2 AI WhatsApp chatbot (booking automatico — pendiente integracion).
+- [x] 5.3 Push notifications (recordatorios de citas) — scheduleAppointmentReminder/cancelAppointmentReminder en appointmentsStore + bootstrapStore. Lazy-load de expo-notifications para compatibilidad Expo Go.
+- [x] 5.4 Offline-first cache — persist middleware (zustand/middleware + AsyncStorage) aplicado a userStore, treatmentsStore, gamesStore, appointmentsStore. Solo se persisten datos clinicos (no loading/hydrated states).
 
-### Phase 4: Patient features
+### Phase 6 — BFF endpoints for new features (current iteration)
 
-- [x] Patient profile screen — `app/(tabs)/profile.tsx` reads `userStore.patient` populated from `GET_MY_PROFILE` (`me` query); `InfoRow` for DNI, NSS, birth date, address, phone, email + `ProfileHeader`.
-- [x] Assigned disabilities with current progression level — `GET_MY_DISABILITIES` returns `currentLevel`; rendered in profile (pathology pills) and in `treatments.tsx` via `DisabilitySection`.
-- [x] Treatment list filtered by disability and level — `treatments.tsx` groups by `disabilityCode` and renders `DisabilitySection` per disability with the corresponding level.
-- [x] Game session history with progress charts — `app/(tabs)/progress.tsx` + `BodyDiagram` + `ProgressChartModal` (LineChart) using `GET_MY_BODY_PART_PROGRESS` and `GET_BODY_PART_METRICS`; assigned-game listing in `games.tsx`.
-- [ ] Appointment list (upcoming **and past**) — only upcoming list rendered; `appointmentsStore.fetch` queries with `upcoming:true` only; no past section. Pending.
+> Detalles en `/mobile/backend/PLAN.md`.
 
-### Phase 5: Advanced features
+- [x] 6.1 GraphQL query `treatmentPdf(codTrat: String!): TreatmentPdfPayload` — proxies a `GET /api/tratamientos/{cod}/pdf`. Devuelve `{ filename, sizeBytes, base64Content }`.
+- [x] 6.2 GraphQL query `availableGames: [Game!]!` — proxies a `GET /api/pacientes/{dni}/dashboard` y devuelve `juegosDesbloqueados`.
+- [x] 6.3 GraphQL mutation `startGame(idVideojuego: ID!): GameSessionLaunch` — devuelve URL de Unity con JWT corto efimero (5 min) en query param.
+- [x] 6.4 GraphQL query `myProgress: PatientProgress` — proxies a `GET /api/pacientes/{dni}/progreso`. Devuelve estructura compatible con grafico react-native-chart-kit.
+- [x] 6.5 GraphQL query `myDashboard: Dashboard` — proxies a `GET /api/pacientes/{dni}/dashboard`.
 
-- [ ] Appointment booking screen (date/time picker, practitioner selection).
-- [ ] AI WhatsApp chatbot integration for automated appointment booking.
-- [ ] Push notifications for appointment reminders.
-- [ ] Offline-first caching strategy for critical patient data.
+### Phase G — BFF Schema Sync (2026-05-05)
+
+- [x] G.1-G.8 Completados (ver mobile/backend/CLAUDE.md Phase G). BFF schema alineado con frontend Phase 4 queries. 25/25 tests verdes.
+
+### Phase 5-bridge — Frontend Bootstrap Hardening (2026-05-05)
+
+- [x] F.1 `progressStore.fetch` envuelto en try/catch con fallback a `bodyParts: []` y `hydrated: true` para evitar que una query fallida bloquee el bootstrap.
+- [x] F.2 `errorStore` expone `silent: boolean` + `setSilent(boolean)`. `bootstrapStore.hydrate` activa modo silencioso al entrar y lo restaura en finally — los popups de error quedan desactivados durante el bootstrap inicial.
+
+### Phase I — Stabilization Sprint (2026-05-07)
+
+- [x] J.1 `appointmentsStore.fetchPast` — spread antes de sort para evitar mutacion de array congelado por Apollo v4.
+- [x] J.2 `treatmentsStore` — import `expo-file-system/legacy` (SDK 54 reorganizo la API; EncodingType y cacheDirectory viven en /legacy).
+- [x] J.3 `GET_BODY_PART_METRICS` — variable tipada como `BodyPartId!` en lugar de `ID!` para pasar validacion de Apollo Server.
+- [x] J.4 `appointments.tsx` — sustituido `AppointmentRequestForm` por `HospitalContactCard` (sin formulario de solicitud).
+- [x] J.5 `WhatsAppButton.tsx` — wired `Linking.openURL` con deep link `whatsapp://` + fallback `wa.me`.
+- [x] J.6 Home screen (`index.tsx`) y `FloatingBalloon.tsx` — variantes dark mode añadidas.
+- [x] J.7 Audit dark mode en `appointments.tsx` — sin regresiones.
+- [x] J.8 `notifications.ts` — nuevo helper `ensureNotificationsEnabled`. `bootstrapStore.hydrate` lo llama con push token + reminders locales condicionados a permiso concedido.
+- [x] J.9 BFF test `bodyPartMetrics acepta variable tipada como BodyPartId!` — 26/26 tests verdes.
+
+### Phase L — WhatsApp Chatbot (2026-05-07)
+
+- [x] L.1-L.12 `/chatbot/` directorio creado con estructura completa: config, logger, db, llm, promptTemplates, sessions, booking, whatsapp, index, tests.
+- [ ] L.13 Tests manuales end-to-end sobre Pixel 8 + PostgreSQL real (requiere docker compose up + npm run dev).
+- [ ] L.14 npm run dev → QR scan primer arranque.
 
 ---
-
-*This file is the single source of truth for the mobile domain. Each subdomain has its own CLAUDE.md with specific implementation details. Update this file for cross-cutting concerns.*
 
 ## Memory
 

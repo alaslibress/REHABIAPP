@@ -1,5 +1,18 @@
-# Perfil LOCAL — desarrollo en máquina local o K8s de desarrollo.
+# Perfil LOCAL — desarrollo en máquina local o stack Docker Compose local.
 # Activa con: SPRING_PROFILES_ACTIVE=local
+#
+# Modo 1 (API fuera de Docker, ./mvnw spring-boot:run):
+#   SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/rehabiapp
+#   REHABIAPP_DATA_SERVICE_URL=http://localhost:8081
+#
+# Modo 2 (API dentro de infra/local/docker-compose.local.yml):
+#   SPRING_DATASOURCE_URL=jdbc:postgresql://rehabiapp-postgres:5432/rehabiapp
+#   REHABIAPP_DATA_SERVICE_URL=http://rehabiapp-data:8081
+#   (el compose inyecta estos valores automaticamente)
+#
+# Ambos modos comparten secretos via env (JWT_SIGNING_KEY, ENCRYPTION_KEY,
+# RH_INTERNAL_KEY); si no se exportan se aplican los defaults dev del
+# application.yml base — solo aptos para desarrollo, NO produccion.
 
 spring:
   datasource:
@@ -8,6 +21,14 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:admin}
     password: ${SPRING_DATASOURCE_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # Pool moderado — alineado con perfil aws-academy (RDS db.t3.micro).
+      # Postgres local aguanta mas; subir si tu equipo lo permite.
+      maximum-pool-size: 8
+      minimum-idle: 1
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
   jpa:
     # Muestra el SQL generado por Hibernate — útil en desarrollo para detectar N+1
     show-sql: true
@@ -15,6 +36,33 @@ spring:
       hibernate:
         # Formatea el SQL para mayor legibilidad en los logs
         format_sql: true
+
+# Bind 0.0.0.0 para que el contenedor sea alcanzable desde Caddy/otros
+# servicios en la red Docker. Sin efectos al correr fuera de Docker.
+server:
+  address: 0.0.0.0
+
+# URL del data pipeline — default localhost:8081 para modo 1.
+# El compose local sobreescribe via REHABIAPP_DATA_SERVICE_URL=http://rehabiapp-data:8081.
+rehabiapp:
+  data-service:
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8081}
+  data:
+    url: ${REHABIAPP_DATA_SERVICE_URL:http://localhost:8081}
+
+# Origenes CORS permitidos en desarrollo local:
+# - localhost:9000 (juego Unity WebGL servido localmente via python -m http.server)
+# - bucket S3 del juego PIANO para pruebas contra API local
+# - puertos varios para mobile frontend / BFF dev
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:9000
+      - http://localhost:9090
+      - http://localhost:5173
+      - http://localhost:8081
+      - http://localhost:3000
+      - http://s3-bucket-rehabiapp-piano-640681720314.s3-website-us-east-1.amazonaws.com
 
 # Nivel de log detallado para desarrollo
 logging:

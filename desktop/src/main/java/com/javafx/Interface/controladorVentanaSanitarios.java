@@ -10,6 +10,7 @@ import com.javafx.excepcion.ConexionException;
 import com.javafx.excepcion.RehabiAppException;
 import com.javafx.service.SanitarioService;
 import com.javafx.util.PaginacionUtil;
+import com.javafx.util.TableUiUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -170,16 +171,35 @@ public class controladorVentanaSanitarios {
         colApellidos.setCellValueFactory(new PropertyValueFactory<>("apellidos"));
         colDNI.setCellValueFactory(new PropertyValueFactory<>("dni"));
         colCargo.setCellValueFactory(new PropertyValueFactory<>("cargo"));
-        // Mostrar cargo traducido al espanol en lugar del valor crudo de la API
+
+        // DNI con tipografia monoespaciada
+        colDNI.setCellFactory(TableUiUtil.monoCell());
+
+        // Cargo como badge semantico — usa el texto traducido al espanol
+        // (specialist → "Medico especialista" brand, nurse → "Enfermero/a" info).
         colCargo.setCellFactory(col -> new TableCell<Sanitario, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || getTableRow() == null || getTableRow().getItem() == null) {
                     setText(null);
-                } else {
-                    setText(((Sanitario) getTableRow().getItem()).getCargoTraducido());
+                    setGraphic(null);
+                    return;
                 }
+                Sanitario s = (Sanitario) getTableRow().getItem();
+                String traducido = s.getCargoTraducido();
+                String crudo = item != null ? item.trim().toLowerCase() : "";
+                String modificador = "";
+                if (crudo.contains("special") || crudo.contains("medico") || crudo.contains("médico")) {
+                    modificador = "brand";
+                } else if (crudo.contains("nurse") || crudo.contains("enferm")) {
+                    modificador = "info";
+                }
+                Label etiqueta = new Label(traducido);
+                etiqueta.getStyleClass().add("badge");
+                if (!modificador.isEmpty()) etiqueta.getStyleClass().add(modificador);
+                setText(null);
+                setGraphic(etiqueta);
             }
         });
 
@@ -207,11 +227,24 @@ public class controladorVentanaSanitarios {
      * Carga todos los sanitarios de la base de datos en la tabla
      */
     private void cargarSanitarios() {
-        //Obtener lista de sanitarios desde la base de datos
-        todosSanitarios = sanitarioDAO.listarTodos();
-
-        //Actualizar paginacion con los datos
-        paginacion.setDatos(todosSanitarios);
+        try {
+            todosSanitarios = sanitarioDAO.listarTodos();
+            if (todosSanitarios == null) todosSanitarios = new java.util.ArrayList<>();
+            paginacion.setDatos(todosSanitarios);
+        } catch (RehabiAppException e) {
+            todosSanitarios = new java.util.ArrayList<>();
+            paginacion.setDatos(todosSanitarios);
+            System.err.println("Error al cargar sanitarios ("
+                    + e.getClass().getSimpleName() + "): " + e.getMessage());
+            com.javafx.Clases.VentanaUtil.mostrarVentanaInformativa(
+                    "No se pudo cargar la lista de sanitarios: " + e.getMessage(),
+                    com.javafx.Clases.VentanaUtil.TipoMensaje.ERROR);
+        } catch (Exception e) {
+            todosSanitarios = new java.util.ArrayList<>();
+            paginacion.setDatos(todosSanitarios);
+            System.err.println("Error inesperado al cargar sanitarios: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -251,6 +284,8 @@ public class controladorVentanaSanitarios {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            stage.setMinHeight(640); // Botones del footer (Aplicar/Cancelar/Restablecer) siempre visibles
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -294,6 +329,8 @@ public class controladorVentanaSanitarios {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            stage.setMinHeight(640); // Botones del footer (Aplicar/Cancelar/Restablecer) siempre visibles
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 
@@ -394,6 +431,8 @@ public class controladorVentanaSanitarios {
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setResizable(false);
+            stage.setMinWidth(520); // Spec §3.8: footer del modal nunca se corta
+            stage.setMinHeight(640); // Botones del footer (Aplicar/Cancelar/Restablecer) siempre visibles
             VentanaUtil.establecerIconoVentana(stage);
             stage.showAndWait();
 

@@ -1,6 +1,7 @@
 import { Text } from 'react-native';
 import type { TextProps } from 'react-native';
 import { useFontScale } from '../utils/fontScale';
+import { useTheme } from '../utils/theme';
 
 // Tamaños base por variante (en dp)
 const VARIANT_SIZES = {
@@ -26,18 +27,24 @@ type AppTextProps = TextProps & {
   children: React.ReactNode;
 };
 
-// Componente de texto que aplica escala de fuente global y tipografia Inter
+// Texto de la app con escala global, fuente Inter y color por defecto segun tema.
+// Si el caller pasa una className con text-* o un style.color, esos valores ganan
+// sobre el color por defecto gracias al orden de merging de StyleSheet.
 export function AppText(props: AppTextProps) {
   const { variant = 'body', weight = 'regular', style, children, ...rest } = props;
   const scale = useFontScale();
+  const { theme } = useTheme();
 
   const baseFontSize = VARIANT_SIZES[variant];
   const fontFamily = WEIGHT_FAMILIES[weight];
 
+  // Color por defecto leido del tema (text.primary), con override via style/className.
+  const defaultColor = theme.text;
+
   return (
     <Text
       style={[
-        { fontFamily, fontSize: baseFontSize * scale },
+        { fontFamily, fontSize: baseFontSize * scale, color: defaultColor },
         style,
       ]}
       {...rest}

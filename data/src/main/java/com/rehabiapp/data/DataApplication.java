@@ -13,8 +13,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  *
  * Puerto por defecto: 8081 (evita colision con el API Core en 8080).
  */
-@SpringBootApplication
 @EnableScheduling
+@SpringBootApplication
 public class DataApplication {
 
     public static void main(String[] args) {

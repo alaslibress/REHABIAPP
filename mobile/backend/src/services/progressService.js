@@ -1,38 +1,36 @@
-// Servicio de progreso corporal del paciente
-// Obtiene el mapa de partes del cuerpo y sus metricas desde la API de Java
+// Servicio de progreso del paciente
+// Consume GET /api/pacientes/{dni}/progreso (proxiado al pipeline /data MongoDB)
+// Devuelve estructura compatible con react-native-chart-kit en el movil.
 'use strict';
 
 const apiClient = require('./apiClient');
 
 /**
- * Obtiene el progreso por partes del cuerpo del paciente.
+ * Obtiene la lista de progreso por tratamiento del paciente y la envuelve
+ * en el tipo PatientProgress del esquema GraphQL.
  *
  * @param {string} dniPac
  * @param {string|null} javaToken
- * @returns {Promise<Array>} BodyPartProgress[]
+ * @returns {Promise<{ tratamientos: Array, lastUpdate: string|null }>}
  */
-async function obtenerProgresoCorporal(dniPac, javaToken) {
-  const data = await apiClient.get(
-    `/api/pacientes/${dniPac}/progreso/partes-cuerpo`,
-    javaToken
-  );
-  return Array.isArray(data) ? data : [];
+async function obtenerProgresoPaciente(dniPac, javaToken) {
+  const data = await apiClient.get(`/api/pacientes/${dniPac}/progreso`, javaToken);
+  const lista = Array.isArray(data) ? data : [];
+
+  // Calcular lastUpdate como el currentFecha mas reciente entre todos los tratamientos
+  let lastUpdate = null;
+  for (const t of lista) {
+    if (t && t.currentFecha) {
+      if (!lastUpdate || new Date(t.currentFecha) > new Date(lastUpdate)) {
+        lastUpdate = t.currentFecha;
+      }
+    }
+  }
+
+  return {
+    tratamientos: lista,
+    lastUpdate,
+  };
 }
 
-/**
- * Obtiene las metricas de sesiones para una parte del cuerpo especifica.
- *
- * @param {string} dniPac
- * @param {string} bodyPartId
- * @param {string|null} javaToken
- * @returns {Promise<Array>} BodyPartMetric[]
- */
-async function obtenerMetricasParte(dniPac, bodyPartId, javaToken) {
-  const data = await apiClient.get(
-    `/api/pacientes/${dniPac}/progreso/partes-cuerpo/${bodyPartId}/metricas?limit=30`,
-    javaToken
-  );
-  return Array.isArray(data) ? data : [];
-}
-
-module.exports = { obtenerProgresoCorporal, obtenerMetricasParte };
+module.exports = { obtenerProgresoPaciente };

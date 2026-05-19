@@ -1,0 +1,23 @@
+{
+  "gameId": "PIANO-001",
+  "requiredKeys": ["fingerSpeed", "notesHit", "notesMissed"],
+  "fields": {
+    "fingerSpeed":     { "type": "number",  "min": 0, "max": 20,    "unit": "notes/s" },
+    "notesHit":        { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "notesMissed":     { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "accuracyPct":     { "type": "number",  "min": 0, "max": 100,   "unit": "%" },
+    "maxStreak":       { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "avgReactionMs":   { "type": "number",  "min": 0, "max": 10000, "unit": "ms" },
+    "irsScore":        { "type": "number",  "min": 0, "max": 500,   "unit": "pts" },
+    "hits_finger_0":   { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "hits_finger_1":   { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "hits_finger_2":   { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "hits_finger_3":   { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "hits_finger_4":   { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "misses_finger_0": { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "misses_finger_1": { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "misses_finger_2": { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "misses_finger_3": { "type": "integer", "min": 0, "max": 10000, "unit": "count" },
+    "misses_finger_4": { "type": "integer", "min": 0, "max": 10000, "unit": "count" }
+  }
+}

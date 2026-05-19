@@ -1,5 +1,5 @@
 import { ActivityIndicator, Pressable, useWindowDimensions, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { X } from 'phosphor-react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { BackdropModal } from './BackdropModal';
 import { ProgressBar } from './ProgressBar';
@@ -17,7 +17,7 @@ type ProgressChartModalProps = {
 
 export function ProgressChartModal(props: ProgressChartModalProps) {
   const { visible, onClose, bodyPart, metrics, loadingMetrics } = props;
-  const { scheme } = useTheme();
+  const { scheme, theme } = useTheme();
   const { width } = useWindowDimensions();
 
   const isDark = scheme === 'dark';
@@ -51,13 +51,13 @@ export function ProgressChartModal(props: ProgressChartModalProps) {
             {bodyPart.name}
           </AppText>
           <Pressable onPress={onClose} hitSlop={12}>
-            <Ionicons name="close-outline" size={24} color={isDark ? '#F1F5F9' : '#1E293B'} />
+            <X size={24} color={isDark ? '#E8ECF3' : '#0F1B33'} weight="regular" />
           </Pressable>
         </View>
 
         {/* Contenido */}
         {loadingMetrics ? (
-          <ActivityIndicator color="#2563EB" />
+          <ActivityIndicator color={theme.accent} />
         ) : sinDatos ? (
           <AppText variant="body" className="text-text-secondary dark:text-text-secondary-dark text-center">
             Sin datos todavia. Juega para ver tu progreso.
@@ -68,11 +68,11 @@ export function ProgressChartModal(props: ProgressChartModalProps) {
             width={chartWidth}
             height={180}
             chartConfig={{
-              backgroundGradientFrom: isDark ? '#111827' : '#FFFFFF',
-              backgroundGradientTo: isDark ? '#111827' : '#FFFFFF',
-              color: function () { return '#2563EB'; },
-              labelColor: function () { return isDark ? '#94A3B8' : '#64748B'; },
-              propsForDots: { r: '4', strokeWidth: '2', stroke: '#2563EB' },
+              backgroundGradientFrom: theme.elev1,
+              backgroundGradientTo: theme.elev1,
+              color: function () { return theme.accent; },
+              labelColor: function () { return theme.text3; },
+              propsForDots: { r: '4', strokeWidth: '2', stroke: theme.accent },
               propsForLabels: { fontSize: 10 },
               decimalPlaces: 0,
             }}

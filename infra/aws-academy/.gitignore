@@ -1,0 +1,4 @@
+# Secretos reales — nunca commitear.
+.env.aws-academy
+*.pem
+*.key

@@ -1,7 +1,25 @@
 'use strict';
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const config = require('./config');
 const logger = require('./logger');
+
+// Limpia Singleton* huerfanos del run anterior — evita el loop crash-restart
+// de Chromium "profile appears to be in use by another Chromium process".
+// Se ejecuta antes de cargar whatsapp.js para que Chrome arranque limpio.
+(function limpiarLocksChromium() {
+  const sessionDir = '/app/.wwebjs_auth/session-rehabiapp-chatbot';
+  for (const nombre of ['SingletonLock', 'SingletonSocket', 'SingletonCookie', 'lockfile']) {
+    try {
+      fs.unlinkSync(path.join(sessionDir, nombre));
+      logger.warn({ nombre }, 'lock Chromium huerfano eliminado');
+    } catch (_e) {
+      // no existe, OK
+    }
+  }
+})();
+
 const wa = require('./whatsapp');
 
 async function main() {

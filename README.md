@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <b>Ecosistema clínico integral de rehabilitación médica · Diseñado bajo ENS Alto · Construido por un equipo multi-agente de IA</b>
+  <b>Ecosistema clínico integral de rehabilitación médica · Diseñado bajo ENS Alto · Con IA integrada</b>
 </p>
 
 ## 🧰 Stack tecnológico

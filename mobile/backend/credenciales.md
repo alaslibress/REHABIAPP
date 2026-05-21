@@ -87,12 +87,13 @@ npm run dev
 ```
 
 El servidor arranca en `http://localhost:3000`.
-El modo mock esta activado por defecto en desarrollo (`MOCK_API=true` en `.env` o variable de entorno).
+El modo mock esta desactivado por defecto. El BFF llama a la API Java real (`apiBaseUrl`).
+Para activarlo en desarrollo, exportar `MOCK_API=true` antes de `npm run dev` o anadirlo al `.env`.
 
-Para confirmarlo, debe aparecer en la terminal:
+Con el modo mock desactivado, debe aparecer en la terminal:
 
 ```
-{"level":30,...,"msg":"BFF mobile-backend iniciado","port":3000,"mockApi":true}
+{"level":30,...,"msg":"BFF mobile-backend iniciado","port":3000,"mockApi":false}
 ```
 
 Verificar que el backend responde:

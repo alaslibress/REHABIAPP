@@ -8,16 +8,15 @@ import type { Appointment } from '../types/appointments';
 const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-// Android + Expo Go = sin soporte de push remotas ni de algunas APIs nativas.
-// En ese caso el modulo `expo-notifications` puede lanzar al importarse,
-// asi que lo cargamos de forma perezosa y protegida.
+// SDK 53+ retiro las push REMOTAS en Expo Go Android (getExpoPushTokenAsync).
+// Las notificaciones LOCALES (scheduleNotificationAsync) siguen funcionando,
+// por eso este flag SOLO debe gatear la obtencion del Expo Push Token.
 export const remotePushDisabled = isExpoGo && Platform.OS === 'android';
 
 // Carga perezosa y defensiva del modulo nativo. Si falla por cualquier motivo
 // (entorno no soportado, modulo ausente), devolvemos null y las funciones
 // publicas actuan como no-op en lugar de romper la app.
 function loadNotifications(): typeof import('expo-notifications') | null {
-  if (remotePushDisabled) return null;
   try {
     // require dinamico: evita que el bundler evalue el modulo en import-time
     // en entornos donde lanzaria durante la carga.

@@ -22,7 +22,8 @@ module.exports = {
   jwtSecret: readSecret('jwt-secret', 'dev-jwt-secret-cambiar-en-produccion'),
   jwtExpirationMs: parseInt(process.env.JWT_EXPIRATION_MS || '1800000', 10),
   jwtRefreshMs: parseInt(process.env.JWT_REFRESH_MS || '604800000', 10),
-  // Modo mock: no hace peticiones reales a la API de Java
+  // Modo mock: solo activo si MOCK_API=true esta exportado de forma explicita.
+  // Por defecto desactivado, el BFF llama a la API Java real (apiBaseUrl).
   mockApi: process.env.MOCK_API === 'true',
   graphqlPath: process.env.GRAPHQL_PATH || '/graphql',
 };

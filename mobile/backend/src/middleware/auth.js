@@ -3,6 +3,8 @@
 'use strict';
 
 const authService = require('../services/authService');
+const config = require('../config');
+const logger = require('../logger');
 
 /**
  * Extrae el usuario del JWT del BFF desde la cabecera Authorization.
@@ -30,6 +32,19 @@ async function authMiddleware(req) {
     }
 
     const javaToken = authService.obtenerTokenJava(payload.sub);
+
+    // Si el BFF se reinicio, el tokenCache en memoria queda vacio pero el
+    // movil aun tiene un JWT BFF valido en SecureStore. En modo real esto
+    // provocaria llamadas al API Java sin Authorization -> 403. Forzamos
+    // re-login devolviendo user=null para que resolvers lancen TOKEN_INVALID
+    // y el frontend dispare logout automatico (ver client.ts SESSION_EXPIRED_CODES).
+    if (!config.mockApi && !javaToken) {
+      logger.warn(
+        { dniPac: payload.sub.substring(0, 3) + '***' },
+        'BFF JWT valido pero sin javaToken cacheado — forzando re-login'
+      );
+      return { user: null, javaToken: null };
+    }
 
     return { user: payload, javaToken };
   } catch {

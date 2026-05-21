@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "start:aws": "node --env-file=.env src/index.js",
-    "dev": "MOCK_API=true LOG_LEVEL=debug node --watch src/index.js | npx pino-pretty",
+    "dev": "MOCK_API=false API_BASE_URL=https://rehabiapp-api.duckdns.org LOG_LEVEL=debug node --watch src/index.js | npx pino-pretty",
     "dev:aws": "node --env-file=.env --watch src/index.js | npx pino-pretty",
     "test": "node --test test/bff.test.js && node --test test/graphql.test.js"
   },

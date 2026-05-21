@@ -22,7 +22,7 @@ import { useErrorStore } from '../src/store/errorStore';
 import { useColorScheme as useNwColorScheme } from 'nativewind';
 import { ThemeContext, resolveTheme, type ThemeMode, type ThemeScheme } from '../src/utils/theme';
 import { FontScaleContext, type FontScale } from '../src/utils/fontScale';
-import { initNotifications, remotePushDisabled } from '../src/utils/notifications';
+import { initNotifications } from '../src/utils/notifications';
 
 // Mantener el splash visible hasta que terminen las fuentes y el bootstrap.
 // preventAutoHideAsync se llama en top-level para que se ejecute lo antes posible.
@@ -161,16 +161,14 @@ export default function RootLayout() {
     // Listener de notificaciones en primer plano — hook para futuras integraciones.
     // Carga perezosa defensiva: evita romper Expo Go si el modulo no esta presente.
     let receivedSub: { remove: () => void } | undefined;
-    if (!remotePushDisabled) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const N = require('expo-notifications') as typeof import('expo-notifications');
-        receivedSub = N.addNotificationReceivedListener(function () {
-          // Hook para badge counters, analytics, etc. en iteraciones futuras.
-        });
-      } catch {
-        // Ignorar: entorno sin soporte
-      }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const N = require('expo-notifications') as typeof import('expo-notifications');
+      receivedSub = N.addNotificationReceivedListener(function () {
+        // Hook para badge counters, analytics, etc. en iteraciones futuras.
+      });
+    } catch {
+      // Ignorar: entorno sin soporte
     }
 
     initNotifications();
